@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 import requests
 import config
-import bot_config
+import bot_token
 
 initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.onmyoji',]
 
@@ -72,4 +72,4 @@ async def cog_reload(self, ctx, *, cog: str):
         await ctx.send('**Success:** cogs.'+cog+' has been reloaded!')
 
 
-bot.run(bot_config.TOKEN)
+bot.run(bot_token.TOKEN)
