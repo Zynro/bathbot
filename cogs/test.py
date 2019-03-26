@@ -43,7 +43,7 @@ class Test(commands.Cog):
             reader = csv.reader(file)
             for row in reader:
                 await ctx.send(row)
-
+                return
 
 def setup(bot):
     bot.add_cog(Test(bot))

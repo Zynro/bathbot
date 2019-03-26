@@ -13,7 +13,8 @@ with open('bountycsv.csv', mode='w', newline='') as bounties:
                 temp = hints[n]
             except IndexError:
                 hints.append('')'''
-        locations = '\n'.join([location for location in item["locations"]])
+        locations = '\n'.join([location.replace('*', '') for location in item["locations"]])
+        locations = locations.replace(';','')
        # print(locations)
        #input()
         row = [item['name']]

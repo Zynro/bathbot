@@ -49,6 +49,8 @@ class Onmyoji(commands.Cog):
         print(ctx)
         await ctx.send('I, for all of my bath powers, could not find that bounty.')
 
+        
+
 def setup(bot):
     bot.add_cog(Onmyoji(bot))
 
