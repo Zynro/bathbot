@@ -3,3 +3,5 @@ opuslib
 requests
 youtube_dl
 asyncio
+google-api-python-client
+google_auth_oauthlib

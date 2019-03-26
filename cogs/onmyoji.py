@@ -109,9 +109,25 @@ class Onmyoji(commands.Cog):
             return
         await ctx.send(f'Couldn\'t find stats for {name.title()}')
 
+    @commands.command(name='database', aliases=['googledoc'])
+    @commands.check(has_permission)
+    async def get_shared_doc_link(self, ctx):
+        '''If Officer, returns the link for the database.'''
+        if ctx.channel.id != config.officer_chat_id:
+            await ctx.send('This command cannot be used in this channel.')
+        else:
+            await ctx.send(f'Here is the link for the Onmyoji database:\n{config.database_google_link}')
+
+    @get_shared_doc_link.error
+    async def get_shared_doc_link_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("You do not have permission to uuse this command.")
+
+
     @commands.command(name='shikigami_update', aliases=['update', 'download'])
     @commands.check(has_permission)
     async def download_shikigami_update(self, ctx):
+        '''If Officer, updates the bot's local database file.'''
         file_id = config.bounty_file_id
         request = drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
         buffer_file = io.BytesIO()
