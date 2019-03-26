@@ -63,6 +63,8 @@ class Onmyoji(commands.Cog):
         with open('lists/shiki_bounty.csv', newline='') as bounties:
             bounty_reader = csv.reader(bounties)
             next(bounty_reader)
+            next(bounty_reader) #skips the first 3 rows because its headers + message + example
+            next(bounty_reader)
             for row in bounty_reader:
                 self.bounty_list.append(row)
         self.shikigami_class = {row[0].lower(): Shikigami(row[0], self.bounty_list) for row in self.bounty_list}
