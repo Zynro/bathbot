@@ -1,7 +1,7 @@
 # User-Added
 *.pyc
 bottoken.py
-bathmemes/
+bathbot-memes/
 cogs/archive
 bot_token.py
 config.py

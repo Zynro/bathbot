@@ -19,26 +19,34 @@ editor_list = config.editor_list
 
 recommend = re.compile(r'recommend',re.IGNORECASE)
 
-#=============Drive API Stuff===============
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-
-SERVICE_ACCOUNT_FILE = 'bbt_credentials.json'
-
-credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-
-drive_service = build('drive', 'v3', credentials = credentials)
-#=============Drive API Stuff===============
-
-#Deactivated backup code
-#with open('lists/bounty.json') as file:
-#    bounty_json = json.loads(file.read())
-
 with open('lists/stats.json') as file:
     stats_json = json.loads(file.read())
 
 def bold(input):
+    '''Returns the Discord bolded version of input text.'''
     return "**"+input+"**"
+
+class DriveAPI:
+    '''Manages the Google Drive API Auth and retreiving the CSV database.'''
+    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    SERVICE_ACCOUNT_FILE = 'bbt_credentials.json'
+    credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    drive_service = build('drive', 'v3', credentials = credentials)
+
+    @staticmethod
+    def get_gdrive_sheet_database():
+        file_id = config.bounty_file_id
+        request = drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
+        buffer_file = io.BytesIO()
+        downloader = MediaIoBaseDownload(buffer_file, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            print ("Download %d%%." % int(status.progress() * 100))
+        with open ('lists/shiki_bounty.csv', 'wb') as f:
+            f.write(buffer_file.getvalue())
+
 
 class Shikigami:
     def __init__(self, input_name, bounty_db):
@@ -55,27 +63,34 @@ class Shikigami:
                 self.hints = hints
                 self.locations = locations
 
-
 class Onmyoji(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.bounty_list = []
-        with open('lists/shiki_bounty.csv', newline='') as bounties:
-            bounty_reader = csv.reader(bounties)
-            next(bounty_reader)
-            next(bounty_reader) #skips the first 3 rows because its headers + message + example
-            next(bounty_reader)
-            for row in bounty_reader:
-                self.bounty_list.append(row)
-        self.shikigami_class = {row[0].lower(): Shikigami(row[0], self.bounty_list) for row in self.bounty_list}
-        self.shikigami_list = [row[0].lower() for row in self.bounty_list]
-        self.bounty_list = []
+        try:
+            self.create_classes()
+        except FileNotFoundError:
+            DriveAPI.get_gdrive_sheet_database()
+            self.create_classes()
 
     async def has_permission(ctx):
         if ctx.author.id in owner_list or ctx.author.id in editor_list:
             return True
         else:
             return False
+
+    def create_classes(self):
+        self.bounty_list = []
+        with open('lists/shiki_bounty.csv', newline='') as bounties:
+            bounty_reader = csv.reader(bounties)
+            for n in range(0, 3):
+                next(bounty_reader) #skips the first 3 rows because its headers + message + example
+            for row in bounty_reader:
+                self.bounty_list.append(row)
+        self.shikigami_class = {row[0].lower(): Shikigami(row[0], self.bounty_list) for row in self.bounty_list}
+        self.shikigami_list = [row[0].lower() for row in self.bounty_list]
+        self.bounty_list = []
+
+    
 
     def shiki_found(self, shiki):
         shiki_name = self.shikigami_class[shiki].name
@@ -111,7 +126,7 @@ class Onmyoji(commands.Cog):
             return
         await ctx.send(f'Couldn\'t find stats for {name.title()}')
 
-    @commands.command(name='database', aliases=['googledoc'])
+    @commands.command(name='database', aliases=['googledoc', 'link', 'share'])
     @commands.check(has_permission)
     async def get_shared_doc_link(self, ctx):
         '''If Officer, returns the link for the database.'''
@@ -126,20 +141,12 @@ class Onmyoji(commands.Cog):
             await ctx.send("You do not have permission to uuse this command.")
 
 
-    @commands.command(name='shikigami_update', aliases=['update', 'download'])
+    @commands.command(name='database_update', aliases=['update', 'download'])
     @commands.check(has_permission)
     async def download_shikigami_update(self, ctx):
         '''If Officer, updates the bot's local database file.'''
-        file_id = config.bounty_file_id
-        request = drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
-        buffer_file = io.BytesIO()
-        downloader = MediaIoBaseDownload(buffer_file, request)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-            print ("Download %d%%." % int(status.progress() * 100))
-        with open ('lists/shiki_bounty.csv', 'wb') as f:
-            f.write(buffer_file.getvalue())
+        await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
+        DriveAPI.get_gdrive_sheet_database()
         await ctx.send("The Shikigami Bounty list has been successfully updated!")
 
     @download_shikigami_update.error
