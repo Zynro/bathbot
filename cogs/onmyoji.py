@@ -34,10 +34,10 @@ class DriveAPI:
             SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     drive_service = build('drive', 'v3', credentials = credentials)
 
-    @staticmethod
-    def get_gdrive_sheet_database():
+    @classmethod
+    def get_gdrive_sheet_database(cls):
         file_id = config.bounty_file_id
-        request = drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
+        request = cls.drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
         buffer_file = io.BytesIO()
         downloader = MediaIoBaseDownload(buffer_file, request)
         done = False
@@ -46,6 +46,7 @@ class DriveAPI:
             print ("Download %d%%." % int(status.progress() * 100))
         with open ('lists/shiki_bounty.csv', 'wb') as f:
             f.write(buffer_file.getvalue())
+        return
 
 
 class Shikigami:
@@ -69,7 +70,7 @@ class Onmyoji(commands.Cog):
         try:
             self.create_classes()
         except FileNotFoundError:
-            DriveAPI.get_gdrive_sheet_database()
+            DriveAPI.class_get_gdrive_sheet_database()
             self.create_classes()
 
     async def has_permission(ctx):
