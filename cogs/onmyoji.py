@@ -74,7 +74,7 @@ class Onmyoji(commands.Cog):
             self.create_classes()
 
     async def has_permission(ctx):
-        if ctx.author.id in owner_list or ctx.author.id in editor_list:
+        return ctx.author.id in owner_list or ctx.author.id in editor_list:
             return True
         else:
             return False
