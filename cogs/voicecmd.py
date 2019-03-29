@@ -133,7 +133,7 @@ class VoiceCmd(commands.Cog):
 	async def playlib(self, ctx):
 		#musicfiles = [f for f in os.walk('./sfx') if isfile(join('.\sfx', str(f)))]
 		musicfiles = ""
-		for r,d,f in os.walk('./sfx'):
+		for r,d,f in os.walk('./bathbot-memes/sfx'):
 			for file in f:
 				temp = join('.\\sfx', str(file))
 				musicfiles = musicfiles + "\n" + temp

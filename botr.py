@@ -6,6 +6,7 @@ import config
 import bot_token
 
 initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.onmyoji']
+extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
     prefixes = ['&']
@@ -22,7 +23,7 @@ async def on_ready():
     #bot.remove_command('help')
     await bot.change_presence(activity=discord.Game(name='Shower With Your Dad Simulator 2015: Do You Still Shower With Your Dad'))
     if __name__ == '__main__':
-        for extension in initial_extensions:
+        for extension in extensions:
             try:
                 bot.load_extension(extension)
                 print(extension +' has been loaded!')
