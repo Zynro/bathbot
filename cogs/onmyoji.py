@@ -24,14 +24,13 @@ with open('lists/stats.json') as file:
 
 def bold(input):
     '''Returns the Discord bolded version of input text.'''
-    return "**"+input+"**"
+    return f'**{input}**'
 
 class DriveAPI:
-    '''Manages the Google Drive API Auth and retreiving the CSV database.'''
-    SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+    """Manages the Google Drive API Auth and retreiving the CSV database."""
     SERVICE_ACCOUNT_FILE = 'bbt_credentials.json'
     credentials = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+            SERVICE_ACCOUNT_FILE, scopes=config.SCOPES_DRIVE_READONLY)
     drive_service = build('drive', 'v3', credentials = credentials)
 
     @classmethod
@@ -46,8 +45,6 @@ class DriveAPI:
             print ("Download %d%%." % int(status.progress() * 100))
         with open ('lists/shiki_bounty.csv', 'wb') as f:
             f.write(buffer_file.getvalue())
-        return
-
 
 class Shikigami:
     def __init__(self, input_name, bounty_db):
@@ -80,22 +77,18 @@ class Onmyoji(commands.Cog):
             return False
 
     def create_classes(self):
-        self.bounty_list = []
         with open('lists/shiki_bounty.csv', newline='') as bounties:
             bounty_reader = csv.reader(bounties)
             for n in range(0, 3):
                 next(bounty_reader) #skips the first 3 rows because its headers + message + example
-            for row in bounty_reader:
-                self.bounty_list.append(row)
+            self.bounty_list = [row for row in bounty_reader]
         self.shikigami_class = {row[0].lower(): Shikigami(row[0], self.bounty_list) for row in self.bounty_list}
         self.shikigami_list = [row[0].lower() for row in self.bounty_list]
-        self.bounty_list = []
-
-    
+        del self.bounty_list[:]
 
     def shiki_found(self, shiki):
         shiki_name = self.shikigami_class[shiki].name
-        return "I found the following Shikigami: **"+shiki_name+"**\nHere are their locations:\n--------------------"
+        return f"I found the following Shikigami: **{shiki_name}**\nHere are their locations:\n--------------------"
 
     def location_finder(self, shiki):
         locations_base = [location for location in self.shikigami_class[shiki].locations]
