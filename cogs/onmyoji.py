@@ -67,7 +67,7 @@ class Onmyoji(commands.Cog):
         try:
             self.create_classes()
         except FileNotFoundError:
-            DriveAPI.class_get_gdrive_sheet_database()
+            DriveAPI.get_gdrive_sheet_database()
             self.create_classes()
 
     async def has_permission(ctx):
