@@ -12,6 +12,7 @@ import io
 import csv
 import config
 import re
+import pandas as pd
 
 permission = 'You do not have permission to use this command.'
 owner_list = config.owner_list
@@ -36,30 +37,52 @@ class DriveAPI:
     @classmethod
     def get_gdrive_sheet_database(cls):
         file_id = config.bounty_file_id
-        request = cls.drive_service.files().export_media(fileId=file_id, mimeType='text/csv')
+        request = cls.drive_service.files().export_media(fileId=file_id, mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         buffer_file = io.BytesIO()
         downloader = MediaIoBaseDownload(buffer_file, request)
         done = False
         while done is False:
             status, done = downloader.next_chunk()
             print ("Download %d%%." % int(status.progress() * 100))
-        with open ('lists/shiki_bounty.csv', 'wb') as f:
+        with open (config.bbt_xlsx_file, 'wb') as f:
             f.write(buffer_file.getvalue())
 
+    @classmethod
+    def generate_csv_databases(cls):
+        """Generate the CSV files from the given XLSX file obtained from Gdrive."""
+        #Convert Onmyoguide DB
+        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Bounty List', index_col=None)
+        data_xls.to_csv(config.onmyoguide_csv_db_file, encoding='utf-8', index=False)
+        #Convert BBT DB
+        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Data Logging', index_col=None)
+        data_xls.to_csv(config.bbt_csv_db_file, encoding='utf-8', index=False)
+        #Convert Shikigami Full List
+        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Shikigami List', index_col=None)
+        data_xls.to_csv(config.bbt_csv_shikigami_list_file, encoding='utf-8', index=False)
+
 class Shikigami:
-    def __init__(self, input_name, bounty_db):
-        self.name = input_name
-        for row in bounty_db:
+    def __init__(self, input_name, onmyoguide_db, bbt_db):
+        for row in onmyoguide_db:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
-            if input_name in shiki_name:
+            if input_name.lower() in shiki_name.lower():
+                self.name = shiki_name
                 self.alias = alias
                 self.hints = hints
                 self.locations = locations.split('\n')
-            elif self.name.lower() in alias.lower():
+                break
+            elif input_name.lower() in alias.lower():
                 self.name = shiki_name
                 self.alias = alias
                 self.hints = hints
                 self.locations = locations
+                break
+            else:
+                self.locations = "No data."
+        #adds the bbt locations, currently this is a list of lists that each have 3 elements, the main location, the sublocation, and the contents of each.
+        bbt_db_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
+        
+
+
 
 class Onmyoji(commands.Cog):
     def __init__(self, bot):
@@ -68,22 +91,34 @@ class Onmyoji(commands.Cog):
             self.create_classes()
         except FileNotFoundError:
             DriveAPI.get_gdrive_sheet_database()
+            DriveAPI.generate_csv_databases()
             self.create_classes()
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
 
     def create_classes(self):
-        with open('lists/shiki_bounty.csv', newline='') as bounties:
+        """Creates all the Shikigami classes with each of their vairables in a dictionary."""
+        #Opens and creates the onmyoguide bounty db
+        with open(config.onmyoguide_csv_db_file, newline='') as bounties:
             bounty_reader = csv.reader(bounties)
             for n in range(0, 3):
                 next(bounty_reader) #skips the first 3 rows because its headers + message + example
-            self.bounty_list = [row for row in bounty_reader]
-        self.shikigami_class = {row[0].lower(): Shikigami(row[0], self.bounty_list) for row in self.bounty_list}
-        self.shikigami_list = [row[0].lower() for row in self.bounty_list]
-        del self.bounty_list[:]
+            bounty_list = [row for row in bounty_reader]
+        #Opens and creates the shikigami list from the full list of shikigami
+        with open(config.bbt_csv_shikigami_list_file, newline='') as shiki_list_csv:
+            shiki_list_reader = csv.reader(shiki_list_csv)
+            next(shiki_list_reader) #skips header
+            shiki_list = [row[0] for row in shiki_list_reader]
+        #Opens the BBT-made database for all stages with all their contents.
+        with open(config.bbt_csv_db_file, newline='') as bbt_db:
+            bbt_db_reader = csv.reader(bbt_db)
+            next(bbt_db_reader)
+            bbt_db = [row for row in bbt_db_reader]
+        self.shikigami_class = {row[0].lower(): Shikigami(row[0], bounty_list, bbt_db) for row in bounty_list}
 
     def shiki_found(self, shiki):
+        """Returns a print message w/ the proper capitalized name of the Shikigami."""
         shiki_name = self.shikigami_class[shiki].name
         return f"I found the following Shikigami: **{shiki_name}**\nHere are their locations:\n--------------------"
 
@@ -93,8 +128,8 @@ class Onmyoji(commands.Cog):
             match_recommend = recommend.search(location)
             if match_recommend:
                 locations_base[locations_base.index(location)] = bold(location)
-        locations_finished = '\n'.join(locations_base)
-        return locations_finished
+        locations_onmyoguide = '\n'.join(locations_base)
+        return locations_onmyoguide
 
     @commands.command()
     async def shikistats(self, ctx, *search):
@@ -138,6 +173,13 @@ class Onmyoji(commands.Cog):
         '''If Officer, updates the bot's local database file.'''
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
         DriveAPI.get_gdrive_sheet_database()
+        await ctx.send("The Shikigami Bounty list has been successfully updated!")
+
+    @commands.command()
+    async def download_shikigami_update_excel(self, ctx):
+        '''If Officer, updates the bot's local database file.'''
+        await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
+        DriveAPI.get_gdrive_sheet_database_excel()
         await ctx.send("The Shikigami Bounty list has been successfully updated!")
 
     @download_shikigami_update.error
