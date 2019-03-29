@@ -71,7 +71,7 @@ class Onmyoji(commands.Cog):
             self.create_classes()
 
     async def has_permission(ctx):
-        return ctx.author.id in owner_list or ctx.author.id in editor_list:
+        return ctx.author.id in owner_list or ctx.author.id in editor_list
 
     def create_classes(self):
         with open('lists/shiki_bounty.csv', newline='') as bounties:
