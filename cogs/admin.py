@@ -1,6 +1,7 @@
 from discord.ext import commands
 import sys
 import config
+import traceback
 
 permission = 'You do not have permission to use this command.'
 owner_list = config.owner_list
@@ -21,6 +22,7 @@ class Admin(commands.Cog):
 			self.bot.load_extension('cogs.'+cog)
 		except Exception as e:
 			await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
+			traceback.print_exc()
 		else:
 			await ctx.send('**Success: **cogs.'+cog+' has been loaded!')
 
@@ -55,6 +57,7 @@ class Admin(commands.Cog):
 			self.bot.load_extension('cogs.'+cog)
 		except Exception as e:
 			await ctx.send(f'**Error:** {type(e).__name__} - {e}')
+			traceback.print_exc()
 		else:
 			await ctx.send('**Success:** cogs.'+cog+' has been reloaded!')
 
