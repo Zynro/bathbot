@@ -13,6 +13,7 @@ import csv
 import config
 import re
 import pandas as pd
+import random
 
 permission = 'You do not have permission to use this command.'
 owner_list = config.owner_list
@@ -23,9 +24,15 @@ recommend = re.compile(r'recommend',re.IGNORECASE)
 with open('lists/stats.json') as file:
     stats_json = json.loads(file.read())
 
-def bold(input):
+def bold(text):
     '''Returns the Discord bolded version of input text.'''
-    return f'**{input}**'
+    return f'**{text}**'
+
+def lower_and_underscore(text):
+    """Lowers entire string and replaces all whitespace with underscores."""
+    text = text.lower()
+    text = text.replace(" ", "_")
+    return text
 
 class DriveAPI:
     """Manages the Google Drive API Auth and retreiving the CSV database."""
@@ -69,20 +76,11 @@ class Shikigami:
                 self.alias = alias
                 self.hints = hints
                 self.locations = locations.split('\n')
+                self.icon_name = f"{lower_and_underscore(self.name)}.png"
+                self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
                 break
-            elif input_name.lower() in alias.lower():
-                self.name = shiki_name
-                self.alias = alias
-                self.hints = hints
-                self.locations = locations
-                break
-            else:
-                self.locations = "No data."
         #adds the bbt locations, currently this is a list of lists that each have 3 elements, the main location, the sublocation, and the contents of each.
         bbt_db_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
-        
-
-
 
 class Onmyoji(commands.Cog):
     def __init__(self, bot):
@@ -130,6 +128,16 @@ class Onmyoji(commands.Cog):
                 locations_base[locations_base.index(location)] = bold(location)
         locations_onmyoguide = '\n'.join(locations_base)
         return locations_onmyoguide
+
+    def shiki_bounty_embed(self, shiki):
+        color = random.randint(0, 0xFFFFFF)
+        icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
+
+        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description="Here are the bounty locations for this Shikigami:")
+        embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
+        embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
+        embed.add_field(name="BBT-Databased Bounty Locations:", value="locations")
+        return embed, icon
 
     @commands.command()
     async def shikistats(self, ctx, *search):
@@ -199,8 +207,8 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.location_finder(shiki))
                 return
             if search in self.shikigami_class[shiki].hints.lower():
-                await ctx.send(self.shiki_found(shiki))
-                await ctx.send(self.location_finder(shiki))
+                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
             if search in self.shikigami_class[shiki].alias.lower():
                 await ctx.send(self.shiki_found(shiki))
