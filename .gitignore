@@ -6,3 +6,4 @@ cogs/archive
 bot_token.py
 config.py
 bbt_credentials.json
+lists/
