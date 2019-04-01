@@ -24,6 +24,8 @@ recommend = re.compile(r'recommend',re.IGNORECASE)
 with open('lists/stats.json') as file:
     stats_json = json.loads(file.read())
 
+number_dict = {1:'First', 2:'Second', 3:'Third', 4:'Fourth', 5:'Fifth', 6:'Sixth', 7:'Seventh'}
+
 def bold(text):
     '''Returns the Discord bolded version of input text.'''
     return f'**{text}**'
@@ -80,7 +82,44 @@ class Shikigami:
                 self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
                 break
         #adds the bbt locations, currently this is a list of lists that each have 3 elements, the main location, the sublocation, and the contents of each.
-        bbt_db_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
+        bbt_db_raw_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
+        if len(bbt_db_raw_locations)>=1:
+            locale_list = []
+            for row in bbt_db_raw_locations:
+                if self.name.lower() in row[2].lower():
+                    contains = row[2].split('\n')
+                    temp_list = []
+                    temp_list.append(row[0])
+                    temp_list.append(row[1])
+                    for each in contains:
+                        if self.name.lower() in each.lower():
+                            temp_list.append(each)
+                            break
+                    locale_list.append(temp_list)
+            main_sub_and_shiki_list = []
+            for row in locale_list:
+                for i in number_dict.keys():
+                    if str(i) in row[1]:
+                        sub_loc_shiki = ''.join(i for i in row[1] if not i.isdigit())
+                        sub_loc = f'{number_dict[i]} {sub_loc_shiki}'
+                        break
+                amount = ''.join(i for i in row[2] if i.isdigit())
+                new_row = [row[0], f'{sub_loc}has {amount}.']
+                main_sub_and_shiki_list.append(new_row)
+            self.final_result = []
+            for row in main_sub_and_shiki_list:
+                sub_loc = []
+                location = row[0]
+                for again in main_sub_and_shiki_list:
+                    if location == again[0]:
+                        sub_loc.append(again[1])
+                for row in main_sub_and_shiki_list:
+                    if row[0] == location:
+                        main_sub_and_shiki_list.remove(row)
+                appending = [location, sub_loc]
+                self.final_result.append(appending)
+
+
 
 class Onmyoji(commands.Cog):
     def __init__(self, bot):
@@ -181,6 +220,7 @@ class Onmyoji(commands.Cog):
         '''If Officer, updates the bot's local database file.'''
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
         DriveAPI.get_gdrive_sheet_database()
+        DriveAPI.generate_csv_databases()
         await ctx.send("The Shikigami Bounty list has been successfully updated!")
 
     @commands.command()
@@ -215,6 +255,59 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.location_finder(shiki))
                 return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
+
+    @commands.command()
+    async def bbt(self, ctx):
+        name = 'Nurikabe'
+        with open(config.bbt_csv_db_file, newline='') as bbt_db:
+            bbt_db_reader = csv.reader(bbt_db)
+            for i in range(0, 6):
+                next(bbt_db_reader)
+            bbt_db = [row for row in bbt_db_reader]
+        locale_list = []
+        for row in bbt_db:
+            if name.lower() in row[2].lower():
+                contains = row[2].split('\n')
+                temp_list = []
+                temp_list.append(row[0])
+                temp_list.append(row[1])
+                for each in contains:
+                    if name.lower() in each.lower():
+                        temp_list.append(each)
+                        break
+                locale_list.append(temp_list)
+        main_sub_and_shiki_list = []
+        for row in locale_list:
+            for i in number_dict.keys():
+                if str(i) in row[1]:
+                    sub_loc_shiki = ''.join(i for i in row[1] if not i.isdigit())
+                    sub_loc = f'{number_dict[i]} {sub_loc_shiki}'
+                    break
+            amount = ''.join(i for i in row[2] if i.isdigit())
+            new_row = [row[0], f'{sub_loc}has {amount}.']
+            main_sub_and_shiki_list.append(new_row)
+        final_result = []
+        for row in main_sub_and_shiki_list:
+            sub_loc = []
+            location = row[0]
+            for again in main_sub_and_shiki_list:
+                if location == again[0]:
+                    sub_loc.append(again[1])
+            for row in main_sub_and_shiki_list:
+                if row[0] == location:
+                    main_sub_and_shiki_list.remove(row)
+            appending = [location, sub_loc]
+            final_result.append(appending)
+        
+
+        '''for row in bbt_db_raw_locations:
+            contains = row[2].split('\n')
+            for each in contains:
+                if name.lower() in each:
+                    contains = each
+                    bbt_db_raw_locations[bbt_db_raw_locations.index(row)][2] = contains'''
+        
+
 
     @commands.command()
     async def tengu(self, ctx):
