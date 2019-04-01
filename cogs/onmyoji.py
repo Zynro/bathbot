@@ -215,6 +215,11 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.location_finder(shiki))
                 return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
+
+    @commands.command()
+    async def tengu(self, ctx):
+        """hurrhurrhurr"""
+        await ctx.send(file=discord.File('./images/tengu.jpg'))
         
 
 def setup(bot):
