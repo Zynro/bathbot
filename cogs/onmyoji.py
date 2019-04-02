@@ -71,17 +71,19 @@ class DriveAPI:
 
 class Shikigami:
     def __init__(self, input_name, onmyoguide_db, bbt_db):
+        self.name = input_name
+        self.alias = self.hints = self.locations = self.icon_name = self.icon = None
+        self.icon_name = f"{lower_and_underscore(self.name)}.png"
+        self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
         for row in onmyoguide_db:
             #need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
-            if input_name.lower() in shiki_name.lower():
-                self.name = shiki_name
+            if self.name.lower() in shiki_name.lower():
                 self.alias = alias
                 self.hints = hints
                 self.locations = locations.split('\n')
-                self.icon_name = f"{lower_and_underscore(self.name)}.png"
-                self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
                 break
+
         bbt_locale_list = []
         for row in bbt_db:
             if self.name.lower() in row[2].lower():
@@ -97,7 +99,10 @@ class Shikigami:
         if len(bbt_locale_list) != 0:
             self.bbt_locations = self.generate_bbt_locations(bbt_locale_list)
         else:
-            self.bbt_locations = None
+            self.bbt_locations = 'None found in database.'
+        if not self.alias: self.alias=''
+        if not self.hints: self.hints=''
+        if not self.locations: self.locations='None found in database.'
 
     def generate_bbt_locations(self, bbt_locale_list):
         if len(bbt_locale_list)==0:
@@ -111,7 +116,7 @@ class Shikigami:
             else:
                 sub_loc = ''
             amount = ''.join(i for i in row[2] if i.isdigit())
-            new_row = [row[0], f'{sub_loc}has {amount}.']
+            new_row = [row[0], f'{sub_loc}has {amount}']
             main_sub_and_shiki_list.append(new_row)
         final_result = []
         for row in main_sub_and_shiki_list:
@@ -153,21 +158,18 @@ class Onmyoji(commands.Cog):
         with open(config.bbt_csv_shikigami_list_file, newline='') as shiki_list_csv:
             shiki_list_reader = csv.reader(shiki_list_csv)
             next(shiki_list_reader) #skips header
-            shiki_list = [row[0] for row in shiki_list_reader]
+            shikigami_full_list = [row[0] for row in shiki_list_reader]
         #Opens the BBT-made database for all stages with all their contents.
         with open(config.bbt_csv_db_file, newline='') as bbt_db:
             bbt_db_reader = csv.reader(bbt_db)
             for i in range(0,6):
                 next(bbt_db_reader)
             bbt_db = [row for row in bbt_db_reader]
-        self.shikigami_class = {row[0].lower(): Shikigami(row[0], bounty_list, bbt_db) for row in bounty_list}
-
-    def shiki_found(self, shiki):
-        """Returns a print message w/ the proper capitalized name of the Shikigami."""
-        shiki_name = self.shikigami_class[shiki].name
-        return f"I found the following Shikigami: **{shiki_name}**\nHere are their locations:\n--------------------"
+        self.shikigami_class = {shiki.lower(): Shikigami(shiki, bounty_list, bbt_db) for shiki in shikigami_full_list}
 
     def location_finder(self, shiki):
+        if 'None' in self.shikigami_class[shiki].locations:
+            return "None found in database."
         locations_base = [location for location in self.shikigami_class[shiki].locations]
         for location in locations_base:
             match_recommend = recommend.search(location)
@@ -176,14 +178,30 @@ class Onmyoji(commands.Cog):
         locations_onmyoguide = '\n'.join(locations_base)
         return locations_onmyoguide
 
+    def location_finder_bbt(self, shiki):
+        """Locates and formats the locations. TODO: In proper order."""
+        if 'None' in self.shikigami_class[shiki].bbt_locations:
+            return "None found in database."
+        return self.shikigami_class[shiki].bbt_locations
+
     def shiki_bounty_embed(self, shiki):
         color = random.randint(0, 0xFFFFFF)
         icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
 
         embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description="Here are the bounty locations for this Shikigami:")
         embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
+
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
-        embed.add_field(name="BBT-Databased Bounty Locations:", value="locations")
+
+        if "None" not in self.shikigami_class[shiki].bbt_locations:
+            all_locations = []
+            for main in self.shikigami_class[shiki].bbt_locations:
+                sub_locs = ', '.join(main[1])
+                all_locations.append(f'{bold(main[0])} - {sub_locs}')
+            all_locations = '\n'.join(all_locations)
+            embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
+        else:
+            embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
         return embed, icon
 
     @commands.command()
@@ -251,16 +269,16 @@ class Onmyoji(commands.Cog):
         search = ' '.join([term.lower() for term in search])
         for shiki in self.shikigami_class.keys():
             if search in shiki:
-                await ctx.send(self.shiki_found(shiki))
-                await ctx.send(self.location_finder(shiki))
+                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
             if search in self.shikigami_class[shiki].hints.lower():
                 shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
             if search in self.shikigami_class[shiki].alias.lower():
-                await ctx.send(self.shiki_found(shiki))
-                await ctx.send(self.location_finder(shiki))
+                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
