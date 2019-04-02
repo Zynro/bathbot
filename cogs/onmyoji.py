@@ -24,7 +24,7 @@ recommend = re.compile(r'recommend',re.IGNORECASE)
 with open('lists/stats.json') as file:
     stats_json = json.loads(file.read())
 
-number_dict = {1:'First', 2:'Second', 3:'Third', 4:'Fourth', 5:'Fifth', 6:'Sixth', 7:'Seventh'}
+number_dict = {'1':'First', '2':'Second', '3':'Third', '4':'Fourth', '5':'Fifth', '6':'Sixth', '7':'Seventh',1:'First', 2:'Second', 3:'Third', 4:'Fourth', 5:'Fifth', 6:'Sixth', 7:'Seventh'}
 
 def bold(text):
     '''Returns the Discord bolded version of input text.'''
@@ -72,6 +72,7 @@ class DriveAPI:
 class Shikigami:
     def __init__(self, input_name, onmyoguide_db, bbt_db):
         for row in onmyoguide_db:
+            #need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name.lower() in shiki_name.lower():
                 self.name = shiki_name
@@ -81,44 +82,50 @@ class Shikigami:
                 self.icon_name = f"{lower_and_underscore(self.name)}.png"
                 self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
                 break
-        #adds the bbt locations, currently this is a list of lists that each have 3 elements, the main location, the sublocation, and the contents of each.
-        bbt_db_raw_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
-        if not bbt_db_raw_locations:
-            self.bbt_locations = 'None found in database.'
-        else:
-            locale_list = []
-            for row in bbt_db_raw_locations:
-                if self.name.lower() in row[2].lower():
-                    contains = row[2].split('\n')
-                    temp_list = [row[0], row[1]]
-                    for each in contains:
-                        if self.name.lower() in each.lower():
-                            temp_list.append(each)
-                            break
-                    locale_list.append(temp_list)
-            main_sub_and_shiki_list = []
-            for row in locale_list:
-                for i in number_dict.keys():
-                    if str(i) in row[1]:
-                        sub_loc_shiki = ''.join(i for i in row[1] if not i.isdigit())
-                        sub_loc = f'{number_dict[i]} {sub_loc_shiki}'
+        bbt_locale_list = []
+        for row in bbt_db:
+            if self.name.lower() in row[2].lower():
+                contains = row[2].split('\n')
+                temp_list = []
+                temp_list.append(row[0])
+                temp_list.append(row[1])
+                for each in contains:
+                    if self.name.lower() in each.lower():
+                        temp_list.append(each)
                         break
-                amount = ''.join(i for i in row[2] if i.isdigit())
-                new_row = [row[0], f'{sub_loc}has {amount}.']
-                main_sub_and_shiki_list.append(new_row)
-            self.final_result = []
-            for row in main_sub_and_shiki_list:
-                sub_locale = []
-                location = row[0]
-                for again in main_sub_and_shiki_list:
-                    if location == again[0]:
-                        sub_locale.append(again[1])
-                for row in main_sub_and_shiki_list:
-                    if row[0] == location:
-                        main_sub_and_shiki_list.remove(row)
-                appending = [location, sub_loc]
-                self.final_result.append(appending)
+                bbt_locale_list.append(temp_list)
+        if len(bbt_locale_list) != 0:
+            self.bbt_locations = self.generate_bbt_locations(bbt_locale_list)
+        else:
+            self.bbt_locations = None
 
+    def generate_bbt_locations(self, bbt_locale_list):
+        if len(bbt_locale_list)==0:
+            return None
+        main_sub_and_shiki_list = []
+        for row in bbt_locale_list:
+            sub_loc_stage = ''.join(i for i in row[1] if not i.isdigit())
+            if any(ch.isdigit() for ch in row[1]):
+                sub_loc_stage_number = number_dict[''.join(i for i in row[1] if i.isdigit())]
+                sub_loc = f'{sub_loc_stage_number} {sub_loc_stage}'
+            else:
+                sub_loc = ''
+            amount = ''.join(i for i in row[2] if i.isdigit())
+            new_row = [row[0], f'{sub_loc}has {amount}.']
+            main_sub_and_shiki_list.append(new_row)
+        final_result = []
+        for row in main_sub_and_shiki_list:
+            sub_locale = []
+            location = row[0]
+            for again in main_sub_and_shiki_list:
+                if location == again[0]:
+                    sub_locale.append(again[1])
+            for row in main_sub_and_shiki_list:
+                if row[0] == location:
+                    main_sub_and_shiki_list.remove(row)
+            appending = [location, sub_locale]
+            final_result.append(appending)
+        return(final_result)
 
 
 class Onmyoji(commands.Cog):
@@ -150,7 +157,8 @@ class Onmyoji(commands.Cog):
         #Opens the BBT-made database for all stages with all their contents.
         with open(config.bbt_csv_db_file, newline='') as bbt_db:
             bbt_db_reader = csv.reader(bbt_db)
-            next(bbt_db_reader)
+            for i in range(0,6):
+                next(bbt_db_reader)
             bbt_db = [row for row in bbt_db_reader]
         self.shikigami_class = {row[0].lower(): Shikigami(row[0], bounty_list, bbt_db) for row in bounty_list}
 
@@ -258,7 +266,8 @@ class Onmyoji(commands.Cog):
 
     @commands.command()
     async def bbt(self, ctx):
-        name = 'Nurikabe'
+        name = 'Orochi'
+        print(name)
         with open(config.bbt_csv_db_file, newline='') as bbt_db:
             bbt_db_reader = csv.reader(bbt_db)
             for i in range(0, 6):
@@ -276,6 +285,9 @@ class Onmyoji(commands.Cog):
                         temp_list.append(each)
                         break
                 locale_list.append(temp_list)
+        if len(locale_list)==0:
+            print('Entry not found in DB.')
+            return
         main_sub_and_shiki_list = []
         for row in locale_list:
             for i in number_dict.keys():
@@ -298,6 +310,8 @@ class Onmyoji(commands.Cog):
                     main_sub_and_shiki_list.remove(row)
             appending = [location, sub_loc]
             final_result.append(appending)
+        for i in final_result:
+            print(i)
         
 
         '''for row in bbt_db_raw_locations:
@@ -307,7 +321,25 @@ class Onmyoji(commands.Cog):
                     contains = each
                     bbt_db_raw_locations[bbt_db_raw_locations.index(row)][2] = contains'''
         
-
+    @commands.command()
+    async def bbt2(self, ctx, *search):
+        if not search:
+                await ctx.send('Search term cannot be blank, try again.')
+                return
+        search = ' '.join([term.lower() for term in search])
+        for shiki in self.shikigami_class.keys():
+            if search in shiki:
+                await ctx.send(self.shikigami_class[search].bbt_locations)
+                return
+            if search in self.shikigami_class[shiki].hints.lower():
+                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                await ctx.send(file=shiki_icon, embed=shiki_embed)
+                return
+            if search in self.shikigami_class[shiki].alias.lower():
+                await ctx.send(self.shiki_found(shiki))
+                await ctx.send(self.location_finder(shiki))
+                return
+        await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
     @commands.command()
     async def tengu(self, ctx):
