@@ -83,14 +83,14 @@ class Shikigami:
                 break
         #adds the bbt locations, currently this is a list of lists that each have 3 elements, the main location, the sublocation, and the contents of each.
         bbt_db_raw_locations = [row for row in bbt_db if self.name.lower() in row[2].lower()]
-        if len(bbt_db_raw_locations)>=1:
+        if not bbt_db_raw_locations:
+            self.bbt_locations = 'None found in database.'
+        else:
             locale_list = []
             for row in bbt_db_raw_locations:
                 if self.name.lower() in row[2].lower():
                     contains = row[2].split('\n')
-                    temp_list = []
-                    temp_list.append(row[0])
-                    temp_list.append(row[1])
+                    temp_list = [row[0], row[1]]
                     for each in contains:
                         if self.name.lower() in each.lower():
                             temp_list.append(each)
@@ -108,11 +108,11 @@ class Shikigami:
                 main_sub_and_shiki_list.append(new_row)
             self.final_result = []
             for row in main_sub_and_shiki_list:
-                sub_loc = []
+                sub_locale = []
                 location = row[0]
                 for again in main_sub_and_shiki_list:
                     if location == again[0]:
-                        sub_loc.append(again[1])
+                        sub_locale.append(again[1])
                 for row in main_sub_and_shiki_list:
                     if row[0] == location:
                         main_sub_and_shiki_list.remove(row)
