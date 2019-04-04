@@ -52,7 +52,7 @@ class Shikigami:
         for row in bounty_db:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name in shiki_name:
-                self.alias = [other_name for other_name in alias.split('\n')]
+                self.alias = [other_name.lower() for other_name in alias.split('\n')]
                 self.hints = hints
                 self.locations = locations.split('\n')
             elif self.name.lower() in alias.lower():
@@ -160,7 +160,7 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.shiki_found(shiki))
                 await ctx.send(self.location_finder(shiki))
                 return
-            if search in self.shikigami_class[shiki].alias.lower():
+            if search in self.shikigami_class[shiki].alias:
                 await ctx.send(self.shiki_found(shiki))
                 await ctx.send(self.location_finder(shiki))
                 return
