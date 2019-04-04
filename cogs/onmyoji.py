@@ -52,7 +52,7 @@ class Shikigami:
         for row in bounty_db:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name in shiki_name:
-                self.alias = alias
+                self.alias = [other_name for other_name in alias.split('\n')]
                 self.hints = hints
                 self.locations = locations.split('\n')
             elif self.name.lower() in alias.lower():
