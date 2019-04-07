@@ -76,8 +76,8 @@ class Shikigami:
         for row in onmyoguide_db:
             #need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
-            if self.name.lower() in shiki_name.lower():
-                self.alias = alias
+            if input_name in shiki_name:
+                self.alias = [other_name.lower() for other_name in alias.split('\n')]
                 self.hints = hints
                 self.locations = locations.split('\n')
                 break
@@ -265,7 +265,7 @@ class Onmyoji(commands.Cog):
                 shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
-            if search in self.shikigami_class[shiki].alias.lower():
+            if search in self.shikigami_class[shiki].alias:                
                 shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
