@@ -12,7 +12,7 @@ import io
 import csv
 import config
 import re
-import pandas as pd
+import pyexcel as pye
 import random
 
 permission = 'You do not have permission to use this command.'
@@ -57,15 +57,18 @@ class DriveAPI:
     @classmethod
     def generate_csv_databases(cls):
         """Generate the CSV files from the given XLSX file obtained from Gdrive."""
-        #Convert Onmyoguide DB
-        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Bounty List', index_col=None)
-        data_xls.to_csv(config.onmyoguide_csv_db_file, encoding='utf-8', index=False)
-        #Convert BBT DB
-        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Data Logging', index_col=None)
-        data_xls.to_csv(config.bbt_csv_db_file, encoding='utf-8', index=False)
-        #Convert Shikigami Full List
-        data_xls = pd.read_excel(config.bbt_xlsx_file, 'Shikigami List', index_col=None)
-        data_xls.to_csv(config.bbt_csv_shikigami_list_file, encoding='utf-8', index=False)
+        book = pye.get_book(file_name=config.bbt_xlsx_file)
+        for sheet in book:
+            filename = f"{sheet.name}.csv"
+            #Convert Onmyoguide DB
+            if sheet.name == "Bounty List":
+                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.onmyoguide_csv_db_file)
+            #Convert BBT DB
+            if sheet.name == "Data Logging":
+                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.bbt_csv_db_file)
+            #Convert Shikigami Full List
+            if sheet.name == "Shikigami List":
+                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.bbt_csv_shikigami_list_file)
 
 class Shikigami:
     def __init__(self, input_name, onmyoguide_db, bbt_db):
