@@ -169,7 +169,7 @@ class Onmyoji(commands.Cog):
             for i in range(0,6):
                 next(bbt_db_reader)
             bbt_db = [row for row in bbt_db_reader]
-        self.shikigami_class = {shiki.lower(): Shikigami(shiki, bounty_list, bbt_db) for shiki in shikigami_full_list}
+        self.shikigami_class = {shiki.lower(): Shikigami(shiki, bounty_list, bbt_db) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
 
     def location_finder(self, shiki):
         if 'None' in self.shikigami_class[shiki].locations:
