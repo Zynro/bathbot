@@ -32,9 +32,7 @@ def bold(text):
 
 def lower_and_underscore(text):
     """Lowers entire string and replaces all whitespace with underscores."""
-    text = text.lower()
-    text = text.replace(" ", "_")
-    return text
+    return text.lower().replace(' ', '_')
 
 class DriveAPI:
     """Manages the Google Drive API Auth and retreiving the CSV database."""
@@ -84,7 +82,7 @@ class Shikigami:
                 self.locations = locations.split('\n')
                 break
 
-        bbt_locale_list = []
+        bbt_database_raw_locations = []
         for row in bbt_db:
             if self.name.lower() in row[2].lower():
                 contains = row[2].split('\n')
@@ -95,28 +93,35 @@ class Shikigami:
                     if self.name.lower() in each.lower():
                         temp_list.append(each)
                         break
-                bbt_locale_list.append(temp_list)
-        if len(bbt_locale_list) != 0:
-            self.bbt_locations = self.generate_bbt_locations(bbt_locale_list)
+                bbt_database_raw_locations.append(temp_list)
+        if len(bbt_database_raw_locations) != 0:
+            self.bbt_locations = self.generate_bbt_locations(bbt_database_raw_locations)
         else:
             self.bbt_locations = 'None found in database.'
         if not self.alias: self.alias=''
         if not self.hints: self.hints=''
         if not self.locations: self.locations='None found in database.'
 
-    def generate_bbt_locations(self, bbt_locale_list):
-        if len(bbt_locale_list)==0:
+    def generate_bbt_locations(self, bbt_database_raw_locations):
+        """Generates the BBT Database list of locations"""
+        #If no locations, end and return none.
+        if len(bbt_database_raw_locations)==0:
             return None
         main_sub_and_shiki_list = []
-        for row in bbt_locale_list:
-            sub_loc_stage = ''.join(i for i in row[1] if not i.isdigit())
-            if any(ch.isdigit() for ch in row[1]):
-                sub_loc_stage_number = number_dict[''.join(i for i in row[1] if i.isdigit())]
-                sub_loc = f'{sub_loc_stage_number} {sub_loc_stage}'
+        for row in bbt_database_raw_locations:
+            if "chapter" in row[0].lower():
+                if any(ch.isdigit() for ch in row[1]):
+                    sub_loc_stage_name = ''.join(i for i in row[1] if not i.isdigit())
+                    sub_loc_stage_number = number_dict[''.join(i for i in row[1] if i.isdigit())]
+                    sub_loc_final = f'{sub_loc_stage_number} {sub_loc_stage_name}'
+                else:
+                    sub_loc_final = ''
+                amount = ''.join(i for i in row[2] if i.isdigit())
+                new_row = [row[0], f'{sub_loc_final}has {amount}']
             else:
-                sub_loc = ''
-            amount = ''.join(i for i in row[2] if i.isdigit())
-            new_row = [row[0], f'{sub_loc}has {amount}']
+                sub_loc_stage_name = row[1]
+                amount = ''.join(i for i in row[2] if i.isdigit())
+                new_row = [row[0], f'{sub_loc_stage_name} has {amount}']
             main_sub_and_shiki_list.append(new_row)
         final_result = []
         for row in main_sub_and_shiki_list:
@@ -128,9 +133,8 @@ class Shikigami:
             for row in main_sub_and_shiki_list:
                 if row[0] == location:
                     main_sub_and_shiki_list.remove(row)
-            appending = [location, sub_locale]
-            final_result.append(appending)
-        return(final_result)
+            final_result.append([location, sub_locale])
+        return final_result
 
 
 class Onmyoji(commands.Cog):
@@ -177,12 +181,6 @@ class Onmyoji(commands.Cog):
                 locations_base[locations_base.index(location)] = bold(location)
         locations_onmyoguide = '\n'.join(locations_base)
         return locations_onmyoguide
-
-    def location_finder_bbt(self, shiki):
-        """Locates and formats the locations. TODO: In proper order."""
-        if 'None' in self.shikigami_class[shiki].bbt_locations:
-            return "None found in database."
-        return self.shikigami_class[shiki].bbt_locations
 
     def shiki_bounty_embed(self, shiki):
         color = random.randint(0, 0xFFFFFF)
@@ -239,24 +237,15 @@ class Onmyoji(commands.Cog):
         if isinstance(error, commands.CheckFailure):
             await ctx.send("You do not have permission to uuse this command.")
 
-
     @commands.command(name='database_update', aliases=['update', 'download'])
-    @commands.check(has_permission)
-    async def download_shikigami_update(self, ctx):
+    async def download_shikigami_update_excel(self, ctx):
         '''If Officer, updates the bot's local database file.'''
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
         DriveAPI.get_gdrive_sheet_database()
         DriveAPI.generate_csv_databases()
-        await ctx.send("The Shikigami Bounty list has been successfully updated!")
+        await ctx.send("The Shikigami bounty list database has been successfully updated!")
 
-    @commands.command()
-    async def download_shikigami_update_excel(self, ctx):
-        '''If Officer, updates the bot's local database file.'''
-        await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
-        DriveAPI.get_gdrive_sheet_database_excel()
-        await ctx.send("The Shikigami Bounty list has been successfully updated!")
-
-    @download_shikigami_update.error
+    @download_shikigami_update_excel.error
     async def download_shikigami_update_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.send("You do not have permission to update the database file.\nPlease tag an @Officer to have them update it.")
@@ -279,83 +268,6 @@ class Onmyoji(commands.Cog):
             if search in self.shikigami_class[shiki].alias.lower():
                 shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
-                return
-        await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
-
-    @commands.command()
-    async def bbt(self, ctx):
-        name = 'Orochi'
-        print(name)
-        with open(config.bbt_csv_db_file, newline='') as bbt_db:
-            bbt_db_reader = csv.reader(bbt_db)
-            for i in range(0, 6):
-                next(bbt_db_reader)
-            bbt_db = [row for row in bbt_db_reader]
-        locale_list = []
-        for row in bbt_db:
-            if name.lower() in row[2].lower():
-                contains = row[2].split('\n')
-                temp_list = []
-                temp_list.append(row[0])
-                temp_list.append(row[1])
-                for each in contains:
-                    if name.lower() in each.lower():
-                        temp_list.append(each)
-                        break
-                locale_list.append(temp_list)
-        if len(locale_list)==0:
-            print('Entry not found in DB.')
-            return
-        main_sub_and_shiki_list = []
-        for row in locale_list:
-            for i in number_dict.keys():
-                if str(i) in row[1]:
-                    sub_loc_shiki = ''.join(i for i in row[1] if not i.isdigit())
-                    sub_loc = f'{number_dict[i]} {sub_loc_shiki}'
-                    break
-            amount = ''.join(i for i in row[2] if i.isdigit())
-            new_row = [row[0], f'{sub_loc}has {amount}.']
-            main_sub_and_shiki_list.append(new_row)
-        final_result = []
-        for row in main_sub_and_shiki_list:
-            sub_loc = []
-            location = row[0]
-            for again in main_sub_and_shiki_list:
-                if location == again[0]:
-                    sub_loc.append(again[1])
-            for row in main_sub_and_shiki_list:
-                if row[0] == location:
-                    main_sub_and_shiki_list.remove(row)
-            appending = [location, sub_loc]
-            final_result.append(appending)
-        for i in final_result:
-            print(i)
-        
-
-        '''for row in bbt_db_raw_locations:
-            contains = row[2].split('\n')
-            for each in contains:
-                if name.lower() in each:
-                    contains = each
-                    bbt_db_raw_locations[bbt_db_raw_locations.index(row)][2] = contains'''
-        
-    @commands.command()
-    async def bbt2(self, ctx, *search):
-        if not search:
-                await ctx.send('Search term cannot be blank, try again.')
-                return
-        search = ' '.join([term.lower() for term in search])
-        for shiki in self.shikigami_class.keys():
-            if search in shiki:
-                await ctx.send(self.shikigami_class[search].bbt_locations)
-                return
-            if search in self.shikigami_class[shiki].hints.lower():
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                await ctx.send(file=shiki_icon, embed=shiki_embed)
-                return
-            if search in self.shikigami_class[shiki].alias.lower():
-                await ctx.send(self.shiki_found(shiki))
-                await ctx.send(self.location_finder(shiki))
                 return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
