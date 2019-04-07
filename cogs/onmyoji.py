@@ -95,7 +95,7 @@ class Shikigami:
                         break
                 bbt_database_raw_locations.append(temp_list)
         if len(bbt_database_raw_locations) != 0:
-            self.bbt_locations = self.generate_bbt_locations(bbt_database_raw_locations)
+            self.bbt_locations = sorted(self.generate_bbt_locations(bbt_database_raw_locations))
         else:
             self.bbt_locations = 'None found in database.'
         if not self.alias: self.alias=''
@@ -110,12 +110,12 @@ class Shikigami:
         main_sub_and_shiki_list = []
         for row in bbt_database_raw_locations:
             if "chapter" in row[0].lower():
+                sub_loc_stage_name = ''.join(i for i in row[1] if not i.isdigit())
                 if any(ch.isdigit() for ch in row[1]):
-                    sub_loc_stage_name = ''.join(i for i in row[1] if not i.isdigit())
                     sub_loc_stage_number = number_dict[''.join(i for i in row[1] if i.isdigit())]
                     sub_loc_final = f'{sub_loc_stage_number} {sub_loc_stage_name}'
                 else:
-                    sub_loc_final = ''
+                    sub_loc_final = f'{sub_loc_stage_name} '
                 amount = ''.join(i for i in row[2] if i.isdigit())
                 new_row = [row[0], f'{sub_loc_final}has {amount}']
             else:
@@ -243,6 +243,7 @@ class Onmyoji(commands.Cog):
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
         DriveAPI.get_gdrive_sheet_database()
         DriveAPI.generate_csv_databases()
+        self.create_classes()
         await ctx.send("The Shikigami bounty list database has been successfully updated!")
 
     @download_shikigami_update_excel.error
