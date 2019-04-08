@@ -57,18 +57,13 @@ class DriveAPI:
     @classmethod
     def generate_csv_databases(cls):
         """Generate the CSV files from the given XLSX file obtained from Gdrive."""
-        book = pye.get_book(file_name=config.bbt_xlsx_file)
-        for sheet in book:
-            filename = f"{sheet.name}.csv"
-            #Convert Onmyoguide DB
-            if sheet.name == "Bounty List":
-                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.onmyoguide_csv_db_file)
-            #Convert BBT DB
-            if sheet.name == "Data Logging":
-                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.bbt_csv_db_file)
-            #Convert Shikigami Full List
-            if sheet.name == "Shikigami List":
-                pye.save_as(file_name = config.bbt_xlsx_file, sheet_name=sheet.name, dest_file_name=config.bbt_csv_shikigami_list_file)
+       # book = pye.get_book(file_name=config.bbt_xlsx_file)
+        #Convert Onmyoguide DB
+        pye.save_as(file_name = config.bbt_xlsx_file, sheet_name="Bounty List", dest_file_name=config.onmyoguide_csv_db_file)
+        #Convert BBT DB
+        pye.save_as(file_name = config.bbt_xlsx_file, sheet_name="Data Logging", dest_file_name=config.bbt_csv_db_file)
+        #Convert Shikigami Full List
+        pye.save_as(file_name = config.bbt_xlsx_file, sheet_name="Shikigami List", dest_file_name=config.bbt_csv_shikigami_list_file)
 
 class Shikigami:
     def __init__(self, input_name, onmyoguide_db, bbt_db):
@@ -189,7 +184,7 @@ class Onmyoji(commands.Cog):
         color = random.randint(0, 0xFFFFFF)
         icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
 
-        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description="Here are the bounty locations for this Shikigami:")
+        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description=f"{self.shikigami_class[shiki].name}'s hints are:")
         embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
 
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
