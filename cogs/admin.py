@@ -10,12 +10,12 @@ class Admin(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
     
-	async def cog_check(self, ctx):
+	async def check_cog(self, ctx):
 		return ctx.author.id in owner_list
 
 	# Hidden means it won't show up on the default help.
 	@commands.command(name='load', hidden=True)
-	async def cog_load(self, ctx, *, cog: str):
+	async def load_cog(self, ctx, *, cog: str):
 		"""Command which Loads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
@@ -26,14 +26,14 @@ class Admin(commands.Cog):
 		else:
 			await ctx.send('**Success: **cogs.'+cog+' has been loaded!')
 
-	@cog_load.error
-	async def cog_load_error(self, ctx, error):
+	@load_cog.error
+	async def load_error_cog(self, ctx, error):
 		if isinstance(error, commands.CheckFailure):
 			await ctx.send(permission)
 
 
 	@commands.command(name='unload', hidden=True)
-	async def cog_unload(self, ctx, *, cog: str):
+	async def unload_cog(self, ctx, *, cog: str):
 		"""Command which Unloads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
@@ -43,13 +43,13 @@ class Admin(commands.Cog):
 		else:
 			await ctx.send('**Success:** cogs.'+cog+' has been unloaded!')
 
-	@cog_unload.error
-	async def cog_unload_error(self, ctx, error):
+	@unload_cog.error
+	async def unload_error_cog(self, ctx, error):
 		if isinstance(error, commands.CheckFailure):
 			await ctx.send(permission)
 
 	@commands.command(name='reload', hidden=True)
-	async def cog_reload(self, ctx, *, cog: str):
+	async def reload_cog(self, ctx, *, cog: str):
 		"""Command which Reloads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
@@ -61,8 +61,8 @@ class Admin(commands.Cog):
 		else:
 			await ctx.send('**Success:** cogs.'+cog+' has been reloaded!')
 
-	@cog_reload.error
-	async def cog_reload_error(self, ctx, error):
+	@reload_cog.error
+	async def reload_error_cog(self, ctx, error):
 		if isinstance(error, commands.CheckFailure):
 			await ctx.send(permission)
 
