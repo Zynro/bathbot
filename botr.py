@@ -1,15 +1,20 @@
-import discord
+import os
+
 from discord.ext import commands
 import asyncio
-import requests
-import config
 import bot_token
+import config
+import discord
+import requests
 
 initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.onmyoji']
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
-    prefixes = ['&']
+    if os.environ.get('BATH_ENV') == 'local':
+        prefixes = ['~']
+    else:
+        prefixes = ['&']
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')

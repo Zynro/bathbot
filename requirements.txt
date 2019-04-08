@@ -6,4 +6,7 @@ asyncio
 google-api-python-client
 google_auth_oauthlib
 pandas
+pyexcel==0.5.13
+pyexcel-xls==0.5.8
+pyexcel-xlsx==0.5.7
 xlrd
