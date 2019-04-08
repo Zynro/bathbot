@@ -5,5 +5,7 @@ youtube_dl
 asyncio
 google-api-python-client
 google_auth_oauthlib
-pandas
+pyexcel
+pyexcel-xls
+pyexcel-xlsx
 xlrd
