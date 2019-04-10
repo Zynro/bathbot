@@ -65,13 +65,46 @@ class DriveAPI:
         #Convert Shikigami Full List
         pye.save_as(file_name = config.bbt_xlsx_file, sheet_name="Shikigami List", dest_file_name=config.bbt_csv_shikigami_list_file)
 
+class DatabaseGeneration:
+    # Opens and creates the onmyoguide bounty db
+    with open(config.onmyoguide_csv_db_file, newline='') as bounties:
+        bounty_reader = csv.reader(bounties)
+        for n in range(0, 3):
+            next(bounty_reader) #skips the first 3 rows because its headers + message + example
+        onmyoguide_database = [row for row in bounty_reader]
+    # Opens the BBT-made database for all stages with all their contents.
+    with open(config.bbt_csv_db_file, newline='') as bbt_db:
+        user_db_reader = csv.reader(bbt_db)
+        for i in range(0,6):
+            next(user_db_reader)
+        user_db = [row for row in user_db_reader]
+
+    @classmethod
+    def generate_user_shikigami_locations(cls, shiki_name):
+        user_database_filtered_locations = []
+        for row in cls.user_db:
+            if shiki_name.lower() in row[2].lower():
+                contains = row[2].split('\n')
+                temp_list = []
+                temp_list.append(row[0])
+                temp_list.append(row[1])
+                for each in contains:
+                    if shiki_name.lower() in each.lower():
+                        temp_list.append(each)
+                        break
+                user_database_filtered_locations.append(temp_list)
+        return user_database_filtered_locations
+
 class Shikigami:
-    def __init__(self, input_name, onmyoguide_db, bbt_db):
+    def __init__(self, input_name):
         self.name = input_name
         self.alias = self.hints = self.locations = self.icon_name = self.icon = None
         self.icon_name = f"{lower_and_underscore(self.name)}.png"
         self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
-        for row in onmyoguide_db:
+        if not os.path.isfile(self.icon):
+            self.icon_name = config.unknown_icon_file_name
+            self.icon = f'{config.shikigami_icon_location}/{self.icon_name}'
+        for row in DatabaseGeneration.onmyoguide_database:
             #need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name in shiki_name:
@@ -79,34 +112,22 @@ class Shikigami:
                 self.hints = hints
                 self.locations = locations.split('\n')
                 break
-
-        bbt_database_raw_locations = []
-        for row in bbt_db:
-            if self.name.lower() in row[2].lower():
-                contains = row[2].split('\n')
-                temp_list = []
-                temp_list.append(row[0])
-                temp_list.append(row[1])
-                for each in contains:
-                    if self.name.lower() in each.lower():
-                        temp_list.append(each)
-                        break
-                bbt_database_raw_locations.append(temp_list)
-        if len(bbt_database_raw_locations) != 0:
-            self.bbt_locations = sorted(self.generate_bbt_locations(bbt_database_raw_locations))
+        user_database = DatabaseGeneration.generate_user_shikigami_locations(self.name)
+        if len(user_database) != 0:
+            self.user_database_locations = sorted(self.generate_user_database_locations(user_database))
         else:
-            self.bbt_locations = 'None found in database.'
-        if not self.alias: self.alias=''
-        if not self.hints: self.hints=''
-        if not self.locations: self.locations='None found in database.'
+            self.user_database_locations = 'None found in database.'
+        if not self.alias: self.alias = ''
+        if not self.hints: self.hints = ''
+        if not self.locations: self.locations = 'None found in database.'
 
-    def generate_bbt_locations(self, bbt_database_raw_locations):
+    def generate_user_database_locations(self, user_location_database):
         """Generates the BBT Database list of locations"""
         #If no locations, end and return none.
-        if len(bbt_database_raw_locations)==0:
+        if len(user_location_database)==0:
             return None
         main_sub_and_shiki_list = []
-        for row in bbt_database_raw_locations:
+        for row in user_location_database:
             if "chapter" in row[0].lower():
                 sub_loc_stage_name = ''.join(i for i in row[1] if not i.isdigit())
                 if any(ch.isdigit() for ch in row[1]):
@@ -150,24 +171,12 @@ class Onmyoji(commands.Cog):
 
     def create_classes(self):
         """Creates all the Shikigami classes with each of their vairables in a dictionary."""
-        #Opens and creates the onmyoguide bounty db
-        with open(config.onmyoguide_csv_db_file, newline='') as bounties:
-            bounty_reader = csv.reader(bounties)
-            for n in range(0, 3):
-                next(bounty_reader) #skips the first 3 rows because its headers + message + example
-            bounty_list = [row for row in bounty_reader]
-        #Opens and creates the shikigami list from the full list of shikigami
+        # Opens and creates the shikigami list from the full list of shikigami
         with open(config.bbt_csv_shikigami_list_file, newline='') as shiki_list_csv:
             shiki_list_reader = csv.reader(shiki_list_csv)
             next(shiki_list_reader) #skips header
             shikigami_full_list = [row[0] for row in shiki_list_reader]
-        #Opens the BBT-made database for all stages with all their contents.
-        with open(config.bbt_csv_db_file, newline='') as bbt_db:
-            bbt_db_reader = csv.reader(bbt_db)
-            for i in range(0,6):
-                next(bbt_db_reader)
-            bbt_db = [row for row in bbt_db_reader]
-        self.shikigami_class = {shiki.lower(): Shikigami(shiki, bounty_list, bbt_db) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
+        self.shikigami_class = {shiki.lower(): Shikigami(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
 
     def location_finder(self, shiki):
         if 'None' in self.shikigami_class[shiki].locations:
@@ -183,15 +192,13 @@ class Onmyoji(commands.Cog):
     def shiki_bounty_embed(self, shiki):
         color = random.randint(0, 0xFFFFFF)
         icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
-
         embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description=f"{self.shikigami_class[shiki].name}'s hints are:")
         embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
-
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
 
-        if "None" not in self.shikigami_class[shiki].bbt_locations:
+        if "None" not in self.shikigami_class[shiki].user_database_locations:
             all_locations = []
-            for main in self.shikigami_class[shiki].bbt_locations:
+            for main in self.shikigami_class[shiki].user_database_locations:
                 sub_locs = ', '.join(main[1])
                 all_locations.append(f'{bold(main[0])} - {sub_locs}')
             all_locations = '\n'.join(all_locations)
