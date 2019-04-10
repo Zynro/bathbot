@@ -1,6 +1,6 @@
 discord.py[voice]==1.0.0
 opuslib==3.0.1
-requests==2.18.4
+requests==2.21.0
 youtube_dl==2017.12.2
 asyncio==3.4.3
 google-api-python-client==1.7.8
