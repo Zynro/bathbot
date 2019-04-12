@@ -1,4 +1,4 @@
-discord.py[voice]==1.0.0
+discord.py[voice]==1.0.1
 opuslib==3.0.1
 requests==2.21.0
 youtube_dl==2017.12.2
