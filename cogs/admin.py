@@ -19,7 +19,10 @@ class Admin(commands.Cog):
 		"""Command which Loads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
-			self.bot.load_extension('cogs.'+cog)
+			if '.' not in cog:
+				self.bot.load_extension('cogs.'+cog)
+			else:
+				self.bot.load_extension(cog)
 		except Exception as e:
 			await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
 			traceback.print_exc()
@@ -37,7 +40,10 @@ class Admin(commands.Cog):
 		"""Command which Unloads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
-			self.bot.unload_extension('cogs.'+cog)
+			if '.' not in cog:
+				self.bot.unload_extension('cogs.'+cog)
+			else:
+				self.bot.unload_extension(cog)
 		except Exception as e:
 			await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
 		else:
@@ -53,8 +59,12 @@ class Admin(commands.Cog):
 		"""Command which Reloads a Module.
 		Remember to use dot path. e.g: cogs.owner"""
 		try:
-			self.bot.unload_extension('cogs.'+cog)
-			self.bot.load_extension('cogs.'+cog)
+			if '.' not in cog:
+				self.bot.unload_extension('cogs.'+cog)
+				self.bot.load_extension('cogs.'+cog)
+			else:
+				self.bot.unload_extension(cog)
+				self.bot.load_extension(cog)
 		except Exception as e:
 			await ctx.send(f'**Error:** {type(e).__name__} - {e}')
 			traceback.print_exc()
