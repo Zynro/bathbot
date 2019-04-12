@@ -165,6 +165,7 @@ class Onmyoji(commands.Cog):
             DriveAPI.get_gdrive_sheet_database()
             DriveAPI.generate_csv_databases()
             self.create_classes()
+        self.shard_load_json()
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
@@ -285,6 +286,139 @@ class Onmyoji(commands.Cog):
     async def tengu(self, ctx):
         """hurrhurrhurr"""
         await ctx.send(file=discord.File('./images/tengu.jpg'))
+
+#=====================Shard Trading===========================
+
+    def shard_load_json(self):
+        try:
+            try:
+                with open(f'{config.list_path}/shard-trading-db.json', 'r') as shard_file:
+                    self.shard_trading_db = json.loads(shard_file.read())
+            except ValueError:
+                self.shard_trading_db = {}
+        except FileNotFoundError:
+            with open(f'{config.list_path}/shard-trading-db.json', 'w') as shard_file:
+                print('New Json file generated!')
+        return
+
+    def shard_file_writeout(self):
+        with open(f'{config.list_path}/shard-trading-db.json', 'w+') as shard_file:
+            json.dump(self.shard_trading_db, shard_file, indent=4)
+        return
+
+
+    @commands.group()
+    async def shard(self, ctx):
+        """
+        Shard trading command group. Use the various commands to assign and initialize shard trading.
+        """
+        if ctx.invoked_subcommand is None:
+            await ctx.send("Welcome to BathBot's Shard Trading implementation!\nZynro can't be assed to learn SQL right now so I'll be storing your shards as json!\nBecause who needs security?\nᶦ ˢʷᵉᵃʳ ᶦ'ˡˡ ˡᵉᵃʳⁿ ˢᵠˡ ˢᵒᵒⁿ\n=============")
+            await ctx.send("To begin, make a list of shards you have and need, each on a new line, and use the commands\n`&shard need list` and `&shard have list`\nwhere 'list' is the list of your shards.")
+            await ctx.send("An example would be:```&shard need Orochi\nMiketsu\nOotengu``` ```&shard have Shuten Doji 4\nIbaraki Doji 5``` Please make sure to use proper spelling!")
+        '''with open(f'lists/shard-trading/{str(str(ctx.message.author.id))}.txt', 'w+') as file:
+                                    file.write(str(args))'''
+
+    @shard.command(name='list')
+    async def shard_print_list(self, ctx, *args):
+        """
+        Initializes a shard trading file if none exists. First time use only, otherwise it does nothing.
+        """
+        print(self.shard_trading_db)
+        await ctx.send(f"Shard Lists for <@{str(ctx.message.author.id)}>:")
+        try:
+            need_list = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
+            await ctx.send(f"Shards you **Need**: ```\n{need_list}```")
+            print(need_list)
+        except KeyError:
+            await ctx.send("You have nothing in your Needed list yet.")
+        try:
+            need_list = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
+            await ctx.send(f"Shards you **Have**: ```\n{have_list}```")
+        except KeyError:
+            await ctx.send("You have nothing in your Have list yet.")
+
+    @shard.command(name="need")
+    async def shard_set_need(self,ctx,*,args):
+        """
+        Returns the list of shards you need.
+        If shards are listed, assigns those shards to your needed list.
+        """
+        arg_list = args.split("\n")
+        self.shard_load_json()
+        try: 
+            self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
+        except KeyError:
+            self.shard_trading_db[str(ctx.message.author.id)] = {'need':arg_list}
+        self.shard_file_writeout()
+        arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
+        await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```')
+
+    @shard.command(name="have")
+    async def shard_set_have(self,ctx,*,args):
+        """
+        Returns the list of shards you have.
+        If shards are listed, assigns those shards to your have list.
+        """
+        arg_list = args.split("\n")
+        self.shard_load_json()
+        try: 
+            self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
+        except KeyError:
+            self.shard_trading_db[str(ctx.message.author.id)] = {'have':arg_list}
+        self.shard_file_writeout()
+        arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
+        await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```')
+
+    @shard.command(name="search")
+    async def shard_search(self, ctx, other_user_raw):
+        if not other_user_raw or "@" not in other_user_raw:
+            await ctx.send("Must @ another user to compare your lists!")
+            return
+        other_user = ''.join(i for i in other_user_raw if i.isdigit())
+        user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(ctx.message.author.id)]['have']]
+        user1_have_list = [i.strip() for i in user1_have_list]
+        user1_need_list = [value for value in self.shard_trading_db[str(ctx.message.author.id)]['need']]
+        user2_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['have']]
+        user2_have_list = [i.strip() for i in user2_have_list]
+        user2_need_list = [value for value in self.shard_trading_db[other_user]['need']]
+        you_have_they_need = []
+        you_need_they_have = []
+        comparison_list = []
+        for user1_have in user1_have_list:
+            for user2_need in user2_need_list:
+                if user1_have == user2_need:
+                    you_have_they_need.append(user1_have)
+        for user1_need in user1_need_list:
+            for user2_have in user2_have_list:
+                if user1_need == user2_have:
+                    you_need_they_have.append(user1_need)
+        if len(you_have_they_need) == 0:
+            await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
+            return
+        else:
+            you_need_they_have = ''.join(you_need_they_have)
+            you_have_they_need = ''.join(you_have_they_need)
+            await ctx.send(f"""
+Good news everybody!
+You and {other_user_raw} have shards that can be exchanged!
+Shards you need that {other_user_raw} has:
+```
+{you_need_they_have}
+```
+Shards you have that {other_user_raw} needs:
+```
+{you_have_they_need}
+```
+""")
+
+    @commands.command(name='arg')
+    async def arg_return(self, ctx):
+        print(self.shard_trading_db[str(ctx.message.author.id)]['need'])
+
+
+#=====================Shard Trading===========================
+
         
 
 def setup(bot):
