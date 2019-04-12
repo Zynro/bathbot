@@ -198,9 +198,13 @@ class Onmyoji(commands.Cog):
 
         if "None" not in self.shikigami_class[shiki].user_database_locations:
             all_locations = []
+            count = 0
             for main in self.shikigami_class[shiki].user_database_locations:
+                if count == 5:
+                    break
                 sub_locs = ', '.join(main[1])
                 all_locations.append(f'{bold(main[0])} - {sub_locs}')
+                count+=1
             all_locations = '\n'.join(all_locations)
             embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
         else:
