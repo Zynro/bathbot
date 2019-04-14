@@ -349,7 +349,8 @@ class Onmyoji(commands.Cog):
         try: 
             self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
         except KeyError:
-            self.shard_trading_db[str(ctx.message.author.id)] = {'need':arg_list}
+            self.shard_trading_db[str(ctx.message.author.id)] = {}
+            self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```')
@@ -365,20 +366,16 @@ class Onmyoji(commands.Cog):
         try: 
             self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
         except KeyError:
-            self.shard_trading_db[str(ctx.message.author.id)] = {'have':arg_list}
+            self.shard_trading_db[str(ctx.message.author.id)] = {}
+            self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```')
 
-    @shard.command(name="search")
-    async def shard_search(self, ctx, other_user_raw):
-        if not other_user_raw or "@" not in other_user_raw:
-            await ctx.send("Must @ another user to compare your lists!")
-            return
-        other_user = ''.join(i for i in other_user_raw if i.isdigit())
-        user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(ctx.message.author.id)]['have']]
+    def compare_shard_db(main_user, other_user):
+        user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['have']]
         user1_have_list = [i.strip() for i in user1_have_list]
-        user1_need_list = [value for value in self.shard_trading_db[str(ctx.message.author.id)]['need']]
+        user1_need_list = [value for value in self.shard_trading_db[main_user]['need']]
         user2_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['have']]
         user2_have_list = [i.strip() for i in user2_have_list]
         user2_need_list = [value for value in self.shard_trading_db[other_user]['need']]
@@ -393,6 +390,23 @@ class Onmyoji(commands.Cog):
             for user2_have in user2_have_list:
                 if user1_need == user2_have:
                     you_need_they_have.append(user1_need)
+        return you_have_they_need, you_need_they_have
+
+
+    @shard.command(name="search")
+    async def shard_search(self, ctx, other_user_raw):
+        main_user = str(ctx.message.author.id)
+        if not other_user_raw or "@" not in other_user_raw:
+            await ctx.send("Must @ another user to compare your lists!")
+            return
+        elif "@" in other_user_raw:
+            you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user_raw)
+        elif "all" in other_user_raw:
+            for user in self.shard_trading_db:
+                if user == main_user:
+                    continue
+        else:
+            return await ctx.send("I didn't understand what you meant, try again.")
         if len(you_have_they_need) == 0:
             await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
             return
@@ -402,11 +416,11 @@ class Onmyoji(commands.Cog):
             await ctx.send(f"""
 Good news everybody!
 You and {other_user_raw} have shards that can be exchanged!
-Shards you need that {other_user_raw} has:
+Shards you **need** that {other_user_raw} has:
 ```
 {you_need_they_have}
 ```
-Shards you have that {other_user_raw} needs:
+Shards you **have** that {other_user_raw} needs:
 ```
 {you_have_they_need}
 ```
