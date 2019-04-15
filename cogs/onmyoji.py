@@ -298,6 +298,7 @@ class Onmyoji(commands.Cog):
                 self.shard_trading_db = {}
         except FileNotFoundError:
             with open(f'{config.list_path}/shard-trading-db.json', 'w') as shard_file:
+                self.shard_trading_db = {}
                 print('New Json file generated!')
         return
 
@@ -306,6 +307,18 @@ class Onmyoji(commands.Cog):
             json.dump(self.shard_trading_db, shard_file, indent=4)
         return
 
+    def shard_print_need_list(self, user):
+        need_list = '\n'.join(self.shard_trading_db[user]['need'])
+        return f"Shards you **Need**: ```\n{need_list}```"
+
+    def shard_print_have_list(self, user):
+        have_list = '\n'.join(self.shard_trading_db[user]['have'])
+        return f"Shards you **Have**: ```\n{have_list}```"
+
+    def shard_entry_init(self, ctx):
+        self.shard_trading_db[str(ctx.message.author.id)] = {'name':ctx.author.nick, 'have':'', 'need':''}
+        self.shard_file_writeout()
+        return
 
     @commands.group()
     async def shard(self, ctx):
@@ -313,37 +326,42 @@ class Onmyoji(commands.Cog):
         Shard trading command group. Use the various commands to assign and initialize shard trading.
         """
         if ctx.invoked_subcommand is None:
-            await ctx.send("Welcome to BathBot's Shard Trading implementation!\nZynro can't be assed to learn SQL right now so I'll be storing your shards as json!\nBecause who needs security?\nᶦ ˢʷᵉᵃʳ ᶦ'ˡˡ ˡᵉᵃʳⁿ ˢᵠˡ ˢᵒᵒⁿ\n=============")
+            if self.shard_trading_db.get(str(ctx.message.author.id)) is None:
+                self.shard_entry_init(ctx)
+            await ctx.send("Welcome to BathBot's Shard Trading implementation!")
             await ctx.send("To begin, make a list of shards you have and need, each on a new line, and use the commands\n`&shard need list` and `&shard have list`\nwhere 'list' is the list of your shards.")
             await ctx.send("An example would be:```&shard need Orochi\nMiketsu\nOotengu``` ```&shard have Shuten Doji 4\nIbaraki Doji 5``` Please make sure to use proper spelling!")
-        '''with open(f'lists/shard-trading/{str(str(ctx.message.author.id))}.txt', 'w+') as file:
-                                    file.write(str(args))'''
 
+    
     @shard.command(name='list')
-    async def shard_print_list(self, ctx, *args):
+    async def shard_print_list(self, ctx, *other_user):
         """
-        Initializes a shard trading file if none exists. First time use only, otherwise it does nothing.
+        If blank, prints list for both need and have lists for the user.
+        Otherwise, if provided a @user, prints that users lists.
         """
-        print(self.shard_trading_db)
-        await ctx.send(f"Shard Lists for <@{str(ctx.message.author.id)}>:")
-        try:
-            need_list = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
-            await ctx.send(f"Shards you **Need**: ```\n{need_list}```")
-            print(need_list)
-        except KeyError:
-            await ctx.send("You have nothing in your Needed list yet.")
-        try:
-            need_list = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
-            await ctx.send(f"Shards you **Have**: ```\n{have_list}```")
-        except KeyError:
-            await ctx.send("You have nothing in your Have list yet.")
+        if not other_user:
+            await ctx.send(f"__Shard Lists for <@{str(ctx.message.author.id)}>:__")
+            await ctx.send(self.shard_print_need_list(str(ctx.message.author.id)))
+            await ctx.send(self.shard_print_have_list(str(ctx.message.author.id)))
+        '''
+        else:
+            await ctx.send(f"Shard Lists for <@{str(ctx.message.author.id)}>:")
+            await ctx.send(shard_print_need_list(ctx))
+            await ctx.send(shard_print_have_list(ctx))
+        '''
+
 
     @shard.command(name="need")
-    async def shard_set_need(self,ctx,*,args):
+    async def shard_set_need(self,ctx,*,args=None):
         """
         Returns the list of shards you need.
         If shards are listed, assigns those shards to your needed list.
         """
+        if not args:
+            try: 
+                await ctx.send(self.shard_print_need_list(str(ctx.message.author.id)))
+            except KeyError:
+                await ctx.send('You do not have a "Need" list yet! Use `&shard` to generate your entry first!')
         arg_list = args.split("\n")
         self.shard_load_json()
         try: 
@@ -356,11 +374,16 @@ class Onmyoji(commands.Cog):
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```')
 
     @shard.command(name="have")
-    async def shard_set_have(self,ctx,*,args):
+    async def shard_set_have(self,ctx,*,args=None):
         """
         Returns the list of shards you have.
         If shards are listed, assigns those shards to your have list.
         """
+        if not args:
+            try: 
+                await ctx.send(self.shard_print_have_list(str(ctx.message.author.id)))
+            except KeyError:
+                await ctx.send('You do not have a "Have" list yet! Use `&shard` to generate your entry first!')
         arg_list = args.split("\n")
         self.shard_load_json()
         try: 
@@ -372,49 +395,56 @@ class Onmyoji(commands.Cog):
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```')
 
-    def compare_shard_db(main_user, other_user):
-        user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['have']]
-        user1_have_list = [i.strip() for i in user1_have_list]
-        user1_need_list = [value for value in self.shard_trading_db[main_user]['need']]
-        user2_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['have']]
-        user2_have_list = [i.strip() for i in user2_have_list]
-        user2_need_list = [value for value in self.shard_trading_db[other_user]['need']]
-        you_have_they_need = []
-        you_need_they_have = []
-        comparison_list = []
-        for user1_have in user1_have_list:
-            for user2_need in user2_need_list:
-                if user1_have == user2_need:
-                    you_have_they_need.append(user1_have)
-        for user1_need in user1_need_list:
-            for user2_have in user2_have_list:
-                if user1_need == user2_have:
-                    you_need_they_have.append(user1_need)
+    def compare_shard_db(self, main_user, other_user):
+        try:
+            user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['have']]
+            user1_have_list = [i.strip().lower() for i in user1_have_list]
+            user1_need_list = [value.strip().lower() for value in self.shard_trading_db[main_user]['need']]
+            user2_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['have']]
+            user2_have_list = [i.strip().lower() for i in user2_have_list]
+            user2_need_list = [value.strip().lower() for value in self.shard_trading_db[other_user]['need']]
+            you_have_they_need = []
+            you_need_they_have = []
+            comparison_list = []
+            for user1_have in user1_have_list:
+                for user2_need in user2_need_list:
+                    if user1_have.lower() == user2_need.lower():
+                        you_have_they_need.append(user1_have)
+            for user1_need in user1_need_list:
+                for user2_have in user2_have_list:
+                    if user1_need.lower() == user2_have.lower():
+                        you_need_they_have.append(user1_need)
+            you_have_they_need = [shiki.capitalize() for shiki in you_have_they_need]
+            you_need_they_have = [shiki.capitalize() for shiki in you_need_they_have]
+        except KeyError:
+            you_have_they_need = None
+            you_need_they_have = None
+            return you_have_they_need, you_need_they_have
+        if len(you_have_they_need) == 0 and len(you_need_they_have) == 0:
+            return None, None
         return you_have_they_need, you_need_they_have
 
 
     @shard.command(name="search")
     async def shard_search(self, ctx, other_user_raw):
+        other_user = ''.join(i for i in other_user_raw if i.isdigit())
         main_user = str(ctx.message.author.id)
-        if not other_user_raw or "@" not in other_user_raw:
-            await ctx.send("Must @ another user to compare your lists!")
+        if not other_user_raw:
+            await ctx.send("Must enter either a @user or the term 'all' to search the database!")
             return
         elif "@" in other_user_raw:
-            you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user_raw)
-        elif "all" in other_user_raw:
-            for user in self.shard_trading_db:
-                if user == main_user:
-                    continue
-        else:
-            return await ctx.send("I didn't understand what you meant, try again.")
-        if len(you_have_they_need) == 0:
-            await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
-            return
-        else:
-            you_need_they_have = ''.join(you_need_they_have)
-            you_have_they_need = ''.join(you_have_they_need)
-            await ctx.send(f"""
-Good news everybody!
+            you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
+            if not you_have_they_need:
+                await ctx.send("Either you or the user your checking doesn't have entries in the shard database.")
+                return
+            if len(you_have_they_need) == 0:
+                await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
+                return
+            else:
+                you_need_they_have = ' '.join(you_need_they_have)
+                you_have_they_need = ' '.join(you_have_they_need)
+                await ctx.send(f"""
+__Good news everyone!__
 You and {other_user_raw} have shards that can be exchanged!
 Shards you **need** that {other_user_raw} has:
 ```
@@ -425,10 +455,50 @@ Shards you **have** that {other_user_raw} needs:
 {you_have_they_need}
 ```
 """)
+                return
+        elif "all" in other_user_raw:
+            match_list = []
+            for user in self.shard_trading_db:
+                if user == main_user:
+                    continue
+                you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, user)
+                if not you_have_they_need:
+                    continue
+                if len(you_have_they_need) >= 1 and len(you_need_they_have) >= 1:
+                    try:
+                        print(ctx.guild.get_member(int(user)).nick)
+                        if not ctx.guild.get_member(int(user)).nick:
+                            match_list.append(ctx.guild.get_member(int(user)).name)
+                        else:
+                            match_list.append(ctx.guild.get_member(int(user)).nick)
+                    except AttributeError:
+                        continue
+            if not match_list:
+                return await ctx.send("I apologize, I was not able to find any other members that match shard needs and haves with you.")
+            print(match_list)
+            if len(match_list) == 1:
+                match_string = f' - {match_list[0]}'
+            else:
+                match_string = ' - \n'.join(match_list)
+            await ctx.send(f"""
+__Good news everyone!__
+You and the following users have shards that can be traded:
+**{match_string}**
+Use `&search @user` where user is one of the ones listed above to check which shards each of you need/have!
+""")
+        else:
+            return await ctx.send("I didn't understand what you meant, try again.")
+        
 
     @commands.command(name='arg')
-    async def arg_return(self, ctx):
-        print(self.shard_trading_db[str(ctx.message.author.id)]['need'])
+    async def arg_return(self, ctx, *, arg):
+        args = arg
+        await ctx.send(eval(args))
+
+    @commands.command(name='arge')
+    async def arg_return_exec(self, ctx, *, arg):
+        args = arg
+        await ctx.send(exec(args))
 
 
 #=====================Shard Trading===========================
