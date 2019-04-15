@@ -488,17 +488,6 @@ Use `&search @user` where user is one of the ones listed above to check which sh
 """)
         else:
             return await ctx.send("I didn't understand what you meant, try again.")
-        
-
-    @commands.command(name='arg')
-    async def arg_return(self, ctx, *, arg):
-        args = arg
-        await ctx.send(eval(args))
-
-    @commands.command(name='arge')
-    async def arg_return_exec(self, ctx, *, arg):
-        args = arg
-        await ctx.send(exec(args))
 
 
 #=====================Shard Trading===========================
