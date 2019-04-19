@@ -95,6 +95,41 @@ class DatabaseGeneration:
                 user_database_filtered_locations.append(temp_list)
         return user_database_filtered_locations
 
+class OnmyojiEmbeds:
+
+    @classmethod
+    def shard_trading_embed
+    embed = discord.Embed(title="<<user's>> Shard Information List", colour=discord.Colour(0x694ece), description="Notes:")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/embed/avatars/0.png")
+    embed.set_footer(text="Up-to-Date as of <<timestamp>>")
+
+    embed.add_field(name="Needs these Shards:", value="<<need_list>>", inline=True)
+    embed.add_field(name="Has these Shards:", value="<<have_list>>", inline=True)
+    return embed
+
+    @classmethod
+    def shiki_bounty_embed(self, shiki):
+        color = random.randint(0, 0xFFFFFF)
+        icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
+        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description=f"{self.shikigami_class[shiki].name}'s hints are:")
+        embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
+        embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
+
+        if "None" not in self.shikigami_class[shiki].user_database_locations:
+            all_locations = []
+            count = 0
+            for main in self.shikigami_class[shiki].user_database_locations:
+                if count == 5:
+                    break
+                sub_locs = ', '.join(main[1])
+                all_locations.append(f'{bold(main[0])} - {sub_locs}')
+                count+=1
+            all_locations = '\n'.join(all_locations)
+            embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
+        else:
+            embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
+        return embed, icon
+
 class Shikigami:
     def __init__(self, input_name):
         self.name = input_name
@@ -190,28 +225,6 @@ class Onmyoji(commands.Cog):
         locations_onmyoguide = '\n'.join(locations_base)
         return locations_onmyoguide
 
-    def shiki_bounty_embed(self, shiki):
-        color = random.randint(0, 0xFFFFFF)
-        icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
-        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description=f"{self.shikigami_class[shiki].name}'s hints are:")
-        embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
-        embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
-
-        if "None" not in self.shikigami_class[shiki].user_database_locations:
-            all_locations = []
-            count = 0
-            for main in self.shikigami_class[shiki].user_database_locations:
-                if count == 5:
-                    break
-                sub_locs = ', '.join(main[1])
-                all_locations.append(f'{bold(main[0])} - {sub_locs}')
-                count+=1
-            all_locations = '\n'.join(all_locations)
-            embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
-        else:
-            embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
-        return embed, icon
-
     @commands.command()
     async def shikistats(self, ctx, *search):
         name = ' '.join([term.lower() for term in search])
@@ -269,15 +282,15 @@ class Onmyoji(commands.Cog):
         search = ' '.join([term.lower() for term in search])
         for shiki in self.shikigami_class.keys():
             if search in shiki:
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                shiki_embed, shiki_icon = OnmyojiEmbeds.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
             if search in self.shikigami_class[shiki].hints.lower():
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                shiki_embed, shiki_icon = OnmyojiEmbeds.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
             if search in self.shikigami_class[shiki].alias:                
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                shiki_embed, shiki_icon = OnmyojiEmbeds.shiki_bounty_embed(shiki)
                 await ctx.send(file=shiki_icon, embed=shiki_embed)
                 return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
@@ -316,7 +329,7 @@ class Onmyoji(commands.Cog):
         return f"Shards you **Have**: ```\n{have_list}```"
 
     def shard_entry_init(self, ctx):
-        self.shard_trading_db[str(ctx.message.author.id)] = {'name':ctx.author.nick, 'have':'', 'need':''}
+        self.shard_trading_db[str(ctx.message.author.id)] = {'name':ctx.author.nick,'comment':'' 'have':'', 'need':''}
         self.shard_file_writeout()
         return
 
