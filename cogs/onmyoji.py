@@ -362,6 +362,7 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.shard_print_need_list(str(ctx.message.author.id)))
             except KeyError:
                 await ctx.send('You do not have a "Need" list yet! Use `&shard` to generate your entry first!')
+                return
         arg_list = args.split("\n")
         self.shard_load_json()
         try: 
@@ -384,6 +385,7 @@ class Onmyoji(commands.Cog):
                 await ctx.send(self.shard_print_have_list(str(ctx.message.author.id)))
             except KeyError:
                 await ctx.send('You do not have a "Have" list yet! Use `&shard` to generate your entry first!')
+                return
         arg_list = args.split("\n")
         self.shard_load_json()
         try: 
@@ -437,7 +439,7 @@ class Onmyoji(commands.Cog):
             if not you_have_they_need:
                 await ctx.send("Either you or the user your checking doesn't have entries in the shard database.")
                 return
-            if len(you_have_they_need) == 0:
+            if len(you_have_they_need) == 0 or len(you_need_they_have) == 0:
                 await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
                 return
             else:
