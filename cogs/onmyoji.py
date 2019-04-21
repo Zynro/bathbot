@@ -551,7 +551,7 @@ Use `&search @user` where user is one of the ones listed above to check which sh
                     if other_user_raw in member.name:
                         other_user = member.id
         if not other_user:
-            return
+            return await ctx.send("I could not find that user, or you typed an improper keyword.")
         you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
         if not you_have_they_need:
             await ctx.send("Either you or the user your checking doesn't have entries in the shard database.")
