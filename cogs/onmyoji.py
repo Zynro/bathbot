@@ -361,7 +361,7 @@ class Onmyoji(commands.Cog, Embeds):
         return have_list
 
     def shard_entry_init(self, ctx):
-        self.shard_trading_db[str(ctx.message.author.id)] = {'name':ctx.author.nick,'comment':'', 'have':'', 'need':''}
+        self.shard_trading_db[str(ctx.message.author.id)] = {'comment':'', 'have':'', 'need':''}
         self.shard_file_writeout()
         return
 
