@@ -28,7 +28,10 @@ number_dict = {'1':'First', '2':'Second', '3':'Third', '4':'Fourth', '5':'Fifth'
 
 def bold(text):
     '''Returns the Discord bolded version of input text.'''
-    return f'**{text}**'
+    if text:
+        return f'**{text}**'
+    else:
+        return text
 
 def lower_and_underscore(text):
     """Lowers entire string and replaces all whitespace with underscores."""
@@ -103,10 +106,10 @@ class Embeds:
         need_list = ''
         have_list = ''
         for i in self.shard_trading_db[str(user.id)]['need']:
-            numbers, shiki = self.shard_split_variable(i)
+            number, shiki = self.shard_split_variable(i)
             need_list = f"{need_list}{bold(number)} {shiki}\n"
         for i in self.shard_trading_db[str(user.id)]['have']:
-            numbers, shiki = self.shard_split_variable(i)
+            number, shiki = self.shard_split_variable(i)
             have_list = f"{have_list}{bold(number)} {shiki}\n"
         if not user.nick:
             nick = user.name
