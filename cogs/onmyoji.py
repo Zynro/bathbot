@@ -99,15 +99,14 @@ class DatabaseGeneration:
         return user_database_filtered_locations
 
 class Embeds:
-    @classmethod
-    def shard_trading_embed(self, user, shard_trading_db):
+    def shard_trading_embed(self, user):
         need_list = ''
         have_list = ''
-        for i in shard_trading_db[str(user.id)]['need']:
+        for i in self.shard_trading_db[str(user.id)]['need']:
             number = ''.join(b for b in i if b.isdigit())
             shiki = ''.join(b for b in i if not b.isdigit())
             need_list = f"{need_list}{bold(number)} {shiki}\n"
-        for i in shard_trading_db[str(user.id)]['have']:
+        for i in self.shard_trading_db[str(user.id)]['have']:
             number = ''.join(b for b in i if b.isdigit())
             shiki = ''.join(b for b in i if not b.isdigit())
             have_list = f"{have_list}{bold(number)} {shiki}\n"
@@ -115,10 +114,14 @@ class Embeds:
             nick = user.name
         else:
             nick = user.nick
+        if self.check_trading_status(user.id) == True:
+            trading_status = "available"
+        else:
+            trading_status = "unavailable"
         try:
-            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {shard_trading_db[str(user.id)]['notes']}")
+            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading.")
         except KeyError:
-            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()))            
+            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")            
         embed.set_thumbnail(url=user.avatar_url)
         #embed.set_footer(text="Up-to-Date as of <<timestamp>>")
         embed.add_field(name="Needs these Shards:", value=need_list, inline=True)
@@ -361,7 +364,7 @@ class Onmyoji(commands.Cog, Embeds):
         return have_list
 
     def shard_entry_init(self, ctx):
-        self.shard_trading_db[str(ctx.message.author.id)] = {'comment':'', 'have':'', 'need':''}
+        self.shard_trading_db[str(ctx.message.author.id)] = {'status': True, 'notes':'', 'have':'', 'need':''}
         self.shard_file_writeout()
         return
 
@@ -387,9 +390,17 @@ Ootengu
 Yotohime``` 
 ```&shard have Shuten Doji 4
 Ibaraki Doji 5
-Orochi 10
+10 Orochi
 Miketsu 19``` 
+The numbers placement does not matter.
+
 Please make sure to use proper spelling, or when using the search function your entry may be skipped.
+
+Once you have set your lists, use the `&shard search` command to search users and the entire database for people to trade with!
+
+To change your trading status so people wont get you in their results, use `&shard stauts on` or `&shard stauts off`
+
+To receive help on commands at any time, use the `&help shard` command, or tag @Zynro.
 """)
 
     
@@ -400,7 +411,7 @@ Please make sure to use proper spelling, or when using the search function your 
         Otherwise, if provided a @user, prints that users lists.
         """
         if not other_user:
-            embed = Embeds.shard_trading_embed(ctx.author, self.shard_trading_db)
+            embed = self.shard_trading_embed(ctx.author)
             await ctx.send(embed=embed)
 
 
@@ -452,12 +463,13 @@ Please make sure to use proper spelling, or when using the search function your 
             self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
-        await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```')
+        await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently')
 
     @shard.command(name="notes")
     async def shard_set_notes(self, ctx, *, args):
         """
         Sets the user note for their shard trading database entry.
+        Leave the field blank to disable, otherwise type in a note to set that note.
         """
         self.shard_load_json()
         if not args:
@@ -469,9 +481,43 @@ Please make sure to use proper spelling, or when using the search function your 
             await ctx.send(f"Your Shard Trading entry Notes have been set to:\n```{args}```")
             self.shard_file_writeout()
 
+    def check_trading_status(self, user):
+        try:
+            return self.shard_trading_db[str(user)]['status']
+        except KeyError:
+            return True
+
+    @shard.command(name="status")
+    async def shard_set_trading_status(self, ctx, *arg):
+        """
+        Toggles the trading status for the user.
+        If no terms are given, toggles it.
+        Otherwise, if on/off is given as a term, sets it to that state.
+        """
+        self.shard_load_json()
+        try:
+            temp = self.shard_trading_db[str(ctx.author.id)]['status']
+        except KeyError:
+            self.shard_trading_db[str(ctx.author.id)]['status'] = True
+        if not arg:
+            if self.check_trading_status(ctx.author.id) == True:
+                self.shard_trading_db[str(ctx.author.id)]['status'] = False
+                return await ctx.send(f"{ctx.author.mention} is now unavailable to be searched for trading.")
+            else:
+                self.shard_trading_db[str(ctx.author.id)]['status'] = True
+                return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
+        else:
+            if arg == "on":
+                self.shard_trading_db[str(ctx.author.id)]['status'] = True
+                return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
+            elif arg == "off":
+                self.shard_trading_db[str(ctx.author.id)]['status'] = False
+                return await ctx.send(f"{ctx.author.mention} is unavailable to be searched for trading.")
 
     def compare_shard_db(self, main_user, other_user):
         try:
+            if self.check_trading_status(main_user) == False or self.check_trading_status(other_user) == False:
+                return None, None
             user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['have']]
             user1_have_list = [i.strip().lower() for i in user1_have_list]
             user1_need_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['need']]
@@ -496,9 +542,7 @@ Please make sure to use proper spelling, or when using the search function your 
             you_have_they_need = [shiki.capitalize() for shiki in you_have_they_need]
             you_need_they_have = [shiki.capitalize() for shiki in you_need_they_have]
         except KeyError:
-            you_have_they_need = None
-            you_need_they_have = None
-            return you_have_they_need, you_need_they_have
+            return None, None
         if len(you_have_they_need) == 0 and len(you_need_they_have) == 0:
             return None, None
         return you_have_they_need, you_need_they_have
@@ -506,6 +550,13 @@ Please make sure to use proper spelling, or when using the search function your 
 
     @shard.command(name="search")
     async def shard_search(self, ctx, other_user_raw):
+        """
+        Compares shard trading lists with other users.
+        Specify a name, or an @user tag to compare to that single user.
+            e.g. &shard search Zynro
+        Specify "all" to search the entire database.
+            e.g. &shard search all
+        """
         main_user = str(ctx.message.author.id)
         other_user = None
         if not other_user_raw:
