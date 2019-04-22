@@ -499,19 +499,25 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
             temp = self.shard_trading_db[str(ctx.author.id)]['status']
         except KeyError:
             self.shard_trading_db[str(ctx.author.id)]['status'] = True
+            self.shard_file_writeout();
+            return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
         if not arg:
             if self.check_trading_status(ctx.author.id) == True:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = False
+                self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is now unavailable to be searched for trading.")
             else:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
+                self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
         else:
             if arg == "on":
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
+                self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
             elif arg == "off":
                 self.shard_trading_db[str(ctx.author.id)]['status'] = False
+                self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is unavailable to be searched for trading.")
 
     def compare_shard_db(self, main_user, other_user):
@@ -557,13 +563,13 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         Specify "all" to search the entire database.
             e.g. &shard search all
         """
+        self.shard_load_json()
         main_user = str(ctx.message.author.id)
         other_user = None
         if not other_user_raw:
             await ctx.send("Must enter either a user's name, nickname, @tag, or the term 'all' to search the database!")
             return
         if other_user_raw.lower().strip() == "all":
-            self.shard_load_json()
             match_list = []
             for user in self.shard_trading_db:
                 if user == main_user:
@@ -594,18 +600,21 @@ Use `&search @user` where user is one of the ones listed above to check which sh
         for member in ctx.guild.members:
             if "@" in other_user_raw:
                 other_user = ''.join(i for i in other_user_raw if i.isdigit())
+                break
             else:
                 try:
-                    if other_user_raw in member.nick:
-                        other_user = member.id
-                except TypeError:
-                    if other_user_raw in member.name:
-                        other_user = member.id
+                    if other_user_raw.lower().strip() in member.nick.lower():
+                        other_user = str(member.id)
+                        break
+                except (TypeError, AttributeError):
+                    if other_user_raw.lower().strip() in member.name.lower():
+                        other_user = str(member.id)
+                        break
         if not other_user:
             return await ctx.send("I could not find that user, or you typed an improper keyword.")
         you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
         if not you_have_they_need:
-            await ctx.send("Either you or the user your checking doesn't have entries in the shard database.")
+            await ctx.send("Either you or the user you're checking doesn't have entries in the shard database, or one of you isn't available for trading.")
             return
         if len(you_have_they_need) == 0 or len(you_need_they_have) == 0:
             await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
