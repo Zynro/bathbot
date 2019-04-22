@@ -103,12 +103,10 @@ class Embeds:
         need_list = ''
         have_list = ''
         for i in self.shard_trading_db[str(user.id)]['need']:
-            number = ''.join(b for b in i if b.isdigit())
-            shiki = ''.join(b for b in i if not b.isdigit())
+            numbers, shiki = self.shard_split_variable(i)
             need_list = f"{need_list}{bold(number)} {shiki}\n"
         for i in self.shard_trading_db[str(user.id)]['have']:
-            number = ''.join(b for b in i if b.isdigit())
-            shiki = ''.join(b for b in i if not b.isdigit())
+            numbers, shiki = self.shard_split_variable(i)
             have_list = f"{have_list}{bold(number)} {shiki}\n"
         if not user.nick:
             nick = user.name
@@ -323,6 +321,10 @@ class Onmyoji(commands.Cog, Embeds):
 #=====================Shard Trading===========================
 
     def shard_load_json(self):
+        """
+        Loads the json shard database file. 
+        Generates a new empty one if it does not exist.
+        """
         try:
             try:
                 with open(f'{config.list_path}/shard-trading-db.json', 'r') as shard_file:
@@ -336,34 +338,54 @@ class Onmyoji(commands.Cog, Embeds):
         return
 
     def shard_file_writeout(self):
+        """Writes to Json shard database file."""
         with open(f'{config.list_path}/shard-trading-db.json', 'w+') as shard_file:
             json.dump(self.shard_trading_db, shard_file, indent=4)
         return
 
+    def shard_split_variable(self, arg):
+        """
+        Splits the incoming '<Shiki> <Amount>' variable into its number and shiki components.
+        """
+        numbers = ''.join(b for b in arg if b.isdigit())
+        shiki = ''.join(b for b in arg if not b.isdigit())
+        return numbers, shiki
+
     def shard_print_need_list(self, user):
+        """
+        Returns the entirety of the 'need' list of the given user in the format of
+        <Amount> <Shiki>
+        Each on a new line.
+        """
         need_list = []
         for i in self.shard_trading_db[user]['need']:
             if not i:
                 continue
-            numbers = ''.join(b for b in i if b.isdigit())
-            shiki = ''.join(b for b in i if not b.isdigit())
+            numbers, shiki = self.shard_split_variable(i)
             need_list.append(f"{numbers} {shiki}")
         self.shard_load_json()
         return need_list
         
 
     def shard_print_have_list(self, user):
+        """
+        Returns the entirety of the 'have' list of the given user in the format of
+        <Amount> <Shiki>
+        Each on a new line.
+        """
         have_list = []
         for i in self.shard_trading_db[user]['have']:
             if not i:
                 continue
-            numbers = ''.join(b for b in i if b.isdigit())
-            shiki = ''.join(b for b in i if not b.isdigit())
+            numbers, shiki = self.shard_split_variable(i)
             have_list.append(f"{numbers} {shiki}")
         self.shard_load_json()
         return have_list
 
     def shard_entry_init(self, ctx):
+        """
+        Initializes the dicitonary entry of the user in the shard trading database.
+        """
         self.shard_trading_db[str(ctx.message.author.id)] = {'status': True, 'notes':'', 'have':'', 'need':''}
         self.shard_file_writeout()
         return
@@ -430,6 +452,11 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
                 await ctx.send('You do not have a "Need" list yet! Use `&shard` to generate your entry first!')
                 return
         arg_list = args.split("\n")
+        for shiki in arg_list:
+            numbers, shiki = self.shard_split_variable(shiki)
+            if "frog" not in shiki.lower().strip():
+                if shiki.lower().strip() not in self.shikigami_class.keys():
+                    return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
         self.shard_load_json()
         try: 
             self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
@@ -455,6 +482,11 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
                 await ctx.send('You do not have a "Have" list yet! Use `&shard` to generate your entry first!')
                 return
         arg_list = args.split("\n")
+        for shiki in arg_list:
+            numbers, shiki = self.shard_split_variable(shiki)
+            if "frog" not in shiki.lower().strip():
+                if shiki.lower().strip() not in self.shikigami_class.keys():
+                    return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
         self.shard_load_json()
         try: 
             self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
