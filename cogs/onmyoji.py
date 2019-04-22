@@ -120,7 +120,10 @@ class Embeds:
         else:
             trading_status = "unavailable"
         try:
-            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading.")
+            if self.shard_trading_db[str(user.id)]['notes']:
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading.")
+            else:
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")  
         except KeyError:
             embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")            
         embed.set_thumbnail(url=user.avatar_url)
@@ -468,7 +471,11 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
             self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
-        await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```')
+        if self.check_trading_status(ctx.author.id) == True:
+            trading_status = "available"
+        else:
+            trading_status = "unavailable"
+        await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard.command(name="have")
     async def shard_set_have(self,ctx,*,args=None):
@@ -498,22 +505,31 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
             self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
-        await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently')
+        if self.check_trading_status(ctx.author.id) == True:
+            trading_status = "available"
+        else:
+            trading_status = "unavailable"
+        await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard.command(name="notes")
-    async def shard_set_notes(self, ctx, *, args):
+    async def shard_set_notes(self, ctx, *notes):
         """
         Sets the user note for their shard trading database entry.
         Leave the field blank to disable, otherwise type in a note to set that note.
         """
+        args = ' '.join(notes)
         self.shard_load_json()
+        if self.check_trading_status(ctx.author.id) == True:
+            trading_status = "available"
+        else:
+            trading_status = "unavailable"
         if not args:
             self.shard_trading_db[str(ctx.author.id)]['notes'] = ''
-            await ctx.send("Notes disabled.")
+            await ctx.send(f"Notes disabled.\nYou are currently {bold(trading_status)} for trading.")
             self.shard_file_writeout()
         else:
             self.shard_trading_db[str(ctx.author.id)]['notes'] = args
-            await ctx.send(f"Your Shard Trading entry Notes have been set to:\n```{args}```")
+            await ctx.send(f"Your Shard Trading entry Notes have been set to:\n```{args}```\nYou are currently {bold(trading_status)} for trading.")
             self.shard_file_writeout()
 
     def check_trading_status(self, user):
