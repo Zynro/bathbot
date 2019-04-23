@@ -398,34 +398,11 @@ class Onmyoji(commands.Cog, Embeds):
                 self.shard_entry_init(ctx)
             await ctx.send("""
 Welcome to BathBot's Shard Trading implementation!
-To begin, make a list of shards you have and need, each on a new line, and use the follow commands:
-`&shard need <list>` 
-and
-`&shard have <list>`
-Where <list> is the list of your shards, copy pasted.
-An example for each would be:
-```&shard need 
-Orochi 50
-Miketsu 13
-16 Ootengu 
-22 Yotohime``` 
-```&shard have 
-Shuten Doji 4
-Ibaraki Doji 5
-10 Orochi
-Miketsu 19``` 
-Using the above commands without shikigami afterwards will return your current lists.
-Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again.
-The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
-
-To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
-
-Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search all` to check against the entire database.
-
-To change your trading status so people wont get you in their results, use `&shard status on` or `&shard status off`
-
+To see the commands, please use the command `&shard help`.
 To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
 Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
+
+If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.
 """)
 
     
@@ -702,6 +679,40 @@ Shards you **have** that {searched_user} needs:
 """)
             return
         return await ctx.send("I didn't understand what you meant, try again.")
+
+    @shard.command(name="help")
+    async def shard_help_text_spam(self, ctx):
+        await ctx.send("""
+**Bathbot Shard Trading 101:**
+To begin, make a list of shards you have and need, each on a new line, and use the follow commands:
+`&shard need <list>` 
+and
+`&shard have <list>`
+Where <list> is the list of your shards, copy pasted.
+An example for each would be:
+```&shard need 
+Orochi 50
+Miketsu 13
+16 Ootengu 
+22 Yotohime``` 
+```&shard have 
+Shuten Doji 4
+Ibaraki Doji 5
+10 Orochi
+Miketsu 19``` 
+Using the above commands without shikigami afterwards will return your current lists.
+Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again.
+The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
+
+To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
+
+Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search all` to check against the entire database.
+
+To change your trading status so people wont get you in their results, use `&shard status on` or `&shard status off`
+To see the commands, please use the command `&shard help`.
+To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
+Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
+""")
 #=====================Shard Trading===========================
 
         
