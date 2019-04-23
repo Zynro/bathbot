@@ -399,30 +399,38 @@ class Onmyoji(commands.Cog, Embeds):
             await ctx.send("""
 __Welcome to BathBot's Shard Trading implementation!__
 
-To see the commands, please use the command `&shard help`.
-To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
+To recieve a full tutorial on every command available in this feature, use the following command: 
+`&shard help`
+
+To receive help on specific commands, use the `&help shard` command to see a list of subcommands and their respective functions.
 Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
+An example would be:
+`&help shard need`
+would return all the features of the command `&shard need`
 
 If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.
+
+For more help, tag Zynro and he'll be happy to assist.
 """)
 
     
     @shard.command(name='list',aliases=['print'])
-    async def shard_print_list_user(self, ctx, *other_user):
+    async def shard_print_list_user(self, ctx):
         """
-        Prints the users current status, notes, and both have/need lists of shards, all in a facy little embed.
+        Prints the users current status, notes, and both have/need lists of shards, all in a fancy little embed.
         """
         if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
             return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
-        if not other_user:
-            embed = self.shard_trading_embed(ctx.author)
-            await ctx.send(embed=embed)
+        embed = self.shard_trading_embed(ctx.author)
+        await ctx.send(embed=embed)
 
 
     @shard.command(name="need")
     async def shard_set_need(self,ctx,*,args=None):
         """
-        Sets your current shard 'need' list to the list provided with each Shikigami on a new line.
+        Sets your current shard 'need' list, or changes it in th following ways.
+
+        If given a list with each shikigami on a new line, sets it to that list.
         Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
 
         An example would be:
@@ -433,9 +441,11 @@ If you're constantly seeing this message, it probably means you're using an impr
         Ibaraki Doji 3
         ---------------------
 
-        If they keyword "clear" is given, i.e. &shard need clear, then your list is cleared.
+        If "clear" is used, clears your list entirely:
+        `&shard need clear`
 
-        If used as-is, returns your list.
+        If used as-is, returns your list:
+        `&shard need`
         """
         if not args:
             try: 
@@ -468,7 +478,9 @@ If you're constantly seeing this message, it probably means you're using an impr
     @shard.command(name="have")
     async def shard_set_have(self,ctx,*,args=None):
         """
-        Sets your current shard 'have' list to the list provided with each Shikigami on a new line.
+        Sets your current shard 'have' list, or changes it in th following ways.
+
+        If given a list with each shikigami on a new line, sets it to that list.
         Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
 
         An example would be:
@@ -479,7 +491,11 @@ If you're constantly seeing this message, it probably means you're using an impr
         Ibaraki Doji 3
         ---------------------
 
-        If used as-is, returns your list.
+        If "clear" is used, clears your list entirely:
+        `&shard have clear`
+
+        If used as-is, returns your list:
+        `&shard have`
         """
         if not args:
             try: 
@@ -517,6 +533,15 @@ If you're constantly seeing this message, it probably means you're using an impr
         """
         Sets the user note for their shard trading database entry.
         Leave the field blank to disable, otherwise type in a note to set that note.
+
+        Examples:
+        ---------------
+        Disabling notes:
+        `shard notes`
+
+        Setting Notes to "1:1 trades all":
+        `&shard notes 1:1 trades all`
+        ---------------
         """
         args = ' '.join(notes)
         self.shard_load_json()
@@ -547,9 +572,14 @@ If you're constantly seeing this message, it probably means you're using an impr
 
         Example Usage:
         ---------------------
-        &shard status on
+        Check current status:
+        `&shard status`
 
-        &shard status off
+        Turn status on:
+        `&shard status on`
+
+        Turn status off:
+        `&shard status off`
         ---------------------
         """
         self.shard_load_json()
@@ -702,7 +732,7 @@ Ibaraki Doji 5
 10 Orochi
 Miketsu 19``` 
 Using the above commands without shikigami afterwards will return your current lists.
-Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again.
+Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again with the changed list.
 The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
 
 To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
