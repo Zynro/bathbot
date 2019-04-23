@@ -429,7 +429,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         If blank, prints list for both need and have lists for the user.
         Otherwise, if provided a @user, prints that users lists.
         """
-        if not self.shard_trading_db[str(ctx.author.id)]['need'] or self.shard_trading_db[str(ctx.author.id)]['need']:
+        if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
             return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
         if not other_user:
             embed = self.shard_trading_embed(ctx.author)
