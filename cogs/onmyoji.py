@@ -105,10 +105,7 @@ class Embeds:
     def shard_trading_embed(self, user):
         need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['need']])
         have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['have']])
-        if not user.nick:
-            nick = user.name
-        else:
-            nick = user.nick
+        nick = user.name if not user.nick else user.nick
         trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
         try:
             if self.shard_trading_db[str(user.id)]['notes']:
@@ -116,7 +113,11 @@ class Embeds:
             else:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")  
         except KeyError:
-            embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")            
+            embed = embed = discord.Embed(
+                    title=f"{nick}'s Shard Trading List",
+                    colour=discord.Colour(generate_random_color()),
+                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading."
+                )            
         embed.set_thumbnail(url=user.avatar_url)
         #embed.set_footer(text="Up-to-Date as of <<timestamp>>")
         embed.add_field(name="Needs these Shards:", value=need_list, inline=True)
@@ -332,7 +333,6 @@ class Onmyoji(commands.Cog, Embeds):
             with open(f'{config.list_path}/shard-trading-db.json', 'w') as shard_file:
                 self.shard_trading_db = {}
                 print('New Json file generated!')
-        return
 
     def shard_file_writeout(self):
         """Writes to Json shard database file."""
@@ -362,8 +362,8 @@ class Onmyoji(commands.Cog, Embeds):
         """
         if list_name == 'have':
             have_list = []
-            for i in self.shard_trading_db[user]['have']:
-                if not i:
+            for entry in self.shard_trading_db[user]['have']:
+                if not entry:
                     continue
                 numbers, shiki = self.shard_split_variable(i, 'split')
                 have_list.append(f"{numbers} {shiki}")
