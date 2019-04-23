@@ -103,22 +103,13 @@ class DatabaseGeneration:
 
 class Embeds:
     def shard_trading_embed(self, user):
-        need_list = ''
-        have_list = ''
-        for i in self.shard_trading_db[str(user.id)]['need']:
-            number, shiki = self.shard_split_variable(i)
-            need_list += f"{bold(number)} {shiki}\n"
-        for i in self.shard_trading_db[str(user.id)]['have']:
-            number, shiki = self.shard_split_variable(i)
-            have_list = f"{have_list}{bold(number)} {shiki}\n"
+        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['need']])
+        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['have']])
         if not user.nick:
             nick = user.name
         else:
             nick = user.nick
-        if self.check_trading_status(user.id) == True:
-            trading_status = "available"
-        else:
-            trading_status = "unavailable"
+        trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
         try:
             if self.shard_trading_db[str(user.id)]['notes']:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading.")
@@ -349,44 +340,44 @@ class Onmyoji(commands.Cog, Embeds):
             json.dump(self.shard_trading_db, shard_file, indent=4)
         return
 
-    def shard_split_variable(self, arg):
+    def shard_split_variable(self, arg, op):
         """
         Splits the incoming '<Shiki> <Amount>' variable into its number and shiki components.
         """
         numbers = ''.join(b for b in arg if b.isdigit())
         shiki = ''.join(b for b in arg if not b.isdigit())
-        return numbers, shiki
+        if op == 'split':
+            return numbers, shiki
+        elif op == "bold":
+            if numbers:
+                return f"{bold(numbers)} {shiki}"
+            else:
+                return arg
 
-    def shard_print_need_list(self, user):
+    def shard_print_list(self, user, list_name):
         """
         Returns the entirety of the 'need' list of the given user in the format of
         <Amount> <Shiki>
         Each on a new line.
         """
-        need_list = []
-        for i in self.shard_trading_db[user]['need']:
-            if not i:
-                continue
-            numbers, shiki = self.shard_split_variable(i)
-            need_list.append(f"{numbers} {shiki}")
-        self.shard_load_json()
-        return need_list
-        
-
-    def shard_print_have_list(self, user):
-        """
-        Returns the entirety of the 'have' list of the given user in the format of
-        <Amount> <Shiki>
-        Each on a new line.
-        """
-        have_list = []
-        for i in self.shard_trading_db[user]['have']:
-            if not i:
-                continue
-            numbers, shiki = self.shard_split_variable(i)
-            have_list.append(f"{numbers} {shiki}")
-        self.shard_load_json()
-        return have_list
+        if list_name == 'have':
+            have_list = []
+            for i in self.shard_trading_db[user]['have']:
+                if not i:
+                    continue
+                numbers, shiki = self.shard_split_variable(i, 'split')
+                have_list.append(f"{numbers} {shiki}")
+            self.shard_load_json()
+            return have_list
+        elif list_name == 'need':
+            need_list = []
+            for i in self.shard_trading_db[user]['need']:
+                if not i:
+                    continue
+                numbers, shiki = self.shard_split_variable(i, 'split')
+                need_list.append(f"{numbers} {shiki}")
+            self.shard_load_json()
+            return need_list
 
     def shard_entry_init(self, ctx):
         """
@@ -433,7 +424,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
 
     
     @shard.command(name='list')
-    async def shard_print_list(self, ctx, *other_user):
+    async def shard_print_list_user(self, ctx, *other_user):
         """
         If blank, prints list for both need and have lists for the user.
         Otherwise, if provided a @user, prints that users lists.
@@ -451,7 +442,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         """
         if not args:
             try: 
-                need_list = '\n'.join(self.shard_print_need_list(str(ctx.message.author.id)))
+                need_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id)), 'need')
                 await ctx.send(f"Shards you **need**: ```\n{need_list}```")
                 return
             except KeyError:
@@ -459,7 +450,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
                 return
         arg_list = args.split("\n")
         for shiki in arg_list:
-            numbers, shiki = self.shard_split_variable(shiki)
+            numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_class.keys():
                     return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
@@ -471,10 +462,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
             self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
         self.shard_file_writeout()
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
-        if self.check_trading_status(ctx.author.id) == True:
-            trading_status = "available"
-        else:
-            trading_status = "unavailable"
+        trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard.command(name="have")
@@ -485,7 +473,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         """
         if not args:
             try: 
-                have_list = '\n'.join(self.shard_print_have_list(str(ctx.message.author.id)))
+                have_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id)), 'have')
                 await ctx.send(f"Shards you **have**: ```\n{have_list}```")
                 return
             except KeyError:
@@ -493,7 +481,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
                 return
         arg_list = args.split("\n")
         for shiki in arg_list:
-            numbers, shiki = self.shard_split_variable(shiki)
+            numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_class.keys():
                     return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
@@ -562,40 +550,28 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
                 self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
         else:
-            if arg == "on":
+            if "on" in arg:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
                 self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
-            elif arg == "off":
+            elif "off" in arg:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = False
                 self.shard_file_writeout();
                 return await ctx.send(f"{ctx.author.mention} is unavailable to be searched for trading.")
+
+    def get_shiki_set(self, user, list_name):
+        return set([''.join(i for i in value if not i.isdigit()).strip().lower() for value in self.shard_trading_db[user][list_name]])
 
     def compare_shard_db(self, main_user, other_user):
         try:
             if self.check_trading_status(main_user) == False or self.check_trading_status(other_user) == False:
                 return None, None
-            user1_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['have']]
-            user1_have_list = [i.strip().lower() for i in user1_have_list]
-            user1_need_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[main_user]['need']]
-            user1_need_list = [i.strip().lower() for i in user1_need_list]
-            
-            user2_have_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['have']]
-            user2_have_list = [i.strip().lower() for i in user2_have_list]
-            user2_need_list = [''.join(i for i in value if not i.isdigit()) for value in self.shard_trading_db[str(other_user)]['need']]
-            user2_need_list = [i.strip().lower() for i in user2_need_list]
-            
-            you_have_they_need = []
-            you_need_they_have = []
-            comparison_list = []
-            for user1_have in user1_have_list:
-                for user2_need in user2_need_list:
-                    if user1_have.lower() == user2_need.lower():
-                        you_have_they_need.append(user1_have)
-            for user1_need in user1_need_list:
-                for user2_have in user2_have_list:
-                    if user1_need.lower() == user2_have.lower():
-                        you_need_they_have.append(user1_need)
+            user1_have_list = self.get_shiki_set(main_user, 'have')
+            user1_need_list = self.get_shiki_set(main_user, 'need')
+            user2_have_list = self.get_shiki_set(other_user, 'have')
+            user2_need_list = self.get_shiki_set(other_user, 'need')
+            you_have_they_need = user1_have_list.intersection(user2_need_list)
+            you_need_they_have = user1_need_list.intersection(user2_have_list)
             you_have_they_need = [shiki.capitalize() for shiki in you_have_they_need]
             you_need_they_have = [shiki.capitalize() for shiki in you_need_they_have]
         except KeyError:
