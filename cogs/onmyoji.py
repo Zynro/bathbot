@@ -398,28 +398,27 @@ class Onmyoji(commands.Cog, Embeds):
             await ctx.send("""
 Welcome to BathBot's Shard Trading implementation!
 To begin, make a list of shards you have and need, each on a new line, and use the follow commands:
-`&shard need list` 
+`&shard need <list>` 
 and
-`&shard have list`
-where 'list' is the list of your shards copy pasted.
+`&shard have <list>`
+where <list> is the list of your shards, copy pasted.
 An example for each would be:
-```&shard need Orochi
-Miketsu
-Ootengu
-Yotohime``` 
+```&shard need Orochi 50
+Miketsu 13
+16 Ootengu 
+22 Yotohime``` 
 ```&shard have Shuten Doji 4
 Ibaraki Doji 5
 10 Orochi
 Miketsu 19``` 
-The numbers placement does not matter.
+The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
 
-Please make sure to use proper spelling, or when using the search function your entry may be skipped.
+Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search all` to check against the entire database.
 
-Once you have set your lists, use the `&shard search` command to search users and the entire database for people to trade with!
+To change your trading status so people wont get you in their results, use `&shard status on` or `&shard status off`
 
-To change your trading status so people wont get you in their results, use `&shard stauts on` or `&shard stauts off`
-
-To receive help on commands at any time, use the `&help shard` command, or tag @Zynro.
+To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
+Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
 """)
 
     
@@ -439,8 +438,9 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
     @shard.command(name="need")
     async def shard_set_need(self,ctx,*,args=None):
         """
-        Returns the list of shards you need.
-        If shards are listed, assigns those shards to your needed list.
+        Sets your current shard 'need' list.
+        If used as-is, returns your 'need' list.
+        Otherwise, if given a list of shards each on a newline, sets your 'need' list to those shards.
         """
         if not args:
             try: 
@@ -470,8 +470,9 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
     @shard.command(name="have")
     async def shard_set_have(self,ctx,*,args=None):
         """
-        Returns the list of shards you have.
-        If shards are listed, assigns those shards to your have list.
+        Sets your current shard 'have' list.
+        If used as-is, returns your 'have' list.
+        Otherwise, if given a list of shards each on a newline, sets your 'have' list to those shards.
         """
         if not args:
             try: 
