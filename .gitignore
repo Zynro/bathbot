@@ -8,3 +8,4 @@ config.py
 bbt_credentials.json
 lists/
 cogs/dev.py
+cog_functions.py
