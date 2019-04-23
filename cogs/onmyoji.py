@@ -107,7 +107,7 @@ class Embeds:
         have_list = ''
         for i in self.shard_trading_db[str(user.id)]['need']:
             number, shiki = self.shard_split_variable(i)
-            need_list = f"{need_list}{bold(number)} {shiki}\n"
+            need_list += f"{bold(number)} {shiki}\n"
         for i in self.shard_trading_db[str(user.id)]['have']:
             number, shiki = self.shard_split_variable(i)
             have_list = f"{have_list}{bold(number)} {shiki}\n"
