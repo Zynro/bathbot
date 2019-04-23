@@ -414,6 +414,8 @@ Shuten Doji 4
 Ibaraki Doji 5
 10 Orochi
 Miketsu 19``` 
+Using the above commands without shikigami afterwards will return your current lists.
+Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again.
 The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
 
 To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
@@ -443,6 +445,7 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     async def shard_set_need(self,ctx,*,args=None):
         """
         Sets your current shard 'need' list to the list provided with each Shikigami on a new line.
+        Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
 
         An example would be:
         ---------------------
@@ -488,6 +491,7 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     async def shard_set_have(self,ctx,*,args=None):
         """
         Sets your current shard 'have' list to the list provided with each Shikigami on a new line.
+        Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
 
         An example would be:
         ---------------------
