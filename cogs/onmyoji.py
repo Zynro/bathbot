@@ -109,14 +109,14 @@ class Embeds:
         trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
         try:
             if self.shard_trading_db[str(user.id)]['notes']:
-                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading.")
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
             else:
-                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"You are **{trading_status}** for trading.")  
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
         except KeyError:
             embed = embed = discord.Embed(
                     title=f"{nick}'s Shard Trading List",
                     colour=discord.Colour(generate_random_color()),
-                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\nYou are **{trading_status}** for trading."
+                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading."
                 )            
         embed.set_thumbnail(url=user.avatar_url)
         #embed.set_footer(text="Up-to-Date as of <<timestamp>>")
