@@ -365,16 +365,16 @@ class Onmyoji(commands.Cog, Embeds):
             for entry in self.shard_trading_db[user]['have']:
                 if not entry:
                     continue
-                numbers, shiki = self.shard_split_variable(i, 'split')
+                numbers, shiki = self.shard_split_variable(entry, 'split')
                 have_list.append(f"{numbers} {shiki}")
             self.shard_load_json()
             return have_list
         elif list_name == 'need':
             need_list = []
-            for i in self.shard_trading_db[user]['need']:
-                if not i:
+            for entry in self.shard_trading_db[user]['need']:
+                if not entry:
                     continue
-                numbers, shiki = self.shard_split_variable(i, 'split')
+                numbers, shiki = self.shard_split_variable(entry, 'split')
                 need_list.append(f"{numbers} {shiki}")
             self.shard_load_json()
             return need_list
@@ -444,7 +444,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         """
         if not args:
             try: 
-                need_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id)), 'need')
+                need_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'need'))
                 await ctx.send(f"Shards you **need**: ```\n{need_list}```")
                 return
             except KeyError:
@@ -475,7 +475,7 @@ To receive help on commands at any time, use the `&help shard` command, or tag @
         """
         if not args:
             try: 
-                have_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id)), 'have')
+                have_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'have'))
                 await ctx.send(f"Shards you **have**: ```\n{have_list}```")
                 return
             except KeyError:
