@@ -397,7 +397,8 @@ class Onmyoji(commands.Cog, Embeds):
             if self.shard_trading_db.get(str(ctx.message.author.id)) is None:
                 self.shard_entry_init(ctx)
             await ctx.send("""
-Welcome to BathBot's Shard Trading implementation!
+__Welcome to BathBot's Shard Trading implementation!__
+
 To see the commands, please use the command `&shard help`.
 To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
 Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
