@@ -428,7 +428,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard.command(name="need")
     async def shard_set_need(self,ctx,*,args=None):
         """
-        Sets your current shard 'need' list, or changes it in th following ways.
+        Sets your current shard 'need' list, or changes it in the following ways.
 
         If given a list with each shikigami on a new line, sets it to that list.
         Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
@@ -442,10 +442,9 @@ For more help, tag Zynro and he'll be happy to assist.
         ---------------------
 
         If "clear" is used, clears your list entirely:
-        `&shard need clear`
-
+            &shard need clear
         If used as-is, returns your list:
-        `&shard need`
+            &shard need
         """
         if not args:
             try: 
@@ -478,7 +477,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard.command(name="have")
     async def shard_set_have(self,ctx,*,args=None):
         """
-        Sets your current shard 'have' list, or changes it in th following ways.
+        Sets your current shard 'have' list, or changes it in the following ways.
 
         If given a list with each shikigami on a new line, sets it to that list.
         Keep in mind this will OVERWRITE your current list. Individual adding/removing is not supported.
@@ -492,11 +491,10 @@ For more help, tag Zynro and he'll be happy to assist.
         ---------------------
 
         If "clear" is used, clears your list entirely:
-        `&shard have clear`
-
+            &shard have clear
         If used as-is, returns your list:
-        `&shard have`
-        """
+            &shard have
+            """
         if not args:
             try: 
                 have_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'have'))
@@ -573,13 +571,11 @@ For more help, tag Zynro and he'll be happy to assist.
         Example Usage:
         ---------------------
         Check current status:
-        `&shard status`
-
+            &shard status
         Turn status on:
-        `&shard status on`
-
+            &shard status on
         Turn status off:
-        `&shard status off`
+            &shard status off
         ---------------------
         """
         self.shard_load_json()
@@ -628,10 +624,10 @@ For more help, tag Zynro and he'll be happy to assist.
     async def shard_search(self, ctx, other_user_raw):
         """
         Compares shard trading lists with other users.
-        Specify a name, or an @user tag to compare to that single user.
-            e.g. &shard search Zynro
-        Specify "all" to search the entire database.
-            e.g. &shard search all
+        Specify a name, or an @user tag to compare to that single user:
+            &shard search Zynro
+        Specify "all" to search the entire database:
+            &shard search all
         """
         self.shard_load_json()
         main_user = str(ctx.message.author.id)
