@@ -402,17 +402,21 @@ To begin, make a list of shards you have and need, each on a new line, and use t
 `&shard need <list>` 
 and
 `&shard have <list>`
-where <list> is the list of your shards, copy pasted.
+Where <list> is the list of your shards, copy pasted.
 An example for each would be:
-```&shard need Orochi 50
+```&shard need 
+Orochi 50
 Miketsu 13
 16 Ootengu 
 22 Yotohime``` 
-```&shard have Shuten Doji 4
+```&shard have 
+Shuten Doji 4
 Ibaraki Doji 5
 10 Orochi
 Miketsu 19``` 
 The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
+
+To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
 
 Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search all` to check against the entire database.
 
@@ -423,10 +427,10 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
 """)
 
     
-    @shard.command(name='list')
+    @shard.command(name='list',aliases=['print'])
     async def shard_print_list_user(self, ctx, *other_user):
         """
-        Returns the users current status, notes, and both have/need lists of shards, all in a facy little embed.
+        Prints the users current status, notes, and both have/need lists of shards, all in a facy little embed.
         """
         if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
             return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
@@ -438,9 +442,19 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     @shard.command(name="need")
     async def shard_set_need(self,ctx,*,args=None):
         """
-        Sets your current shard 'need' list.
-        If used as-is, returns your 'need' list.
-        Otherwise, if given a list of shards each on a newline, sets your 'need' list to those shards.
+        Sets your current shard 'need' list to the list provided with each Shikigami on a new line.
+
+        An example would be:
+        ---------------------
+        &shard need 
+        Ootengu 5
+        Miketsu 4
+        Ibaraki Doji 3
+        ---------------------
+
+        If they keyword "clear" is given, i.e. &shard need clear, then your list is cleared.
+
+        If used as-is, returns your list.
         """
         if not args:
             try: 
@@ -450,6 +464,9 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
             except KeyError:
                 await ctx.send('You do not have a "Need" list yet! Use `&shard` to generate your entry first!')
                 return
+        if "clear" in args:
+            self.shard_trading_db[str(ctx.message.author.id)]['need'] = ''
+            return await ctx.send("Your Need list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
         arg_list = args.split("\n")
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
@@ -470,9 +487,17 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     @shard.command(name="have")
     async def shard_set_have(self,ctx,*,args=None):
         """
-        Sets your current shard 'have' list.
-        If used as-is, returns your 'have' list.
-        Otherwise, if given a list of shards each on a newline, sets your 'have' list to those shards.
+        Sets your current shard 'have' list to the list provided with each Shikigami on a new line.
+
+        An example would be:
+        ---------------------
+        &shard have 
+        Ootengu 5
+        Miketsu 4
+        Ibaraki Doji 3
+        ---------------------
+
+        If used as-is, returns your list.
         """
         if not args:
             try: 
@@ -482,6 +507,9 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
             except KeyError:
                 await ctx.send('You do not have a "Have" list yet! Use `&shard` to generate your entry first!')
                 return
+        if "clear" in args:
+            self.shard_trading_db[str(ctx.message.author.id)]['have'] = ''
+            return await ctx.send("Your Have list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
         arg_list = args.split("\n")
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
@@ -532,9 +560,15 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     @shard.command(name="status")
     async def shard_set_trading_status(self, ctx, *arg):
         """
-        Toggles the trading status for the user.
-        If no terms are given, toggles it.
-        Otherwise, if on/off is given as a term, sets it to that state.
+        Prints the current shard trading availability of the user.
+        Give either the term 'on' or 'off' to set your status to that state.
+
+        Example Usage:
+        ---------------------
+        &shard status on
+
+        &shard status off
+        ---------------------
         """
         self.shard_load_json()
         try:
@@ -544,14 +578,8 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
             self.shard_file_writeout();
             return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
         if not arg:
-            if self.check_trading_status(ctx.author.id) == True:
-                self.shard_trading_db[str(ctx.author.id)]['status'] = False
-                self.shard_file_writeout();
-                return await ctx.send(f"{ctx.author.mention} is now unavailable to be searched for trading.")
-            else:
-                self.shard_trading_db[str(ctx.author.id)]['status'] = True
-                self.shard_file_writeout();
-                return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
+            trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
+            return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
         else:
             if "on" in arg:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
