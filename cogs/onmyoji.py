@@ -391,6 +391,7 @@ class Onmyoji(commands.Cog, Embeds):
     async def shard(self, ctx):
         """
         Shard trading command group. Use the various commands to assign and initialize shard trading.
+        Type &help shard <subcommand> where 'subcommand' is one of the subcommands listed below to receive more help on that subcommand.
         """
         if ctx.invoked_subcommand is None:
             if self.shard_trading_db.get(str(ctx.message.author.id)) is None:
@@ -425,8 +426,7 @@ Additionally, using `&help shard <subcommand>` will return the help for that spe
     @shard.command(name='list')
     async def shard_print_list_user(self, ctx, *other_user):
         """
-        If blank, prints list for both need and have lists for the user.
-        Otherwise, if provided a @user, prints that users lists.
+        Returns the users current status, notes, and both have/need lists of shards, all in a facy little embed.
         """
         if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
             return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
