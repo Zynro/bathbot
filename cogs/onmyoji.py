@@ -734,6 +734,8 @@ If the command has <> code brackets, it means that command accepts a term. Some 
 **&help shard <subcommand>**
     Returns the help for the specific subcommand,
     e.g. `&help shard need`
+
+Note: These commands can be used in #fox-abuse in the BubbleTea Guild Discord.
 """)
 #=====================Shard Trading===========================
 
