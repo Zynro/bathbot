@@ -582,7 +582,7 @@ For more help, tag Zynro and he'll be happy to assist.
             elif "off" in arg:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = False
                 self.shard_file_writeout();
-                return await ctx.send(f"{ctx.author.mention} is unavailable to be searched for trading.")
+                return await ctx.send(f"{ctx.author.mention} is now unavailable to be searched for trading.")
 
     def get_shiki_set(self, user, list_name):
         return set([''.join(i for i in value if not i.isdigit()).strip().lower() for value in self.shard_trading_db[user][list_name]])
