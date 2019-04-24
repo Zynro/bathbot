@@ -707,12 +707,12 @@ If the command has <> code brackets, it means that command accepts a term. Some 
     e.g. `&shard have clear`
 
 **&shard list**
-    Shows your shard lists.
+    Displays your shard lists.
 
 **&shard status <on/off>**
     No term: Returns current status
     On: Sets status to "on", enabling users to search for you.
-    Off: Sets status to "off", enabling users to search for you.
+    Off: Sets status to "off", disabling users to search for you.
 
 **&shard notes <notes>**
     No term: Disables your notes entry.
