@@ -700,7 +700,8 @@ Reusing the above commands will overwrite lists. Adding/removing individually is
 Spelling is important and mispelled shikigami will not be accepted. Number placement does not matter.
 
 __Afterwards, the following commands can be used:__
-If the command has <> code brackets, it means that command accepts a term. Some commands work differently with and without terms. Make sure to read each segment carefully.
+If the command has <> code brackets, it means that command accepts a term. Some commands work differently with and without terms. Make sure to read each segment carefully. The code brackets <> are to not be used during the actual command usage.
+
 
 **&shard <have/need> clear**
     Clears that specific list.
