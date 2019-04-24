@@ -366,6 +366,7 @@ class Onmyoji(commands.Cog, Embeds):
         <Amount> <Shiki>
         Each on a new line.
         """
+        self.shard_load_json()
         if list_name == 'have':
             have_list = []
             for entry in self.shard_trading_db[user]['have']:
@@ -373,7 +374,6 @@ class Onmyoji(commands.Cog, Embeds):
                     continue
                 numbers, shiki = self.shard_split_variable(entry, 'split')
                 have_list.append(f"{numbers} {shiki}")
-            self.shard_load_json()
             return have_list
         elif list_name == 'need':
             need_list = []
@@ -382,7 +382,6 @@ class Onmyoji(commands.Cog, Embeds):
                     continue
                 numbers, shiki = self.shard_split_variable(entry, 'split')
                 need_list.append(f"{numbers} {shiki}")
-            self.shard_load_json()
             return need_list
 
     def shard_entry_init(self, ctx):
@@ -427,7 +426,7 @@ For more help, tag Zynro and he'll be happy to assist.
     def shard_set_list(self, ctx, args, list_name):
         if not args:
             try: 
-                shard_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'list_name'))
+                shard_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), list_name))
                 return f"Shards you **{list_name}**: ```\n{shard_list}```"
             except KeyError:
                 return f'You do not have a {list_name} list yet! Use `&shard` to generate your entry first!'
