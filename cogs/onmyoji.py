@@ -596,7 +596,7 @@ For more help, tag Zynro and he'll be happy to assist.
 
 
     @shard.command(name="search")
-    async def shard_search(self, ctx, other_user_raw):
+    async def shard_search(self, ctx, *other_user_raw):
         """
         Compares shard trading lists with other users.
         Specifying no user searches the entire database.
@@ -635,6 +635,7 @@ You and the following users have shards that can be traded:
 **{match_string}**
 Use `&search @user` where user is one of the ones listed above to check which shards each of you need/have!
 """)
+        other_user_raw = ' '.join(other_user_raw)
         for member in ctx.guild.members:
             if "@" in other_user_raw:
                 other_user = ''.join(i for i in other_user_raw if i.isdigit())
