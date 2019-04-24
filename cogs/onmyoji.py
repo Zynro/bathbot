@@ -402,7 +402,7 @@ __Welcome to BathBot's Shard Trading implementation!__
 To recieve a full tutorial on every command available in this feature, use the following command, and I will send you an instructional message: 
 `&shard help`
 
-If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.
+*If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.*
 
 For more help, tag Zynro and he'll be happy to assist.
 """)
@@ -433,9 +433,7 @@ For more help, tag Zynro and he'll be happy to assist.
             numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_class.keys():
-                    shiki = shiki.replace(" ","")
-                    if shiki not in self.shikigami_class.keys():
-                        return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
+                    return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
         self.shard_load_json()
         try: 
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
