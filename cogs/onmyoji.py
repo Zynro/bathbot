@@ -109,15 +109,15 @@ class Embeds:
         trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
         try:
             if self.shard_trading_db[str(user.id)]['notes']:
-                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
+                    colour=discord.Colour(generate_random_color()), 
+                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
             else:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
         except KeyError:
-            embed = embed = discord.Embed(
-                    title=f"{nick}'s Shard Trading List",
-                    colour=discord.Colour(generate_random_color()),
-                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading."
-                )            
+            embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"{nick} is **{trading_status}** for trading.")         
         embed.set_thumbnail(url=user.avatar_url)
         #embed.set_footer(text="Up-to-Date as of <<timestamp>>")
         embed.add_field(name="Needs these Shards:", value=need_list, inline=True)
@@ -406,7 +406,7 @@ To receive help on specific commands, use the `&help shard` command to see a lis
 Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
 An example would be:
 `&help shard need`
-would return all the features of the command `&shard need`
+would return all the features of the command `&shard need` 
 
 If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.
 
@@ -424,6 +424,32 @@ For more help, tag Zynro and he'll be happy to assist.
         embed = self.shard_trading_embed(ctx.author)
         await ctx.send(embed=embed)
 
+    def shard_set_list(self, ctx, args, list_name):
+        if not args:
+            try: 
+                shard_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'list_name'))
+                return f"Shards you **{list_name}**: ```\n{shard_list}```"
+            except KeyError:
+                return f'You do not have a {list_name} list yet! Use `&shard` to generate your entry first!'
+        if "clear" in args:
+            self.shard_trading_db[str(ctx.message.author.id)][list_name] = ''
+            return f"Your {list_name} list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires."
+        arg_list = args.split("\n")
+        for shiki in arg_list:
+            numbers, shiki = self.shard_split_variable(shiki, 'split')
+            if "frog" not in shiki.lower().strip():
+                if shiki.lower().strip() not in self.shikigami_class.keys():
+                    shiki = shiki.replace(" ","")
+                    if shiki not in self.shikigami_class.keys():
+                        return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
+        self.shard_load_json()
+        try: 
+            self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
+        except KeyError:
+            self.shard_trading_db[str(ctx.message.author.id)] = {}
+            self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
+        self.shard_file_writeout()
+        return None
 
     @shard.command(name="need")
     async def shard_set_need(self,ctx,*,args=None):
@@ -446,30 +472,9 @@ For more help, tag Zynro and he'll be happy to assist.
         If used as-is, returns your list:
             &shard need
         """
-        if not args:
-            try: 
-                need_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'need'))
-                await ctx.send(f"Shards you **need**: ```\n{need_list}```")
-                return
-            except KeyError:
-                await ctx.send('You do not have a "Need" list yet! Use `&shard` to generate your entry first!')
-                return
-        if "clear" in args:
-            self.shard_trading_db[str(ctx.message.author.id)]['need'] = ''
-            return await ctx.send("Your Need list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
-        arg_list = args.split("\n")
-        for shiki in arg_list:
-            numbers, shiki = self.shard_split_variable(shiki, 'split')
-            if "frog" not in shiki.lower().strip():
-                if shiki.lower().strip() not in self.shikigami_class.keys():
-                    return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
-        self.shard_load_json()
-        try: 
-            self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
-        except KeyError:
-            self.shard_trading_db[str(ctx.message.author.id)] = {}
-            self.shard_trading_db[str(ctx.message.author.id)]['need'] = arg_list
-        self.shard_file_writeout()
+        return_message = self.shard_set_list(ctx, args, 'need')
+        if return_message:
+            return await ctx.send(return_message) 
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
         trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
@@ -495,35 +500,11 @@ For more help, tag Zynro and he'll be happy to assist.
         If used as-is, returns your list:
             &shard have
             """
-        if not args:
-            try: 
-                have_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), 'have'))
-                await ctx.send(f"Shards you **have**: ```\n{have_list}```")
-                return
-            except KeyError:
-                await ctx.send('You do not have a "Have" list yet! Use `&shard` to generate your entry first!')
-                return
-        if "clear" in args:
-            self.shard_trading_db[str(ctx.message.author.id)]['have'] = ''
-            return await ctx.send("Your Have list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
-        arg_list = args.split("\n")
-        for shiki in arg_list:
-            numbers, shiki = self.shard_split_variable(shiki, 'split')
-            if "frog" not in shiki.lower().strip():
-                if shiki.lower().strip() not in self.shikigami_class.keys():
-                    return await ctx.send(f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again.")
-        self.shard_load_json()
-        try: 
-            self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
-        except KeyError:
-            self.shard_trading_db[str(ctx.message.author.id)] = {}
-            self.shard_trading_db[str(ctx.message.author.id)]['have'] = arg_list
-        self.shard_file_writeout()
+        return_message = self.shard_set_list(ctx, args, 'have')
+        if return_message:
+            return await ctx.send(return_message)
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
-        if self.check_trading_status(ctx.author.id) == True:
-            trading_status = "available"
-        else:
-            trading_status = "unavailable"
+        trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard.command(name="notes")
@@ -560,6 +541,8 @@ For more help, tag Zynro and he'll be happy to assist.
         try:
             return self.shard_trading_db[str(user)]['status']
         except KeyError:
+            self.shard_trading_db[str(user)]['status'] = True
+            self.shard_file_writeout()
             return True
 
     @shard.command(name="status")
@@ -586,7 +569,7 @@ For more help, tag Zynro and he'll be happy to assist.
             self.shard_file_writeout();
             return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
         if not arg:
-            trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
+            trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
             return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
         else:
             if "on" in arg:
@@ -708,34 +691,46 @@ Shards you **have** that {searched_user} needs:
     async def shard_help_text_spam(self, ctx):
         await ctx.send("""
 **Bathbot Shard Trading 101:**
-To begin, make a list of shards you have and need, each on a new line, and use the follow commands:
+First make both your need and have lists of shards.
 `&shard need <list>` 
 and
 `&shard have <list>`
-Where <list> is the list of your shards, copy pasted.
-An example for each would be:
+Where <list> is the list of your shards, each on a new line.
+__Example:__
 ```&shard need 
 Orochi 50
 Miketsu 13
 16 Ootengu 
 22 Yotohime``` 
-```&shard have 
-Shuten Doji 4
-Ibaraki Doji 5
-10 Orochi
-Miketsu 19``` 
-Using the above commands without shikigami afterwards will return your current lists.
-Keep in mind the above commands will OVERWRITE your current lists. Individual adding/removing is not supported. In the event you need to edit them, either get them with `&shard need`, `&shard have`, or, `&shard list`, copy the list, edit it, and use the command again with the changed list.
-The numbers placement does not matter, but the spelling does. Each use of the above commands will completely overwrite the previous entry.
+Reusing the above commands will overwrite lists. Adding/removing individually is currently not supported.
+Spelling matters.
 
-To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
+The following commands can also be used:
 
-Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search` to check against the entire database.
+`&shard <have/need> clear`
+    Clears that specific list.
 
-To change your trading status so people wont get you in their results, use `&shard status on` or `&shard status off`
-To see the commands, please use the command `&shard help`.
-To receive help on commands at any time, use the `&help shard` command to see a list of subcommands and their respective functions, or tag @Zynro.
-Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
+`&shard list`
+    Shows your shard lists.
+
+`&shard status <on/off>`
+    No term: Returns current status
+    On: Sets status to "on", enabling users to search for you.
+    Off: Sets status to "off", enabling users to search for you.
+
+`&shard search <user>`
+    No term: Searches entire database for shard trading matches
+    User Name, Nickname, or @tag: Searches for matches between you and that user.
+
+`&shard help`
+    Returns this message.
+
+`&help shard`
+    Returns the help statement for the shard command group, and lists all possible subcommands.
+
+`&help shard <subcommand>`
+    Returns the help for the specific subcommand,
+    e.g. `&help shard need`
 """)
 #=====================Shard Trading===========================
 
