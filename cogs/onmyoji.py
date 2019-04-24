@@ -624,18 +624,15 @@ For more help, tag Zynro and he'll be happy to assist.
     async def shard_search(self, ctx, other_user_raw):
         """
         Compares shard trading lists with other users.
+        Specifying no user searches the entire database.
+            &shard search
         Specify a name, or an @user tag to compare to that single user:
             &shard search Zynro
-        Specify "all" to search the entire database:
-            &shard search all
         """
         self.shard_load_json()
         main_user = str(ctx.message.author.id)
         other_user = None
         if not other_user_raw:
-            await ctx.send("Must enter either a user's name, nickname, @tag, or the term 'all' to search the database!")
-            return
-        if other_user_raw.lower().strip() == "all":
             match_list = []
             for user in self.shard_trading_db:
                 if user == main_user:
@@ -733,7 +730,7 @@ The numbers placement does not matter, but the spelling does. Each use of the ab
 
 To clear a list, use `&shard need clear` or `&shard have clear` to clear that list. Remember, you can't use `&shard list` unless both lists have entries!
 
-Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search all` to check against the entire database.
+Once you have set your lists, use the `&shard search <user>` command to check lists against an individual user, or `&shard search` to check against the entire database.
 
 To change your trading status so people wont get you in their results, use `&shard status on` or `&shard status off`
 To see the commands, please use the command `&shard help`.
