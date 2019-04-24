@@ -735,7 +735,7 @@ If the command has <> code brackets, it means that command accepts a term. Some 
     Returns the help for the specific subcommand,
     e.g. `&help shard need`
 
-Note: These commands can be used in #fox-abuse in the BubbleTea Guild Discord.
+Note: These commands can ***ONLY*** be used in Bathbot's connected servers. Such as #fox-abuse in the BubbleTea Discord.
 """)
 #=====================Shard Trading===========================
 
