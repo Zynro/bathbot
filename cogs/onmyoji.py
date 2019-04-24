@@ -40,6 +40,12 @@ def lower_and_underscore(text):
 def generate_random_color():
     return random.randint(0, 0xFFFFFF)
 
+def bracket_check(arg):
+    if "<" in arg or ">" in arg:
+        return "Please do not include brackets in your command uses. They are to demonstrate that terms are optional, or what terms can be used, for that specific command."
+    else:
+        return None
+
 class DriveAPI:
     """Manages the Google Drive API Auth and retreiving the CSV database."""
     SERVICE_ACCOUNT_FILE = 'bbt_credentials.json'
@@ -425,6 +431,8 @@ For more help, tag Zynro and he'll be happy to assist.
                 return f"Shards you **{list_name}**: ```\n{shard_list}```"
             except KeyError:
                 return f'You do not have a {list_name} list yet! Use `&shard` to generate your entry first!'
+        if bracket_check(args):
+            return bracket_check(args)
         if "clear" in args:
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = ''
             return f"Your {list_name} list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires."
@@ -515,6 +523,8 @@ For more help, tag Zynro and he'll be happy to assist.
         ---------------
         """
         args = ' '.join(notes)
+        if bracket_check(args):
+            return await ctx.send(bracket_check(args))
         self.shard_load_json()
         if self.check_trading_status(ctx.author.id) == True:
             trading_status = "available"
@@ -553,6 +563,8 @@ For more help, tag Zynro and he'll be happy to assist.
             &shard status off
         ---------------------
         """
+        if bracket_check(arg):
+            return await ctx.send(bracket_check(arg))
         self.shard_load_json()
         try:
             temp = self.shard_trading_db[str(ctx.author.id)]['status']
@@ -636,6 +648,8 @@ You and the following users have shards that can be traded:
 Use `&search @user` where user is one of the ones listed above to check which shards each of you need/have!
 """)
         other_user_raw = ' '.join(other_user_raw)
+        if bracket_check(other_user_raw):
+            return await ctx.send(bracket_check(other_user_raw))
         for member in ctx.guild.members:
             if "@" in other_user_raw:
                 other_user = ''.join(i for i in other_user_raw if i.isdigit())
