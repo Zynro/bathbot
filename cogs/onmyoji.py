@@ -399,14 +399,8 @@ class Onmyoji(commands.Cog, Embeds):
             await ctx.send("""
 __Welcome to BathBot's Shard Trading implementation!__
 
-To recieve a full tutorial on every command available in this feature, use the following command: 
+To recieve a full tutorial on every command available in this feature, use the following command, and I will send you an instructional message: 
 `&shard help`
-
-To receive help on specific commands, use the `&help shard` command to see a list of subcommands and their respective functions.
-Additionally, using `&help shard <subcommand>` will return the help for that specific subcommand as well.
-An example would be:
-`&help shard need`
-would return all the features of the command `&shard need` 
 
 If you're constantly seeing this message, it probably means you're using an improper subcommand. Any non-existing subcommand will return this message, every time.
 
@@ -689,9 +683,10 @@ Shards you **have** that {searched_user} needs:
 
     @shard.command(name="help")
     async def shard_help_text_spam(self, ctx):
-        await ctx.send("""
-**Bathbot Shard Trading 101:**
-First make both your need and have lists of shards.
+        await ctx.send("I sent you an instructional message!")
+        await ctx.author.send("""
+__**Bathbot Shard Trading 101:**__
+First, create both your 'need' and 'have' lists of shards. The commands for this are:
 `&shard need <list>` 
 and
 `&shard have <list>`
@@ -703,32 +698,41 @@ Miketsu 13
 16 Ootengu 
 22 Yotohime``` 
 Reusing the above commands will overwrite lists. Adding/removing individually is currently not supported.
-Spelling matters.
+Spelling is important and mispelled shikigami will not be accepted. Number placement does not matter.
 
-The following commands can also be used:
+__Afterwards, the following commands can be used:__
+If the command has <> code brackets, it means that command accepts a term. Some commands work differently with and without terms. Make sure to read each segment carefully.
 
-`&shard <have/need> clear`
+**&shard <have/need> clear**
     Clears that specific list.
+    e.g. `&shard have clear`
 
-`&shard list`
+**&shard list**
     Shows your shard lists.
 
-`&shard status <on/off>`
+**&shard status <on/off>**
     No term: Returns current status
     On: Sets status to "on", enabling users to search for you.
     Off: Sets status to "off", enabling users to search for you.
 
-`&shard search <user>`
+**&shard notes <notes>**
+    No term: Disables your notes entry.
+    Notes provided: Sets your notes when using `&shard list` to the message given.
+    e.g. `&shard notes 1:1 Trades only`
+
+**&shard search <user>**
     No term: Searches entire database for shard trading matches
     User Name, Nickname, or @tag: Searches for matches between you and that user.
+    e.g. `&shard search zynro`
+    e.g. `&shard search @zynro`
 
-`&shard help`
+**&shard help**
     Returns this message.
 
-`&help shard`
+**&help shard**
     Returns the help statement for the shard command group, and lists all possible subcommands.
 
-`&help shard <subcommand>`
+**&help shard <subcommand>**
     Returns the help for the specific subcommand,
     e.g. `&help shard need`
 """)
