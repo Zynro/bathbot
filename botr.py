@@ -36,6 +36,10 @@ async def on_ready():
             discord.opus.load_opus('libopus.so')
             print('Opus has been loaded!')
 
+@bot.check
+async def guild_only_commands(ctx):
+    return ctx.guild != None
+
 '''@bot.command(name='load',hidden=True)
 async def cog_load(bot, ctx, *, cog: str):
     """Command which Loads a Module.
