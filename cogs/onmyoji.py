@@ -353,7 +353,7 @@ class Onmyoji(commands.Cog, Embeds):
         numbers = ''.join(b for b in arg if b.isdigit())
         shiki = ''.join(b for b in arg if not b.isdigit())
         if op == 'split':
-            return numbers, shiki
+            return numbers.strip(), shiki.strip()
         elif op == "bold":
             if numbers:
                 return f"{bold(numbers)} {shiki}"
@@ -436,8 +436,11 @@ For more help, tag Zynro and he'll be happy to assist.
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = ''
             return f"Your {list_name} list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires."
         arg_list = args.split("\n")
+        arg_index = 0
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
+            arg_list[arg_index] = f"{numbers} {self.shikigami_class[shiki.lower()].name}"
+            arg_index += 1
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_class.keys():
                     return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
@@ -449,6 +452,33 @@ For more help, tag Zynro and he'll be happy to assist.
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
         self.shard_file_writeout()
         return None
+
+    def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
+        self.shard_load_json()
+        numbers, shiki = self.shard_split_variable(input_shiki, 'split')
+        shiki_class_name = self.shikigami_class[shiki].name if mod == "add" else None
+        for entry in self.shard_trading_db[user][list_name]:
+            if shiki.lower() in entry.lower():
+                index_num = self.shard_trading_db[user][list_name].index(entry)
+                entry_name = "".join(char.strip() for char in self.shard_trading_db[user][list_name][index_num] if not char.isdigit())
+                if mod == "add":
+                    self.shard_trading_db[user][list_name][index_num] = f"{numbers} {shiki_class_name}" if numbers else f"{shiki_class_name}"
+                    self.shard_file_writeout()
+                    return f"**{shiki_class_name}** already exists in your {list_name} list. The amount has been updated to __{numbers}__."
+                if mod == "remove":
+                    removed_item = self.shard_trading_db[user][list_name].pop(index_num)
+                    self.shard_file_writeout()
+                    if removed_item:
+                        return f"**{entry_name}** has been removed from your __{list_name}__ list."
+                    else:
+                        return f"Removal failed, **{input_shiki}** is not present in your __{list_name}__ list. "
+        if mod == "add":
+            if numbers:
+                self.shard_trading_db[user][list_name].append(f"{numbers} {shiki_class_name}")
+            else:
+                self.shard_trading_db[user][list_name].append(shiki_class_name)
+            self.shard_file_writeout()
+            return f"You have added the entry: **{numbers} {shiki_class_name}** to your __{list_name}__ list."
 
     @shard.group(name="need", invoke_without_command=True)
     async def shard_set_need(self,ctx,*,args=None):
@@ -477,48 +507,27 @@ For more help, tag Zynro and he'll be happy to assist.
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
         trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
-        print("not invoking anything")
-
-    def mod_shikigami_to_list(self, user, entry, list_name, mod):
-        self.shard_load_json()
-        numbers, shiki = self.shard_split_variable(entry, 'split')
-        for entry in self.shard_trading_db[user][list_name]:
-            if shiki in entry:
-                index_val = self.shard_trading_db[user][list_name].index(entry)
-                if mod == "add":
-                    self.shard_trading_db[user][list_name][index_val] = f"{numbers} {shiki}" if numbers else shiki
-                    self.shard_file_writeout()
-                    return f"**{shiki}** already exists in your {list_name} list. The amount has been updated to {numbers}."
-                if mod == "remove":
-                    del self.shard_trading_db[user][list_name][index_val]
-                    self.shard_file_writeout()
-                    return f"**{shiki}** has been removed from your {list_name} list."
-        if mod == "add":
-            self.shard_trading_db[user][list_name].append(f"{numbers} {shiki.capitalize()}") if numbers else shiki
-            self.shard_file_writeout()
-            return f"You have added the entry: **{numbers} {shiki}** to your {list_name} list."
 
     @shard_set_need.command(name="add")
-    async def shard_set_need_add(self, ctx, *, shiki=None):
-        if not shiki:
+    async def shard_set_need_add(self, ctx, *, entry=None):
+        if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
-        numbers, shiki = self.shard_split_variable(shiki, 'split')
-        if shiki.lower().strip() not in self.shikigami_class.keys():
+        entry = entry.lower().strip()
+        numbers, shiki = self.shard_split_variable(entry, 'split')
+        if shiki not in self.shikigami_class.keys():
             return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
         else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), shiki, "need", "add")
+            return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "add")
             return await ctx.send(return_message)
 
     @shard_set_need.command(name="remove")
-    async def shard_set_need_remove(self, ctx, *, shiki=None):
-        if not shiki:
+    async def shard_set_need_remove(self, ctx, *, entry=None):
+        if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
-        numbers, shiki = self.shard_split_variable(shiki, 'split')
-        if shiki.lower().strip() not in self.shikigami_class.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
-        else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), shiki, "need", "remove")
-            return await ctx.send(return_message)
+        entry = entry.lower().strip()
+        numbers, shiki = self.shard_split_variable(entry, 'split')
+        return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "remove")
+        return await ctx.send(return_message)
 
 
     @shard.group(name="have", invoke_without_command=True)
@@ -550,26 +559,25 @@ For more help, tag Zynro and he'll be happy to assist.
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard_set_have.command(name="add")
-    async def shard_set_have_add(self, ctx, *, shiki=None):
-        if not shiki:
+    async def shard_set_have_add(self, ctx, *, entry=None):
+        if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
-        numbers, shiki = self.shard_split_variable(shiki, 'split')
+        entry = entry.lower().strip()
+        numbers, shiki = self.shard_split_variable(entry, 'split')
         if shiki.lower().strip() not in self.shikigami_class.keys():
             return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
         else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), shiki, "have", "add")
+            return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
             return await ctx.send(return_message)
 
     @shard_set_have.command(name="remove")
-    async def shard_set_have_remove(self, ctx, *, shiki=None):
-        if not shiki:
+    async def shard_set_have_remove(self, ctx, *, entry=None):
+        if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
-        numbers, shiki = self.shard_split_variable(shiki, 'split')
-        if shiki.lower().strip() not in self.shikigami_class.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
-        else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), shiki, "have", "remove")
-            return await ctx.send(return_message)
+        entry = entry.lower().strip()
+        numbers, shiki = self.shard_split_variable(entry, 'split')
+        return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "remove")
+        return await ctx.send(return_message)
 
     @shard.command(name="notes")
     async def shard_set_notes(self, ctx, *notes):
@@ -786,6 +794,16 @@ If the command has <> code brackets, it means that command accepts a term. Some 
 **&shard <have/need> clear**
     Clears that specific list.
     e.g. `&shard have clear`
+
+**&shard <have/need> add <shikigami>**
+    Adds the listed entry to your list. If the shikigami already exists in that list, updates that number.
+    e.g. `&shard have add Orochi 1`
+    e.g. `&shard need add 38 Sakura`
+
+**&shard <have/need> remove <shikigami>**
+    Removes the specified shikigami from the specified list. This does not update the number, but deletes the entire entry.
+    e.g. `&shard have remove Orochi`
+    e.g. `&shard need remove Onikiri`
 
 **&shard list**
     Displays your shard lists.
