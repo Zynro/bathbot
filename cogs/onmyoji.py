@@ -95,7 +95,7 @@ class DatabaseGeneration:
     def generate_user_shikigami_locations(cls, shiki_name):
         user_database_filtered_locations = []
         for row in cls.user_db:
-            if shiki_name.lower() in row[2].lower():
+            if shiki_name.lower() == row[2].lower():
                 contains = row[2].split('\n')
                 temp_list = []
                 temp_list.append(row[0])
@@ -164,7 +164,7 @@ class Shikigami:
         for row in DatabaseGeneration.onmyoguide_database:
             #need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
-            if input_name in shiki_name:
+            if input_name == shiki_name:
                 self.alias = [other_name.lower() for other_name in alias.split('\n')]
                 self.hints = hints
                 self.locations = locations.split('\n')
@@ -297,24 +297,46 @@ class Onmyoji(commands.Cog, Embeds):
             await ctx.send("You do not have permission to update the database file.\nPlease tag an @Officer to have them update it.")
 
     @commands.command()
-    async def bounty(self, ctx, *search):
+    async def bounty(self, ctx, *,search=None):
         if not search:
             await ctx.send('Search term cannot be blank, try again.')
             return
-        search = ' '.join([term.lower() for term in search])
+        search = search.lower()
+        if '"' in search:
+            exact = True
+            search = search.replace('"', '')
+        else:
+            exact = False
+        
         for shiki in self.shikigami_class.keys():
-            if search in shiki:
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                await ctx.send(file=shiki_icon, embed=shiki_embed)
-                return
-            if search in self.shikigami_class[shiki].hints.lower():
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                await ctx.send(file=shiki_icon, embed=shiki_embed)
-                return
-            if search in self.shikigami_class[shiki].alias:                
-                shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                await ctx.send(file=shiki_icon, embed=shiki_embed)
-                return
+            if exact == True:
+                if search == shiki:
+                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                    await ctx.send(file=shiki_icon, embed=shiki_embed)
+                    return
+                for hint in self.shikigami_class[shiki].hints.lower():
+                    if search == hint:
+                        shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                        await ctx.send(file=shiki_icon, embed=shiki_embed)
+                        return
+                for alias in self.shikigami_class[shiki].alias:  
+                    if search == alias:            
+                        shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                        await ctx.send(file=shiki_icon, embed=shiki_embed)
+                        return
+            elif exact == False:
+                if search in shiki:
+                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                    await ctx.send(file=shiki_icon, embed=shiki_embed)
+                    return
+                if search in self.shikigami_class[shiki].hints.lower():
+                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                    await ctx.send(file=shiki_icon, embed=shiki_embed)
+                    return
+                if search in self.shikigami_class[shiki].alias:                
+                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
+                    await ctx.send(file=shiki_icon, embed=shiki_embed)
+                    return
         await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
     @commands.command()
