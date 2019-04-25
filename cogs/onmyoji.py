@@ -508,8 +508,8 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_need.command(name="add")
-    async def shard_set_need_add(self, ctx, *, entry=None):
+    @shard_set_need.command(name="set")
+    async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
@@ -558,8 +558,8 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_have.command(name="add")
-    async def shard_set_have_add(self, ctx, *, entry=None):
+    @shard_set_have.command(name="set")
+    async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
@@ -794,10 +794,10 @@ __Afterwards, the following commands can be used:__
     Clears that specific list.
     e.g. `&shard have clear`
 
-**&shard <have/need> add <shikigami>**
-    Adds the listed entry to your list. If the shikigami already exists in that list, updates that number.
-    e.g. `&shard have add Orochi 1`
-    e.g. `&shard need add 38 Sakura`
+**&shard <have/need> set <shikigami>**
+    Sets the listed shikigami to your list. If the shikigami already exists in that list, updates that number, otherwise, adds it.
+    e.g. `&shard have set Orochi 1`
+    e.g. `&shard need set 38 Sakura`
 
 **&shard <have/need> remove <shikigami>**
     Removes the specified shikigami from the specified list. This does not update the number, but deletes the entire entry.
