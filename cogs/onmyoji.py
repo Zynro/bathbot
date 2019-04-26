@@ -130,12 +130,29 @@ class Embeds:
         embed.add_field(name="Has these Shards:", value=have_list, inline=True)
         return embed
 
+    def shard_trading_search_results_embed(self, user, other_user, you_have_they_need, you_need_they_have, search_type):
+        thumbnail = random.choice(os.listdir("./images/shard-trading"))
+        if search_type == "individual":
+            icon = discord.File(f"./images/shard-trading/{thumbnail}", filename = thumbnail)
+            embed = discord.Embed(title="*Good News Everyone!*", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"You and {other_user} have the following shards that can be traded!")
+
+            embed.set_thumbnail(url=f"attachment://{thumbnail}")
+
+            embed.add_field(name=f"{user}'s Shards:", value=you_have_they_need, inline=True)
+            embed.add_field(name=f"{other_user}'s Shards", value=you_need_they_have, inline=True)
+            #embed.add_field(name="Don't be shy", value="@them to set up a trade! ")
+            return icon, embed
+
     def shiki_bounty_embed(self, shiki):
-        color = generate_random_color()
         icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
-        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", colour=discord.Colour(color), description=f"{self.shikigami_class[shiki].name}'s hints are:")
+        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", 
+            colour=discord.Colour(generate_random_color()), 
+            description=f"{self.shikigami_class[shiki].name}'s hints are:")
         embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
-        embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", value=self.location_finder(shiki))
+        embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", 
+            value=self.location_finder(shiki))
 
         if "None" not in self.shikigami_class[shiki].user_database_locations:
             all_locations = []
@@ -771,23 +788,10 @@ Use `&search @user` where user is one of the ones listed above to check which sh
         else:
             you_need_they_have = ', '.join(you_need_they_have)
             you_have_they_need = ', '.join(you_have_they_need)
-            if not ctx.guild.get_member(int(other_user)).nick:
-                searched_user = ctx.guild.get_member(int(other_user)).name
-            else:
-                searched_user = ctx.guild.get_member(int(other_user)).nick
-            await ctx.send(f"""
-__Good news everyone!__
-You and {searched_user} have shards that can be exchanged!
-Shards you **need** that {searched_user} has:
-```
-{you_need_they_have}
-```
-Shards you **have** that {searched_user} needs:
-```
-{you_have_they_need}
-```
-""")
-            return
+            searched_user = ctx.guild.get_member(int(other_user)).name if not ctx.guild.get_member(int(other_user)).nick else ctx.guild.get_member(int(other_user)).nick
+            primary_user = ctx.guild.get_member(int(main_user)).name if not ctx.guild.get_member(int(main_user)).nick else ctx.guild.get_member(int(main_user)).nick
+            icon, embed = self.shard_trading_search_results_embed(primary_user, searched_user, you_have_they_need, you_need_they_have, "individual")
+            return await ctx.send(file=icon, embed=embed)
         return await ctx.send("I didn't understand what you meant, try again.")
 
     @shard.command(name="help")
