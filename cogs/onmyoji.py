@@ -788,8 +788,10 @@ Use `&search @user` where user is one of the ones listed above to check which sh
         else:
             you_need_they_have = ', '.join(you_need_they_have)
             you_have_they_need = ', '.join(you_have_they_need)
-            searched_user = ctx.guild.get_member(int(other_user)).name if not ctx.guild.get_member(int(other_user)).nick else ctx.guild.get_member(int(other_user)).nick
-            primary_user = ctx.guild.get_member(int(main_user)).name if not ctx.guild.get_member(int(main_user)).nick else ctx.guild.get_member(int(main_user)).nick
+            other_user = ctx.guild.get_member(int(other_user))
+            searched_user = other_user.name if not other_user.nick else other_user.nick
+            primary_user = ctx.guild.get_member(int(main_user))
+            primary_user = primary_user.name if not primary_user.nick else primary_user.nick
             icon, embed = self.shard_trading_search_results_embed(primary_user, searched_user, you_have_they_need, you_need_they_have, "individual")
             return await ctx.send(file=icon, embed=embed)
         return await ctx.send("I didn't understand what you meant, try again.")
