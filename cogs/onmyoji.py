@@ -844,7 +844,9 @@ __Afterwards, the following commands can be used:__
     No term: Disables your notes entry.
     Notes provided: Sets your notes when using `&shard list` to the message given.
     e.g. `&shard notes 1:1 Trades only`
-
+    
+""")
+        await ctx.author.send("""
 **&shard search <user>**
     No term: Searches entire database for shard trading matches
     User Name, Nickname, or @tag: Searches for matches between you and that user.
