@@ -466,23 +466,27 @@ For more help, tag Zynro and he'll be happy to assist.
         if not args:
             try: 
                 shard_list = '\n'.join(self.shard_print_list(str(ctx.message.author.id), list_name))
-                return f"Shards you **{list_name}**: ```\n{shard_list}```"
+                if not shard_list:
+                    return f"Your {list_name} list is currently empty."
+                else:
+                    return f"Shards you **{list_name}**: ```\n{shard_list}```"
             except KeyError:
                 return f'You do not have a {list_name} list yet! Use `&shard` to generate your entry first!'
         if bracket_check(args):
             return bracket_check(args)
         if "clear" in args:
-            self.shard_trading_db[str(ctx.message.author.id)][list_name] = ''
+            self.shard_trading_db[str(ctx.message.author.id)][list_name] = []
+            self.shard_file_writeout()
             return f"Your {list_name} list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires."
         arg_list = args.split("\n")
         arg_index = 0
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
-            arg_list[arg_index] = f"{numbers} {self.shikigami_class[shiki.lower()].name}"
-            arg_index += 1
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_class.keys():
                     return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
+            arg_list[arg_index] = f"{numbers} {self.shikigami_class[shiki.lower()].name}"
+            arg_index += 1
         self.shard_load_json()
         try: 
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
