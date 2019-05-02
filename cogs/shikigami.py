@@ -108,23 +108,6 @@ class DatabaseGeneration:
         return user_database_filtered_locations
 
 class Embeds:
-    
-
-    def shard_trading_search_results_embed(self, user, other_user, you_have_they_need, you_need_they_have, search_type):
-        thumbnail = random.choice(os.listdir("./images/shard-trading"))
-        if search_type == "individual":
-            icon = discord.File(f"./images/shard-trading/{thumbnail}", filename = thumbnail)
-            embed = discord.Embed(title="*Good News Everyone!*", 
-                colour=discord.Colour(generate_random_color()), 
-                description=f"You and {other_user} have the following shards that can be traded!")
-
-            embed.set_thumbnail(url=f"attachment://{thumbnail}")
-
-            embed.add_field(name=f"{user}'s Shards:", value=you_have_they_need, inline=True)
-            embed.add_field(name=f"{other_user}'s Shards", value=you_need_they_have, inline=True)
-            #embed.add_field(name="Don't be shy", value="@them to set up a trade! ")
-            return icon, embed
-
     def shiki_bounty_embed(self, shiki):
         icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
         embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", 
@@ -149,7 +132,7 @@ class Embeds:
             embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
         return embed, icon
 
-class Shikigami:
+class ShikigamiClass:
     def __init__(self, input_name):
         self.name = input_name
         self.alias = self.hints = self.locations = self.icon_name = self.icon = None
@@ -210,7 +193,7 @@ class Shikigami:
         return final_result
 
 
-class Onmyoji(commands.Cog, Embeds):
+class Shikigami(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
         try:
@@ -219,7 +202,6 @@ class Onmyoji(commands.Cog, Embeds):
             DriveAPI.get_gdrive_sheet_database()
             DriveAPI.generate_csv_databases()
             self.shikigami_class = self.create_classes()
-        self.shard_load_json()
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
@@ -231,7 +213,7 @@ class Onmyoji(commands.Cog, Embeds):
             shiki_list_reader = csv.reader(shiki_list_csv)
             next(shiki_list_reader) #skips header
             shikigami_full_list = [row[0] for row in shiki_list_reader]
-        return {shiki.lower(): Shikigami(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
+        return {shiki.lower(): ShikigamiClass(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
 
     def location_finder(self, shiki):
         if 'None' in self.shikigami_class[shiki].locations:

@@ -23,35 +23,59 @@ def bracket_check(arg):
     else:
         return None
 
-class Embeds()
+def bold(text):
+    '''Returns the Discord bolded version of input text.'''
+    if text:
+        return f'**{text}**'
+    else:
+        return text
+
+class Embeds:
+    def shard_trading_embed(self, user):
+        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['need']])
+        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['have']])
+        nick = user.name if not user.nick else user.nick
+        trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
+        try:
+            if self.shard_trading_db[str(user.id)]['notes']:
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
+                    colour=discord.Colour(generate_random_color()), 
+                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
+            else:
+                embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
+        except KeyError:
+            embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"{nick} is **{trading_status}** for trading.")         
+        embed.set_thumbnail(url=user.avatar_url)
+        #embed.set_footer(text="Up-to-Date as of <<timestamp>>")
+        embed.add_field(name="Needs these Shards:", value=need_list, inline=True)
+        embed.add_field(name="Has these Shards:", value=have_list, inline=True)
+        return embed
+
+    def shard_trading_search_results_embed(self, user, other_user, you_have_they_need, you_need_they_have, search_type):
+        thumbnail = random.choice(os.listdir("./images/shard-trading"))
+        if search_type == "individual":
+            icon = discord.File(f"./images/shard-trading/{thumbnail}", filename = thumbnail)
+            embed = discord.Embed(title="*Good News Everyone!*", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"You and {other_user} have the following shards that can be traded!")
+
+            embed.set_thumbnail(url=f"attachment://{thumbnail}")
+
+            embed.add_field(name=f"{user}'s Shards:", value=you_have_they_need, inline=True)
+            embed.add_field(name=f"{other_user}'s Shards", value=you_need_they_have, inline=True)
+            #embed.add_field(name="Don't be shy", value="@them to set up a trade! ")
+            return icon, embed
 
 class Shard(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
         self.shard_load_json()
+        self.Shikigami = self.bot.get_cog("Shikigami")
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
-
-    def create_classes(self):
-        """Creates all the Shikigami classes with each of their vairables in a dictionary."""
-        # Opens and creates the shikigami list from the full list of shikigami
-        with open(config.bbt_csv_shikigami_list_file, newline='') as shiki_list_csv:
-            shiki_list_reader = csv.reader(shiki_list_csv)
-            next(shiki_list_reader) #skips header
-            shikigami_full_list = [row[0] for row in shiki_list_reader]
-        return {shiki.lower(): Shikigami(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
-
-    def location_finder(self, shiki):
-        if 'None' in self.shikigami_class[shiki].locations:
-            return "None found in database."
-        locations_base = [location for location in self.shikigami_class[shiki].locations]
-        for location in locations_base:
-            match_recommend = recommend.search(location)
-            if match_recommend:
-                locations_base[locations_base.index(location)] = bold(location)
-        locations_onmyoguide = '\n'.join(locations_base)
-        return locations_onmyoguide
 
     def shard_load_json(self):
         """
@@ -173,9 +197,9 @@ For more help, tag Zynro and he'll be happy to assist.
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
-                if shiki.lower().strip() not in self.shikigami_class.keys():
-                    return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
-            arg_list[arg_index] = f"{numbers} {self.shikigami_class[shiki.lower()].name}"
+                if shiki.lower().strip() not in self.Shikigami.shikigami_class.keys():
+                    return f"The following shikigami is not present in the master self.Shikigami.database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
+            arg_list[arg_index] = f"{numbers} {self.Shikigami.shikigami_class[shiki.lower()].name}"
             arg_index += 1
         self.shard_load_json()
         try: 
@@ -189,7 +213,7 @@ For more help, tag Zynro and he'll be happy to assist.
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
         self.shard_load_json()
         numbers, shiki = self.shard_split_variable(input_shiki, 'split')
-        shiki_class_name = self.shikigami_class[shiki].name if mod == "add" else None
+        shiki_class_name = self.Shikigami.shikigami_class[shiki].name if mod == "add" else None
         for entry in self.shard_trading_db[user][list_name]:
             if shiki.lower() in entry.lower():
                 index_num = self.shard_trading_db[user][list_name].index(entry)
@@ -244,11 +268,11 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_need.command(name="set")
     async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a Shikigami to add to the list!")
+            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki not in self.shikigami_class.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
+        if shiki not in self.Shikigami.shikigami_class.keys():
+            return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
         else:
             return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "add")
             return await ctx.send(return_message)
@@ -256,7 +280,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_need.command(name="remove")
     async def shard_set_need_remove(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a Shikigami to add to the list!")
+            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "remove")
@@ -294,11 +318,11 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="set")
     async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a Shikigami to add to the list!")
+            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki.lower().strip() not in self.shikigami_class.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
+        if shiki.lower().strip() not in self.Shikigami.shikigami_class.keys():
+            return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
         else:
             return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
             return await ctx.send(return_message)
@@ -306,7 +330,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="remove")
     async def shard_set_have_remove(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a Shikigami to add to the list!")
+            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "remove")
