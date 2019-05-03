@@ -5,7 +5,7 @@ import requests
 import config
 import bot_token
 
-initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.onmyoji']
+initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.shard', 'cogs.shikigami']
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
