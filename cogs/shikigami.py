@@ -109,18 +109,18 @@ class DatabaseGeneration:
 
 class Embeds:
     def shiki_bounty_embed(self, shiki):
-        icon = discord.File(self.shikigami_class[shiki].icon, filename = self.shikigami_class[shiki].icon_name)
-        embed = discord.Embed(title=f"__**{self.shikigami_class[shiki].name}**__", 
+        icon = discord.File(self.shikigami_db[shiki].icon, filename = self.shikigami_db[shiki].icon_name)
+        embed = discord.Embed(title=f"__**{self.shikigami_db[shiki].name}**__", 
             colour=discord.Colour(generate_random_color()), 
-            description=f"{self.shikigami_class[shiki].name}'s hints are:")
-        embed.set_thumbnail(url=f"attachment://{self.shikigami_class[shiki].icon_name}")
+            description=f"{self.shikigami_db[shiki].name}'s hints are:")
+        embed.set_thumbnail(url=f"attachment://{self.shikigami_db[shiki].icon_name}")
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", 
             value=self.location_finder(shiki))
 
-        if "None" not in self.shikigami_class[shiki].user_database_locations:
+        if "None" not in self.shikigami_db[shiki].user_database_locations:
             all_locations = []
             count = 0
-            for main in self.shikigami_class[shiki].user_database_locations:
+            for main in self.shikigami_db[shiki].user_database_locations:
                 if count == 5:
                     break
                 sub_locs = ', '.join(main[1])
@@ -197,11 +197,11 @@ class Shikigami(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
         try:
-            self.shikigami_class = self.create_classes()
+            self.shikigami_db = self.create_classes()
         except FileNotFoundError:
             DriveAPI.get_gdrive_sheet_database()
             DriveAPI.generate_csv_databases()
-            self.shikigami_class = self.create_classes()
+            self.shikigami_db = self.create_classes()
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
@@ -216,9 +216,9 @@ class Shikigami(commands.Cog, Embeds):
         return {shiki.lower(): ShikigamiClass(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
 
     def location_finder(self, shiki):
-        if 'None' in self.shikigami_class[shiki].locations:
+        if 'None' in self.shikigami_db[shiki].locations:
             return "None found in database."
-        locations_base = [location for location in self.shikigami_class[shiki].locations]
+        locations_base = [location for location in self.shikigami_db[shiki].locations]
         for location in locations_base:
             match_recommend = recommend.search(location)
             if match_recommend:
@@ -287,18 +287,18 @@ class Shikigami(commands.Cog, Embeds):
         else:
             exact = False
         
-        for shiki in self.shikigami_class.keys():
+        for shiki in self.shikigami_db.keys():
             if exact == True:
                 if search == shiki:
                     shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                     await ctx.send(file=shiki_icon, embed=shiki_embed)
                     return
-                for hint in self.shikigami_class[shiki].hints.lower():
+                for hint in self.shikigami_db[shiki].hints.lower():
                     if search == hint:
                         shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                         await ctx.send(file=shiki_icon, embed=shiki_embed)
                         return
-                for alias in self.shikigami_class[shiki].alias:  
+                for alias in self.shikigami_db[shiki].alias:  
                     if search == alias:            
                         shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                         await ctx.send(file=shiki_icon, embed=shiki_embed)
@@ -308,11 +308,11 @@ class Shikigami(commands.Cog, Embeds):
                     shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                     await ctx.send(file=shiki_icon, embed=shiki_embed)
                     return
-                if search in self.shikigami_class[shiki].hints.lower():
+                if search in self.shikigami_db[shiki].hints.lower():
                     shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                     await ctx.send(file=shiki_icon, embed=shiki_embed)
                     return
-                if search in self.shikigami_class[shiki].alias:                
+                if search in self.shikigami_db[shiki].alias:                
                     shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
                     await ctx.send(file=shiki_icon, embed=shiki_embed)
                     return
