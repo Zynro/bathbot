@@ -268,7 +268,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_need.command(name="set")
     async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         if shiki not in self.shikigami_db.keys():
@@ -318,7 +318,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="set")
     async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         if shiki.lower().strip() not in self.shikigami_db.keys():
@@ -330,7 +330,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="remove")
     async def shard_set_have_remove(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "remove")
