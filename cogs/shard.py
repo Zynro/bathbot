@@ -72,7 +72,7 @@ class Shard(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
         self.shard_load_json()
-        self.Shikigami = self.bot.get_cog("Shikigami")
+        self.shikigami_db = self.bot.get_cog("Shikigami").shikigami_db
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
@@ -197,9 +197,9 @@ For more help, tag Zynro and he'll be happy to assist.
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
-                if shiki.lower().strip() not in self.Shikigami.shikigami_class.keys():
+                if shiki.lower().strip() not in self.shikigami_db.keys():
                     return f"The following shikigami is not present in the master self.Shikigami.database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
-            arg_list[arg_index] = f"{numbers} {self.Shikigami.shikigami_class[shiki.lower()].name}"
+            arg_list[arg_index] = f"{numbers} {self.shikigami_db[shiki.lower()].name}"
             arg_index += 1
         self.shard_load_json()
         try: 
@@ -213,7 +213,7 @@ For more help, tag Zynro and he'll be happy to assist.
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
         self.shard_load_json()
         numbers, shiki = self.shard_split_variable(input_shiki, 'split')
-        shiki_class_name = self.Shikigami.shikigami_class[shiki].name if mod == "add" else None
+        shiki_class_name = self.shikigami_db[shiki].name if mod == "add" else None
         for entry in self.shard_trading_db[user][list_name]:
             if shiki.lower() in entry.lower():
                 index_num = self.shard_trading_db[user][list_name].index(entry)
@@ -271,7 +271,7 @@ For more help, tag Zynro and he'll be happy to assist.
             return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki not in self.Shikigami.shikigami_class.keys():
+        if shiki not in self.shikigami_db.keys():
             return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
         else:
             return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "add")
@@ -321,7 +321,7 @@ For more help, tag Zynro and he'll be happy to assist.
             return await ctx.send("You must enter a self.Shikigami.to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki.lower().strip() not in self.Shikigami.shikigami_class.keys():
+        if shiki.lower().strip() not in self.shikigami_db.keys():
             return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
         else:
             return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
@@ -476,11 +476,12 @@ For more help, tag Zynro and he'll be happy to assist.
 __Good news everyone!__
 You and the following users have shards that can be traded:
 **{match_string}**
-Use `&search @user` where user is one of the ones listed above to check which shards each of you need/have!
+Use `&search user` where user is one of the ones listed above to check which shards each of you need/have!
 """)
         other_user_raw = ' '.join(other_user_raw)
-        if bracket_check(other_user_raw):
-            return await ctx.send(bracket_check(other_user_raw))
+        if "@" not in other_user_raw:
+            if bracket_check(other_user_raw):
+                return await ctx.send(bracket_check(other_user_raw))
         for member in ctx.guild.members:
             if "@" in other_user_raw:
                 other_user = ''.join(i for i in other_user_raw if i.isdigit())
