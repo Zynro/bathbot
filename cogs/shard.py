@@ -198,7 +198,7 @@ For more help, tag Zynro and he'll be happy to assist.
             numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_db.keys():
-                    return f"The following shikigami is not present in the master self.Shikigami.database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
+                    return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
             arg_list[arg_index] = f"{numbers} {self.shikigami_db[shiki.lower()].name}"
             arg_index += 1
         self.shard_load_json()
@@ -268,7 +268,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_need.command(name="set")
     async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         if shiki not in self.shikigami_db.keys():
@@ -280,7 +280,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_need.command(name="remove")
     async def shard_set_need_remove(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "remove")
@@ -318,11 +318,11 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="set")
     async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigamito add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         if shiki.lower().strip() not in self.shikigami_db.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
+            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
         else:
             return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
             return await ctx.send(return_message)
@@ -330,7 +330,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_set_have.command(name="remove")
     async def shard_set_have_remove(self, ctx, *, entry=None):
         if not entry:
-            return await ctx.send("You must enter a self.Shikigami.to add to the list!")
+            return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "remove")
