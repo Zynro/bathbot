@@ -505,8 +505,8 @@ Use `&search user` where user is one of the ones listed above to check which sha
             await ctx.send(f"Unfortunately, based on your lists, you and {other_user_raw} do not have any shards that can be exchanged.")
             return
         else:
-            you_need_they_have = ', '.join(you_need_they_have)
-            you_have_they_need = ', '.join(you_have_they_need)
+            you_need_they_have = '\n'.join(you_need_they_have)
+            you_have_they_need = '\n'.join(you_have_they_need)
             other_user = ctx.guild.get_member(int(other_user))
             searched_user = other_user.name if not other_user.nick else other_user.nick
             primary_user = ctx.guild.get_member(int(main_user))
