@@ -192,6 +192,13 @@ class ShikigamiClass:
             final_result.append([location, sub_locale])
         return final_result
 
+    @staticmethod
+    def shiki_validate(shiki, shikigami_full_list):
+        """
+        Given a search term of "shiki" and the shikigami full list, returns a Shikigami object.
+        If not found, returns None.
+        """
+        
 
 class Shikigami(commands.Cog, Embeds):
     def __init__(self, bot):
@@ -286,7 +293,6 @@ class Shikigami(commands.Cog, Embeds):
             search = search.replace('"', '')
         else:
             exact = False
-        
         for shiki in self.shikigami_db.keys():
             if exact == True:
                 if search == shiki:
