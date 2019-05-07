@@ -196,26 +196,38 @@ class ShikigamiClass:
             final_result.append([location, sub_locale])
         return final_result
 
-    @staticmethod
-    def shiki_validate(shiki_input, shikigami_db):
+    def shiki_validate(self, shiki_input, shikigami_db):
         """
         Given a search term of "shiki input" and the shikigami database, returns a list of Shikigami objects.
         If none are found, returns an empty list.
         """
-        match_list = []
-        high_score = 0
+        shikigami_result_list = []
         for shiki in shikigami_db['all']:
-            temp_score = lev_dist_similar(shiki_input, shiki)
-            if temp_score > high_score:
-                high_score = temp_score
-        for shiki in shikigami_db['all']:
-            score = lev_dist_similar(shiki_input, shiki)
-            if high_score - 5 <= score <= high_score + 5:
-                match_list.append(shikigami_db[shiki.lower()])
-        return match_list
+            shiki = shiki.lower()
+            if shiki_input == shiki:
+                return [shikigami_db[shiki]]
+            if shiki_input in shikigami_db[shiki].hints.lower():
+                shikigami_result_list.append(shikigami_db[shiki])
+            if shiki_input in shiki:
+                shikigami_result_list.append(shikigami_db[shiki])
+            if shiki_input in shikigami_db[shiki].alias:
+                shikigami_result_list.append(shikigami_db[shiki])
+        if shikigami_result_list:
+            return shikigami_result_list
+        else:
+            high_score = 0
+            for shiki in shikigami_db['all']:
+                temp_score = lev_dist_similar(shiki_input, shiki)
+                if temp_score > high_score:
+                    high_score = temp_score
+            for shiki in shikigami_db['all']:
+                score = lev_dist_similar(shiki_input, shiki)
+                if high_score - 5 <= score <= high_score + 5:
+                    shikigami_result_list.append(shikigami_db[shiki.lower()])
+            return shikigami_result_list
 
 
-class Shikigami(commands.Cog, Embeds):
+class Shikigami(commands.Cog, Embeds, ShikigamiClass):
     def __init__(self, bot):
         self.bot = bot
         try:
@@ -311,27 +323,7 @@ class Shikigami(commands.Cog, Embeds):
             search = search.replace('"', '')
         else:
             exact = False
-        for shiki in self.shikigami_db['all']:
-            shiki = shiki.lower()
-            if exact == True:
-                if search == shiki:
-                    final_shikigami.append(self.shikigami_db[shiki])
-                for hint in self.shikigami_db[shiki].hints.lower():
-                    if search == hint:
-                        final_shikigami.append(self.shikigami_db[shiki])
-                for alias in self.shikigami_db[shiki].alias:  
-                    if search == alias:            
-                        final_shikigami.append(self.shikigami_db[shiki])
-            elif exact == False:
-                if search == shiki:
-                    final_shikigami.append(self.shikigami_db[shiki])
-                    break
-                if search in self.shikigami_db[shiki].hints.lower():
-                    final_shikigami.append(self.shikigami_db[shiki])
-                if search in shiki:
-                   final_shikigami.append(self.shikigami_db[shiki])
-                if search in self.shikigami_db[shiki].alias:                
-                    final_shikigami.append(self.shikigami_db[shiki])
+        final_shikigami = self.shiki_validate(search, self.shikigami_db)
         if final_shikigami:
             if len(final_shikigami) > 1:
                 final_string = "\n".join([shiki.name for shiki in final_shikigami])
@@ -342,7 +334,7 @@ class Shikigami(commands.Cog, Embeds):
         else:
             for shiki in self.shikigami_db['all']:
                 shiki = shiki.lower()
-                result_list = ShikigamiClass.shiki_validate(search, self.shikigami_db)
+                result_list = self.shiki_validate(search, self.shikigami_db)
                 if len(result_list) > 1:
                     result = "\n".join([shiki.name for shiki in result_list])
                     return await ctx.send(f"__I found multiple matches for your search, please search again with one specified:__\n{result}")
@@ -361,7 +353,7 @@ class Shikigami(commands.Cog, Embeds):
 
     @commands.command(name = "br")
     async def test_br(self, ctx, *, entry = None):
-        for shiki_object in ShikigamiClass.shiki_validate(entry, self.shikigami_db):
+        for shiki_object in self.shiki_validate(entry, self.shikigami_db):
             await ctx.send(shiki_object.name)
 
 def setup(bot):
