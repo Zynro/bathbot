@@ -327,7 +327,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         if final_shikigami:
             if len(final_shikigami) > 1:
                 final_string = "\n".join([shiki.name for shiki in final_shikigami])
-                return await ctx.send(f"__I found multiple matches for your search, please search again with one specified:__\n{final_string}")
+                return await ctx.send(f"*I found multiple matches for your search, please search again with one specified:*\n{final_string}")
             shiki_embed, shiki_icon = self.shiki_bounty_embed(final_shikigami[0])
             await ctx.send(file=shiki_icon, embed=shiki_embed)
             return
