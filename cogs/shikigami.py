@@ -323,11 +323,6 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
             await ctx.send('Search term cannot be blank, try again.')
             return
         search = search.lower()
-        if '"' in search:
-            exact = True
-            search = search.replace('"', '')
-        else:
-            exact = False
         final_shikigami = self.shiki_validate(search, self.shikigami_db)
         if final_shikigami:
             if len(final_shikigami) > 1:
@@ -337,19 +332,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
             await ctx.send(file=shiki_icon, embed=shiki_embed)
             return
         else:
-            for shiki in self.shikigami_db['all']:
-                shiki = shiki.lower()
-                result_list = self.shiki_validate(search, self.shikigami_db)
-                if len(result_list) > 1:
-                    result = "\n".join([shiki.name for shiki in result_list])
-                    return await ctx.send(f"__I found multiple matches for your search, please search again with one specified:__\n{result}")
-                else:
-                    shiki_embed, shiki_icon = self.shiki_bounty_embed(result_list[0])
-                    return await ctx.send(file=shiki_icon, embed=shiki_embed)
-
-        
-
-        await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
+            await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
     @commands.command()
     async def tengu(self, ctx):
