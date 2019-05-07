@@ -605,8 +605,11 @@ __Afterwards, the following commands can be used:__
     e.g. `&shard have remove Orochi`
     e.g. `&shard need remove Onikiri`
 
-**&shard list**
-    Displays your shard lists.
+**&shard list <target>**
+    Displays shard lists.
+    No term: Returns your list.
+    User Name, Nickname, or @tag: Returns that users' lists if their trading status is available.
+
 
 **&shard status <on/off>**
     No term: Returns current status
