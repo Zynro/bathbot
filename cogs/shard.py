@@ -32,15 +32,16 @@ def bold(text):
 
 class Embeds:
     def shard_trading_embed(self, user):
-        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['need']])
-        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['have']])
+        user_id_string = str(user.id)
+        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['need']])
+        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['have']])
         nick = user.name if not user.nick else user.nick
-        trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
+        trading_status = 'available' if  self.check_trading_status(user_id_string) else 'unavailable'
         try:
-            if self.shard_trading_db[str(user.id)]['notes']:
+            if self.shard_trading_db[user_id_string]['notes']:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
                     colour=discord.Colour(generate_random_color()), 
-                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
+                    description=f"__**Notes:**__ {self.shard_trading_db[user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.")
             else:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
         except KeyError:
@@ -78,6 +79,21 @@ class Shard(commands.Cog, Embeds):
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
+
+
+    def user_validation(self, ctx, other_user_raw):
+        if "@" in other_user_raw:
+            other_user = ''.join(i for i in other_user_raw if i.isdigit())
+        for member in ctx.guild.members:
+            try:
+                if other_user_raw.lower().strip() in member.nick.lower():
+                    other_user = str(member.id)
+                    break
+            except (TypeError, AttributeError):
+                if other_user_raw.lower().strip() in member.name.lower():
+                    other_user = str(member.id)
+                    break
+        return other_user
 
     def shard_load_json(self):
         """
@@ -169,13 +185,35 @@ For more help, tag Zynro and he'll be happy to assist.
 
     
     @shard.command(name='list',aliases=['print'])
-    async def shard_print_list_user(self, ctx):
+    async def shard_print_list_user(self, ctx, *, target=None):
         """
         Prints the users current status, notes, and both have/need lists of shards, all in a fancy little embed.
+
+        If used as-is, returns *your* list.
+            &shard list
+        If given a user's name, nickname, or @tag, returns their list if their trading status is available.
+            &shard list zynro
         """
-        if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
-            return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
-        embed = self.shard_trading_embed(ctx.author)
+        self.shard_load_json()
+        user_id = str(ctx.author.id) if not target else self.user_validation(ctx, target)
+        user = ctx.author if not target else ctx.guild.get_member(int(user_id))
+        if not target:
+            try:
+                temp = self.shard_trading_db[user_id]
+            except KeyError:
+                self.shard_entry_init
+            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+                return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
+        else:
+            try:
+                temp = self.shard_trading_db[user_id]
+            except KeyError:
+                return await ctx.send("That user has not used the shard command group before and has no lists.")
+            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+                return await ctx.send("That user must have both 'need' and 'have' lists before you can check their shards.")
+        if self.shard_trading_db[user_id]['status'] == False:
+            return await ctx.send("That user is currently not available for trading.")
+        embed = self.shard_trading_embed(user)
         await ctx.send(embed=embed)
 
     def shard_set_list(self, ctx, args, list_name):
@@ -464,6 +502,7 @@ For more help, tag Zynro and he'll be happy to assist.
             return None, None
         return you_have_they_need, you_need_they_have
 
+    
 
     @shard.command(name="search")
     async def shard_search(self, ctx, *other_user_raw):
@@ -509,19 +548,7 @@ Use `&search user` where user is one of the ones listed above to check which sha
         if "@" not in other_user_raw:
             if bracket_check(other_user_raw):
                 return await ctx.send(bracket_check(other_user_raw))
-        for member in ctx.guild.members:
-            if "@" in other_user_raw:
-                other_user = ''.join(i for i in other_user_raw if i.isdigit())
-                break
-            else:
-                try:
-                    if other_user_raw.lower().strip() in member.nick.lower():
-                        other_user = str(member.id)
-                        break
-                except (TypeError, AttributeError):
-                    if other_user_raw.lower().strip() in member.name.lower():
-                        other_user = str(member.id)
-                        break
+        other_user = self.user_validation(ctx, other_user_raw)
         if not other_user:
             return await ctx.send("I could not find that user, or you typed an improper keyword.")
         you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
