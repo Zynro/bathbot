@@ -222,14 +222,14 @@ For more help, tag Zynro and he'll be happy to assist.
 
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
         self.shard_load_json()
+        numbers, shiki = self.shard_split_variable(input_shiki.lower(), 'split')
         if mod == "add":
-            shiki_list = self.Shikigami.shiki_validate(input_shiki, self.shikigami_db)
+            shiki_list = self.Shikigami.shiki_validate(shiki, self.shikigami_db)
             if len(shiki_list)>1:
                 fuzzy = ", ".join([shiki.name for shiki in shiki_list])
-                return f"**{input_shiki}** does not exist in the master Shikigami list.\n\n*Did you mean:*\n`{fuzzy}`\n\nPlease try again with exact spelling."
+                return f"**{shiki}** does not exist in the master Shikigami list.\n\n*Did you mean:*\n`{fuzzy}`\n\nPlease try again with exact spelling."
             else:
-                input_shiki = input_shiki[0]
-        numbers, shiki = self.shard_split_variable(input_shiki, 'split')
+                shiki = shiki_list[0].name.lower()
         shiki_class_name = self.shikigami_db[shiki].name if mod == "add" else None
         for entry in self.shard_trading_db[user][list_name]:
             if shiki.lower() in entry.lower():
@@ -253,6 +253,8 @@ For more help, tag Zynro and he'll be happy to assist.
                 self.shard_trading_db[user][list_name].append(shiki_class_name)
             self.shard_file_writeout()
             return f"You have added the entry: **{numbers} {shiki_class_name}** to your __{list_name}__ list."
+        elif mod == "remove":
+            return f"Removal failed, **{input_shiki}** is not present in your __{list_name}__ list. "
 
     @shard.group(name="need", invoke_without_command=True)
     async def shard_set_need(self,ctx,*,args=None):
