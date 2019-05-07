@@ -114,9 +114,14 @@ class DatabaseGeneration:
 class Embeds:
     def shiki_bounty_embed(self, shikigami_object):
         icon = discord.File(shikigami_object.icon, filename = shikigami_object.icon_name)
-        embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
+        if shikigami_object.hints:
+            embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"Hints:\n*{shikigami_object.hints}*")
+        else:
+            embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
             colour=discord.Colour(generate_random_color()), 
-            description=f"Hints:\n*{shikigami_object.hints}*")
+            description=f"*No hints found*")
         embed.set_thumbnail(url=f"attachment://{shikigami_object.icon_name}")
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", 
             value=self.location_finder(shikigami_object))
