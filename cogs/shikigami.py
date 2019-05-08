@@ -136,9 +136,11 @@ class Embeds:
                 all_locations.append(f'{bold(main[0])} - {sub_locs}')
                 count+=1
             all_locations = '\n'.join(all_locations)
-            embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
+            embed.add_field(name="BubbleTea Database Bounty Locations:", value=all_locations)
         else:
-            embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
+            #Re-add when Database is fully functional
+            #embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
+            embed.add_field(name="BubbleTea Database Bounty Locations:", value='Temporarily disabled until the BubbleTea Shikigami Location Database is more populated.')
         return embed, icon
 
 class ShikigamiClass:
