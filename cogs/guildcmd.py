@@ -24,8 +24,11 @@ class GuildCmd(commands.Cog):
             self.guild_info.update(schedule)
         self.bot = bot
 
+    async def has_permission(ctx):
+        return ctx.author.id in owner_list or ctx.author.id in editor_list
+
     def guild_leader_check(ctx):
-        return ctx.guild.owner.id == ctx.author.id
+        return ctx.guild.owner.id == ctx.author.id or ctx.author.id in owner_list
 
     def guild_json_load(self):
         try:
@@ -64,6 +67,7 @@ class GuildCmd(commands.Cog):
             return await ctx.send(self.guild_info["schedule"]["message"], file = File(self.guild_info["schedule"]["file_path"]))
 
     @schedule.command(name = "image")
+    @schedule.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
         guild_img_path = f"./{config.images_path}/guild"
         for file in os.listdir(guild_img_path):
@@ -102,7 +106,13 @@ class GuildCmd(commands.Cog):
                 await ctx.send(f"An error occured: {e}")
         self.guild_json_writeout()
 
+    @schedule_set_imagee.error
+    async def schedule_set_image_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("You do not have permission to uuse this command.")
+
     @schedule.command(name = "message")
+    @schedule.check(guild_leader_check)
     async def schedule_set_message(self, ctx, *, arg=None):
         if not arg:
             try:
@@ -122,6 +132,10 @@ class GuildCmd(commands.Cog):
             await ctx.send(f"Your current schedule message is now set to: {arg}")
         self.guild_json_writeout()
 
+    @schedule_set_message.error
+    async def schedule_set_message_error(self, ctx, error):
+        if isinstance(error, commands.CheckFailure):
+            await ctx.send("You do not have permission to uuse this command.")
 
 def setup(bot):
     bot.add_cog(GuildCmd(bot))

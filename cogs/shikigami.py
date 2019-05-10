@@ -305,6 +305,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
             await ctx.send("You do not have permission to uuse this command.")
 
     @commands.command(name='database_update', aliases=['update', 'download'])
+    @commands.check(has_permission)
     async def download_shikigami_update_excel(self, ctx):
         '''If Officer, updates the bot's local database file.'''
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")

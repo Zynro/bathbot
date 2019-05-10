@@ -10,3 +10,4 @@ pyexcel-xls==0.5.8
 pyexcel-xlsx==0.5.7
 xlrd==1.2.0
 git+ssh://git@github.com/seatgeek/fuzzywuzzy.git@0.17.0#egg=fuzzywuzzy[speedup]
+requests==2.21.0
