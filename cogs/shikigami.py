@@ -14,6 +14,7 @@ import config
 import re
 import pyexcel as pye
 import random
+from fuzzywuzzy import fuzz
 
 permission = 'You do not have permission to use this command.'
 owner_list = config.owner_list
@@ -45,6 +46,9 @@ def bracket_check(arg):
         return "Please do not include brackets in your command uses. They are to demonstrate that terms are optional, or what terms can be used, for that specific command."
     else:
         return None
+
+def lev_dist_similar(a, b):
+    return fuzz.partial_ratio(a.lower(), b.lower())
 
 class DriveAPI:
     """Manages the Google Drive API Auth and retreiving the CSV database."""
@@ -108,28 +112,35 @@ class DatabaseGeneration:
         return user_database_filtered_locations
 
 class Embeds:
-    def shiki_bounty_embed(self, shiki):
-        icon = discord.File(self.shikigami_db[shiki].icon, filename = self.shikigami_db[shiki].icon_name)
-        embed = discord.Embed(title=f"__**{self.shikigami_db[shiki].name}**__", 
+    def shiki_bounty_embed(self, shikigami_object):
+        icon = discord.File(shikigami_object.icon, filename = shikigami_object.icon_name)
+        if shikigami_object.hints:
+            embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
+                colour=discord.Colour(generate_random_color()), 
+                description=f"Hints:\n*{shikigami_object.hints}*")
+        else:
+            embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
             colour=discord.Colour(generate_random_color()), 
-            description=f"{self.shikigami_db[shiki].name}'s hints are:")
-        embed.set_thumbnail(url=f"attachment://{self.shikigami_db[shiki].icon_name}")
+            description=f"*No hints found*")
+        embed.set_thumbnail(url=f"attachment://{shikigami_object.icon_name}")
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", 
-            value=self.location_finder(shiki))
+            value=self.location_finder(shikigami_object))
 
-        if "None" not in self.shikigami_db[shiki].user_database_locations:
+        if "None" not in shikigami_object.user_database_locations:
             all_locations = []
             count = 0
-            for main in self.shikigami_db[shiki].user_database_locations:
+            for main in shikigami_object.user_database_locations:
                 if count == 5:
                     break
                 sub_locs = ', '.join(main[1])
                 all_locations.append(f'{bold(main[0])} - {sub_locs}')
                 count+=1
             all_locations = '\n'.join(all_locations)
-            embed.add_field(name="BBT-Databased Bounty Locations:", value=all_locations)
+            embed.add_field(name="BubbleTea Database Bounty Locations:", value=all_locations)
         else:
-            embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
+            #Re-add when Database is fully functional
+            #embed.add_field(name="BBT-Databased Bounty Locations:", value='None found in database.')
+            embed.add_field(name="BubbleTea Database Bounty Locations:", value='Temporarily disabled until the BubbleTea Shikigami Location Database is more populated.')
         return embed, icon
 
 class ShikigamiClass:
@@ -146,7 +157,7 @@ class ShikigamiClass:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name == shiki_name:
                 self.alias = [other_name.lower() for other_name in alias.split('\n')]
-                self.hints = hints
+                self.hints = ", ".join(hints.split("\n"))
                 self.locations = locations.split('\n')
                 break
         user_database = DatabaseGeneration.generate_user_shikigami_locations(self.name)
@@ -192,16 +203,48 @@ class ShikigamiClass:
             final_result.append([location, sub_locale])
         return final_result
 
+    def shiki_validate(self, shiki_input, shikigami_db):
+        """
+        Given a search term of "shiki input" and the shikigami database, returns a list of Shikigami objects.
+        If none are found, returns an empty list.
+        """
+        shikigami_result_list = []
+        for shiki in shikigami_db['all']:
+            shiki = shiki.lower()
+            if shiki_input == shiki:
+                return [shikigami_db[shiki]]
+            if shiki_input in shikigami_db[shiki].hints.lower():
+                shikigami_result_list.append(shikigami_db[shiki])
+            if shiki_input in shiki:
+                shikigami_result_list.append(shikigami_db[shiki])
+            if shiki_input in shikigami_db[shiki].alias:
+                shikigami_result_list.append(shikigami_db[shiki])
+        if shikigami_result_list:
+            return shikigami_result_list
+        else:
+            high_score = 0
+            for shiki in shikigami_db['all']:
+                temp_score = lev_dist_similar(shiki_input, shiki)
+                if temp_score > high_score:
+                    high_score = temp_score
+            for shiki in shikigami_db['all']:
+                score = lev_dist_similar(shiki_input, shiki)
+                if high_score - 5 <= score <= high_score + 5:
+                    shikigami_result_list.append(shikigami_db[shiki.lower()])
+            return shikigami_result_list
 
-class Shikigami(commands.Cog, Embeds):
+
+class Shikigami(commands.Cog, Embeds, ShikigamiClass):
     def __init__(self, bot):
         self.bot = bot
         try:
             self.shikigami_db = self.create_classes()
+            self.shikigami_db['all'] = self.shikigami_full_list
         except FileNotFoundError:
             DriveAPI.get_gdrive_sheet_database()
             DriveAPI.generate_csv_databases()
             self.shikigami_db = self.create_classes()
+            self.shikigami_db['all'] = self.shikigami_full_list
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
@@ -212,13 +255,13 @@ class Shikigami(commands.Cog, Embeds):
         with open(config.bbt_csv_shikigami_list_file, newline='') as shiki_list_csv:
             shiki_list_reader = csv.reader(shiki_list_csv)
             next(shiki_list_reader) #skips header
-            shikigami_full_list = [row[0] for row in shiki_list_reader]
-        return {shiki.lower(): ShikigamiClass(shiki) for shiki in shikigami_full_list if "frog" not in shiki.lower()}
+            self.shikigami_full_list = [row[0] for row in shiki_list_reader if "frog" not in row[0].lower()]
+        return {shiki.lower(): ShikigamiClass(shiki) for shiki in self.shikigami_full_list if "frog" not in shiki.lower()}
 
-    def location_finder(self, shiki):
-        if 'None' in self.shikigami_db[shiki].locations:
+    def location_finder(self, shikigami_object):
+        if 'None' in shikigami_object.locations:
             return "None found in database."
-        locations_base = [location for location in self.shikigami_db[shiki].locations]
+        locations_base = [location for location in shikigami_object.locations]
         for location in locations_base:
             match_recommend = recommend.search(location)
             if match_recommend:
@@ -277,51 +320,31 @@ class Shikigami(commands.Cog, Embeds):
 
     @commands.command()
     async def bounty(self, ctx, *,search=None):
+        final_shikigami = []
         if not search:
             await ctx.send('Search term cannot be blank, try again.')
             return
         search = search.lower()
-        if '"' in search:
-            exact = True
-            search = search.replace('"', '')
+        final_shikigami = self.shiki_validate(search, self.shikigami_db)
+        if final_shikigami:
+            if len(final_shikigami) > 1:
+                final_string = "\n".join([shiki.name for shiki in final_shikigami])
+                return await ctx.send(f"*I found multiple matches for your search, please search again with one specified:*\n{final_string}")
+            shiki_embed, shiki_icon = self.shiki_bounty_embed(final_shikigami[0])
+            await ctx.send(file=shiki_icon, embed=shiki_embed)
+            return
         else:
-            exact = False
-        
-        for shiki in self.shikigami_db.keys():
-            if exact == True:
-                if search == shiki:
-                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                    await ctx.send(file=shiki_icon, embed=shiki_embed)
-                    return
-                for hint in self.shikigami_db[shiki].hints.lower():
-                    if search == hint:
-                        shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                        await ctx.send(file=shiki_icon, embed=shiki_embed)
-                        return
-                for alias in self.shikigami_db[shiki].alias:  
-                    if search == alias:            
-                        shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                        await ctx.send(file=shiki_icon, embed=shiki_embed)
-                        return
-            elif exact == False:
-                if search in shiki:
-                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                    await ctx.send(file=shiki_icon, embed=shiki_embed)
-                    return
-                if search in self.shikigami_db[shiki].hints.lower():
-                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                    await ctx.send(file=shiki_icon, embed=shiki_embed)
-                    return
-                if search in self.shikigami_db[shiki].alias:                
-                    shiki_embed, shiki_icon = self.shiki_bounty_embed(shiki)
-                    await ctx.send(file=shiki_icon, embed=shiki_embed)
-                    return
-        await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
+            await ctx.send("For all my bath powers, I could not find your term, or something went wrong.")
 
     @commands.command()
     async def tengu(self, ctx):
         """hurrhurrhurr"""
         await ctx.send(file=discord.File('./images/tengu.jpg'))
+
+    @commands.command(name = "br")
+    async def test_br(self, ctx, *, entry = None):
+        for shiki_object in self.shiki_validate(entry, self.shikigami_db):
+            await ctx.send(shiki_object.name)
 
 def setup(bot):
     bot.add_cog(Shikigami(bot))

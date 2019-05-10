@@ -32,15 +32,16 @@ def bold(text):
 
 class Embeds:
     def shard_trading_embed(self, user):
-        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['need']])
-        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[str(user.id)]['have']])
+        user_id_string = str(user.id)
+        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['need']])
+        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['have']])
         nick = user.name if not user.nick else user.nick
-        trading_status = 'available' if  self.check_trading_status(user.id) else 'unavailable'
+        trading_status = 'available' if  self.check_trading_status(user_id_string) else 'unavailable'
         try:
-            if self.shard_trading_db[str(user.id)]['notes']:
+            if self.shard_trading_db[user_id_string]['notes']:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
                     colour=discord.Colour(generate_random_color()), 
-                    description=f"__**Notes:**__ {self.shard_trading_db[str(user.id)]['notes']}\n\n{nick} is **{trading_status}** for trading.")
+                    description=f"__**Notes:**__ {self.shard_trading_db[user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.")
             else:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
         except KeyError:
@@ -72,10 +73,27 @@ class Shard(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
         self.shard_load_json()
+        self.Shikigami = self.bot.get_cog("Shikigami")
         self.shikigami_db = self.bot.get_cog("Shikigami").shikigami_db
+
 
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
+
+
+    def user_validation(self, ctx, other_user_raw):
+        if "@" in other_user_raw:
+            other_user = ''.join(i for i in other_user_raw if i.isdigit())
+        for member in ctx.guild.members:
+            try:
+                if other_user_raw.lower().strip() in member.nick.lower():
+                    other_user = str(member.id)
+                    break
+            except (TypeError, AttributeError):
+                if other_user_raw.lower().strip() in member.name.lower():
+                    other_user = str(member.id)
+                    break
+        return other_user
 
     def shard_load_json(self):
         """
@@ -167,13 +185,35 @@ For more help, tag Zynro and he'll be happy to assist.
 
     
     @shard.command(name='list',aliases=['print'])
-    async def shard_print_list_user(self, ctx):
+    async def shard_print_list_user(self, ctx, *, target=None):
         """
         Prints the users current status, notes, and both have/need lists of shards, all in a fancy little embed.
+
+        If used as-is, returns *your* list.
+            &shard list
+        If given a user's name, nickname, or @tag, returns their list if their trading status is available.
+            &shard list zynro
         """
-        if not self.shard_trading_db[str(ctx.author.id)]['need'] or not self.shard_trading_db[str(ctx.author.id)]['have']:
-            return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
-        embed = self.shard_trading_embed(ctx.author)
+        self.shard_load_json()
+        user_id = str(ctx.author.id) if not target else self.user_validation(ctx, target)
+        user = ctx.author if not target else ctx.guild.get_member(int(user_id))
+        if not target:
+            try:
+                temp = self.shard_trading_db[user_id]
+            except KeyError:
+                self.shard_entry_init
+            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+                return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
+        else:
+            try:
+                temp = self.shard_trading_db[user_id]
+            except KeyError:
+                return await ctx.send("That user has not used the shard command group before and has no lists.")
+            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+                return await ctx.send("That user must have both 'need' and 'have' lists before you can check their shards.")
+        if self.shard_trading_db[user_id]['status'] == False:
+            return await ctx.send("That user is currently not available for trading.")
+        embed = self.shard_trading_embed(user)
         await ctx.send(embed=embed)
 
     def shard_set_list(self, ctx, args, list_name):
@@ -188,19 +228,27 @@ For more help, tag Zynro and he'll be happy to assist.
                 return f'You do not have a {list_name} list yet! Use `&shard` to generate your entry first!'
         if bracket_check(args):
             return bracket_check(args)
-        if "clear" in args:
-            self.shard_trading_db[str(ctx.message.author.id)][list_name] = []
-            self.shard_file_writeout()
-            return f"Your {list_name} list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires."
         arg_list = args.split("\n")
         arg_index = 0
+        failed_list = []
         for shiki in arg_list:
             numbers, shiki = self.shard_split_variable(shiki, 'split')
             if "frog" not in shiki.lower().strip():
                 if shiki.lower().strip() not in self.shikigami_db.keys():
-                    return f"The following shikigami is not present in the master Shikigami database: \n**{shiki}**\nSpelling is important, else searches won't work. Please try again."
-            arg_list[arg_index] = f"{numbers} {self.shikigami_db[shiki.lower()].name}"
-            arg_index += 1
+                    failed_list.append(shiki)
+            try:
+                arg_list[arg_index] = f"{numbers} {self.shikigami_db[shiki.lower()].name}"
+                arg_index += 1
+            except KeyError:
+                continue
+        if failed_list:
+            result = "The following shikigami are not present in the master Shikigami database:\n"
+            for shiki in failed_list:
+                result += f"**{shiki}**"
+                guess = ", ".join([shiki.name for shiki in self.Shikigami.shiki_validate(shiki, self.shikigami_db)])
+                result = f"{result}\n*Did you mean:* `{guess}`\n"
+            result += "\nExact spelling is important, else searches won't work. Please try again."
+            return result
         self.shard_load_json()
         try: 
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
@@ -212,7 +260,14 @@ For more help, tag Zynro and he'll be happy to assist.
 
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
         self.shard_load_json()
-        numbers, shiki = self.shard_split_variable(input_shiki, 'split')
+        numbers, shiki = self.shard_split_variable(input_shiki.lower(), 'split')
+        if mod == "add":
+            shiki_list = self.Shikigami.shiki_validate(shiki, self.shikigami_db)
+            if len(shiki_list)>1:
+                fuzzy = ", ".join([shiki.name for shiki in shiki_list])
+                return f"**{shiki}** does not exist in the master Shikigami list.\n\n*Did you mean:*\n`{fuzzy}`\n\nPlease try again with exact spelling."
+            else:
+                shiki = shiki_list[0].name.lower()
         shiki_class_name = self.shikigami_db[shiki].name if mod == "add" else None
         for entry in self.shard_trading_db[user][list_name]:
             if shiki.lower() in entry.lower():
@@ -228,7 +283,7 @@ For more help, tag Zynro and he'll be happy to assist.
                     if removed_item:
                         return f"**{entry_name}** has been removed from your __{list_name}__ list."
                     else:
-                        return f"Removal failed, **{input_shiki}** is not present in your __{list_name}__ list. "
+                        return f"Removal failed, **{entry_name}** is not present in your __{list_name}__ list. "
         if mod == "add":
             if numbers:
                 self.shard_trading_db[user][list_name].append(f"{numbers} {shiki_class_name}")
@@ -236,6 +291,8 @@ For more help, tag Zynro and he'll be happy to assist.
                 self.shard_trading_db[user][list_name].append(shiki_class_name)
             self.shard_file_writeout()
             return f"You have added the entry: **{numbers} {shiki_class_name}** to your __{list_name}__ list."
+        elif mod == "remove":
+            return f"Removal failed, **{input_shiki}** is not present in your __{list_name}__ list. "
 
     @shard.group(name="need", invoke_without_command=True)
     async def shard_set_need(self,ctx,*,args=None):
@@ -265,17 +322,14 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_need.command(name="set")
+    @shard_set_need.command(name="add")
     async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki not in self.shikigami_db.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master self.Shikigami.list. Please try again.")
-        else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "add")
-            return await ctx.send(return_message)
+        return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "add")
+        return await ctx.send(return_message)
 
     @shard_set_need.command(name="remove")
     async def shard_set_need_remove(self, ctx, *, entry=None):
@@ -285,6 +339,13 @@ For more help, tag Zynro and he'll be happy to assist.
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "need", "remove")
         return await ctx.send(return_message)
+
+    @shard_set_need.command(name="clear")
+    async def shard_set_need_clear(self, ctx):
+        self.shard_load_json()
+        self.shard_trading_db[str(ctx.message.author.id)]["need"] = []
+        self.shard_file_writeout()
+        return await ctx.send("Your need list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
 
 
     @shard.group(name="have", invoke_without_command=True)
@@ -315,17 +376,14 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_have.command(name="set")
+    @shard_set_have.command(name="add")
     async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
         entry = entry.lower().strip()
         numbers, shiki = self.shard_split_variable(entry, 'split')
-        if shiki.lower().strip() not in self.shikigami_db.keys():
-            return await ctx.send(f"**{shiki}** does not exist in the master Shikigami list. Please try again.")
-        else:
-            return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
-            return await ctx.send(return_message)
+        return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "add")
+        return await ctx.send(return_message)
 
     @shard_set_have.command(name="remove")
     async def shard_set_have_remove(self, ctx, *, entry=None):
@@ -335,6 +393,13 @@ For more help, tag Zynro and he'll be happy to assist.
         numbers, shiki = self.shard_split_variable(entry, 'split')
         return_message = self.mod_shikigami_to_list(str(ctx.author.id), entry, "have", "remove")
         return await ctx.send(return_message)
+
+    @shard_set_have.command(name="clear")
+    async def shard_set_have_clear(self, ctx):
+        self.shard_load_json()
+        self.shard_trading_db[str(ctx.message.author.id)]["have"] = []
+        self.shard_file_writeout()
+        return await ctx.send("Your have list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
 
     @shard.command(name="notes")
     async def shard_set_notes(self, ctx, *notes):
@@ -437,6 +502,7 @@ For more help, tag Zynro and he'll be happy to assist.
             return None, None
         return you_have_they_need, you_need_they_have
 
+    
 
     @shard.command(name="search")
     async def shard_search(self, ctx, *other_user_raw):
@@ -482,19 +548,7 @@ Use `&search user` where user is one of the ones listed above to check which sha
         if "@" not in other_user_raw:
             if bracket_check(other_user_raw):
                 return await ctx.send(bracket_check(other_user_raw))
-        for member in ctx.guild.members:
-            if "@" in other_user_raw:
-                other_user = ''.join(i for i in other_user_raw if i.isdigit())
-                break
-            else:
-                try:
-                    if other_user_raw.lower().strip() in member.nick.lower():
-                        other_user = str(member.id)
-                        break
-                except (TypeError, AttributeError):
-                    if other_user_raw.lower().strip() in member.name.lower():
-                        other_user = str(member.id)
-                        break
+        other_user = self.user_validation(ctx, other_user_raw)
         if not other_user:
             return await ctx.send("I could not find that user, or you typed an improper keyword.")
         you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
@@ -551,8 +605,11 @@ __Afterwards, the following commands can be used:__
     e.g. `&shard have remove Orochi`
     e.g. `&shard need remove Onikiri`
 
-**&shard list**
-    Displays your shard lists.
+**&shard list <target>**
+    Displays shard lists.
+    No term: Returns your list.
+    User Name, Nickname, or @tag: Returns that users' lists if their trading status is available.
+
 
 **&shard status <on/off>**
     No term: Returns current status
