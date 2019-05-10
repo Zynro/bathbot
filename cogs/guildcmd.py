@@ -56,7 +56,7 @@ class GuildCmd(commands.Cog):
             except KeyError:
                 image = None
             if not message and not image:
-                return await ctx.send("No schedule is set.\nTo set an image, use `&schedule image <link to image>.\nTo set an accompanying message, use `&schedule message <message>`\nYou can set both or just one.")
+                return await ctx.send("No schedule is set.\nTo set an image, use `&schedule image <link to image>`.\nTo set an accompanying message, use `&schedule message <message>`\nYou can set both or just one.")
             if not message:
                 return await ctx.send(file = File(self.guild_info["schedule"]["file_path"]))
             if not image:
