@@ -115,9 +115,10 @@ class Embeds:
     def shiki_bounty_embed(self, shikigami_object):
         icon = discord.File(shikigami_object.icon, filename = shikigami_object.icon_name)
         if shikigami_object.hints:
+            hints = ", ".join(shikigami_object.hints)
             embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
                 colour=discord.Colour(generate_random_color()), 
-                description=f"Hints:\n*{shikigami_object.hints}*")
+                description=f"Hints:\n*{hints}*")
         else:
             embed = discord.Embed(title=f"__**{shikigami_object.name}**__", 
             colour=discord.Colour(generate_random_color()), 
@@ -157,7 +158,7 @@ class ShikigamiClass:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name == shiki_name:
                 self.alias = [other_name.lower() for other_name in alias.split('\n')]
-                self.hints = ", ".join(hints.split("\n"))
+                self.hints = hints.split("\n")
                 self.locations = locations.split('\n')
                 break
         user_database = DatabaseGeneration.generate_user_shikigami_locations(self.name)
@@ -213,8 +214,9 @@ class ShikigamiClass:
             shiki = shiki.lower()
             if shiki_input == shiki:
                 return [shikigami_db[shiki]]
-            if shiki_input in shikigami_db[shiki].hints.lower():
-                shikigami_result_list.append(shikigami_db[shiki])
+            for hint in shikigami_db[shiki].hints:
+                if hint.startswith(shiki_input):
+                    shikigami_result_list.append(shikigami_db[shiki])
             if shiki_input in shiki:
                 shikigami_result_list.append(shikigami_db[shiki])
             if shiki_input in shikigami_db[shiki].alias:
