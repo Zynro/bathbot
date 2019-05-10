@@ -216,7 +216,7 @@ class ShikigamiClass:
             if shiki_input == shiki:
                 return [shikigami_db[shiki]]
             for hint in shikigami_db[shiki].hints:
-                if hint.lower().startswith():
+                if hint.lower().startswith(shiki_input):
                     shikigami_result_list.append(shikigami_db[shiki])
             if shiki_input in shiki:
                 shikigami_result_list.append(shikigami_db[shiki])
