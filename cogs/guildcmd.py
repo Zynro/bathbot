@@ -56,7 +56,7 @@ class GuildCmd(commands.Cog):
             except KeyError:
                 image = None
             if not message and not image:
-                return await ctx.send("No schedule is set.")
+                return await ctx.send("No schedule is set.\nTo set an image, use `&schedule image <link to image>.\nTo set an accompanying message, use `&schedule message <message>`\nYou can set both or just one.")
             if not message:
                 return await ctx.send(file = File(self.guild_info["schedule"]["file_path"]))
             if not image:
@@ -81,7 +81,7 @@ class GuildCmd(commands.Cog):
                 await ctx.send("The schedule image is currently:", file = File(self.guild_info["schedule"]["file_path"]))
                 return
             except:
-                await ctx.send("There is no current schedule image.")
+                await ctx.send("There is no current schedule image. Re-use the command with a link to the image to set one. Can be any format.\ne.g. `&schedule image https://link.com/to_image.jpeg`")
                 return
         elif "clear" in arg:
             self.guild_info["schedule"]["file_path"] = None
@@ -108,7 +108,7 @@ class GuildCmd(commands.Cog):
             try:
                 await ctx.send(f'Your current message is currently: {self.guild_info["schedule"]["message"]}')
             except KeyError:
-                await ctx.send("You currently have no schedule message set.")
+                await ctx.send("You currently have no schedule message set. Reuse the command with a message to set one.\ne.g. `&schedule message This is a message.`")
             return
         elif "clear" in arg:
             self.guild_info["schedule"]["message"] = None
