@@ -67,7 +67,7 @@ class GuildCmd(commands.Cog):
             return await ctx.send(self.guild_info["schedule"]["message"], file = File(self.guild_info["schedule"]["file_path"]))
 
     @schedule.command(name = "image")
-    @schedule.check(guild_leader_check)
+    @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
         guild_img_path = f"./{config.images_path}/guild"
         for file in os.listdir(guild_img_path):
@@ -106,13 +106,13 @@ class GuildCmd(commands.Cog):
                 await ctx.send(f"An error occured: {e}")
         self.guild_json_writeout()
 
-    @schedule_set_imagee.error
+    @schedule_set_image.error
     async def schedule_set_image_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.send("You do not have permission to uuse this command.")
 
     @schedule.command(name = "message")
-    @schedule.check(guild_leader_check)
+    @commands.check(guild_leader_check)
     async def schedule_set_message(self, ctx, *, arg=None):
         if not arg:
             try:
