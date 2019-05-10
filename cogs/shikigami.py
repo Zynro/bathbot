@@ -210,12 +210,13 @@ class ShikigamiClass:
         If none are found, returns an empty list.
         """
         shikigami_result_list = []
+        shiki_input = shiki_input.lower()
         for shiki in shikigami_db['all']:
             shiki = shiki.lower()
             if shiki_input == shiki:
                 return [shikigami_db[shiki]]
             for hint in shikigami_db[shiki].hints:
-                if hint.startswith(shiki_input):
+                if hint.lower().startswith():
                     shikigami_result_list.append(shikigami_db[shiki])
             if shiki_input in shiki:
                 shikigami_result_list.append(shikigami_db[shiki])
