@@ -231,7 +231,7 @@ class ShikigamiClass:
                 score = lev_dist_similar(shiki_input, shiki)
                 if high_score - 5 <= score <= high_score + 5:
                     shikigami_result_list.append(shikigami_db[shiki.lower()])
-            return shikigami_result_list
+            return list(set(shikigami_result_list))
 
 
 class Shikigami(commands.Cog, Embeds, ShikigamiClass):
