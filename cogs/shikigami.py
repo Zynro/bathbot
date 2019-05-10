@@ -144,6 +144,19 @@ class Embeds:
             embed.add_field(name="BubbleTea Database Bounty Locations:", value='Temporarily disabled until the BubbleTea Shikigami Location Database is more populated.')
         return embed, icon
 
+    def multiple_results_embed(self, shiki_result_list):
+        embed = discord.Embed(title="__I found multiple results for your search:__", colour=discord.Colour(generate_random_color()))
+        embed.set_footer(text="Try your search again with a shikigami specified.")
+        shiki_names_list = ""
+        shiki_hints_list = ""
+        for shiki in shiki_result_list:
+            shiki_names_list += f"{shiki.name}\n"
+            hints = ", ".join(shiki.hints) if shiki.hints else "No hints found."
+            shiki_hints_list += f"{hints}\n"
+        embed.add_field(name="Shikigami", value=shiki_names_list, inline=True)
+        embed.add_field(name="Hints", value=shiki_hints_list, inline=True)
+        return embed
+
 class ShikigamiClass:
     def __init__(self, input_name):
         self.name = input_name
@@ -158,7 +171,7 @@ class ShikigamiClass:
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
             if input_name == shiki_name:
                 self.alias = [other_name.lower() for other_name in alias.split('\n')]
-                self.hints = hints.split("\n")
+                self.hints = hints.split("\n") if hints else None
                 self.locations = locations.split('\n')
                 break
         user_database = DatabaseGeneration.generate_user_shikigami_locations(self.name)
@@ -332,8 +345,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         final_shikigami = self.shiki_validate(search, self.shikigami_db)
         if final_shikigami:
             if len(final_shikigami) > 1:
-                final_string = "\n".join([shiki.name for shiki in final_shikigami])
-                return await ctx.send(f"*I found multiple matches for your search, please search again with one specified:*\n{final_string}")
+                return await ctx.send(embed = self.multiple_results_embed(final_shikigami))
             shiki_embed, shiki_icon = self.shiki_bounty_embed(final_shikigami[0])
             await ctx.send(file=shiki_icon, embed=shiki_embed)
             return
