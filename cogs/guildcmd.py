@@ -16,12 +16,11 @@ def get_ext(path):
 
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
-        self.guild_json_load()
         try:
-            self.guild_info[schedule] = {}
-        except NameError:
-            schedule = {}
-            self.guild_info.update(schedule)
+            os.makedirs("./images/guild")
+        except FileExistsError:
+            pass
+        self.guild_json_load()
         self.bot = bot
 
     async def has_permission(ctx):
@@ -37,6 +36,9 @@ class GuildCmd(commands.Cog):
         except FileNotFoundError:
             with open(f'{config.list_path}/guild_info.json', 'w') as guild_file:
                 self.guild_info = {}
+                self.guild_info["schedule"] = {}
+                self.guild_info["schedule"]["message"] = None
+                self.guild_info["schedule"]["file_path"] = None
                 json.dump(self.guild_info, guild_file, indent=4)
                 print('New Guild Info Json file generated!')
 
@@ -69,7 +71,7 @@ class GuildCmd(commands.Cog):
     @schedule.command(name = "image")
     @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
-        guild_img_path = f"./{config.images_path}/guild"
+        guild_img_path = f"./images/guild"
         for file in os.listdir(guild_img_path):
             if "schedule" in file:
                 try:
@@ -79,6 +81,7 @@ class GuildCmd(commands.Cog):
                     self.guild_info["schedule"] = {} 
                     self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
                     current_image = file
+                    self.guild_json_writeout()
                 break
         if not arg:
             try:
