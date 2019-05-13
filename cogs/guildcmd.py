@@ -12,7 +12,7 @@ owner_list = config.owner_list
 editor_list = config.editor_list
 
 def get_ext(path):
-    return os.path.splitext(path)[1]
+    return os.path.splitext(path)[1].strip().lower()
 
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
@@ -72,20 +72,21 @@ class GuildCmd(commands.Cog):
     @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
         guild_img_path = f"./images/guild"
-        for file in os.listdir(guild_img_path):
-            if "schedule" in file:
-                try:
-                    self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
-                    current_image = file
-                except KeyError:
-                    self.guild_info["schedule"] = {} 
-                    self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
-                    current_image = file
-                    self.guild_json_writeout()
-                break
+        try:
+            schedule_image_file = self.guild_info["schedule"]["file_path"]
+        except KeyError:
+            for file in os.listdir(guild_img_path):
+                if "schedule" in file:
+                    try:
+                        guild_img_path = self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
+                    except KeyError:
+                        self.guild_info["schedule"] = {} 
+                        guild_img_path = self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
+                        self.guild_json_writeout()
+                    break
         if not arg:
             try:
-                await ctx.send("The schedule image is currently:", file = File(self.guild_info["schedule"]["file_path"]))
+                await ctx.send("The schedule image is currently:", file = File(schedule_image_file))
                 return
             except:
                 await ctx.send("There is no current schedule image. Re-use the command with a link to the image to set one. Can be any format.\ne.g. `&schedule image https://link.com/to_image.jpeg`")
@@ -96,14 +97,13 @@ class GuildCmd(commands.Cog):
         else:
             ext = get_ext(arg)
             try:
-                if not os.path.exists(guild_img_path):
-                    os.makedirs(guild_img_path)
                 r = requests.get(arg, stream=True)
                 if r.status_code == 200:
+                    print(f"{guild_img_path}/schedule{ext}")
                     with open(f"{guild_img_path}/schedule{ext}", 'wb') as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
-                        self.guild_json_writeout()
+                        self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/schedule{ext}"
                         await ctx.send("The schedule image is now:", file = File(self.guild_info["schedule"]["file_path"]))
             except Exception as e:
                 await ctx.send(f"An error occured: {e}")
