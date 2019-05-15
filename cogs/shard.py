@@ -242,7 +242,7 @@ For more help, tag Zynro and he'll be happy to assist.
             except KeyError:
                 continue
         if failed_list:
-            result = "The following shikigami are not present in the master Shikigami database:\n"
+            result = "The following shikigami are not present in the master Shikigami database:\n\n"
             for shiki in failed_list:
                 result += f"**{shiki}**"
                 guess = ", ".join([shiki.name for shiki in self.Shikigami.shiki_validate(shiki, self.shikigami_db)])
@@ -595,10 +595,10 @@ __Afterwards, the following commands can be used:__
     Clears that specific list.
     e.g. `&shard have clear`
 
-**&shard <have/need> set <shikigami>**
+**&shard <have/need> add <shikigami>**
     Sets the listed shikigami to your list. If the shikigami already exists in that list, updates that number, otherwise, adds it.
-    e.g. `&shard have set Orochi 1`
-    e.g. `&shard need set 38 Sakura`
+    e.g. `&shard have add Orochi 1`
+    e.g. `&shard need add 38 Sakura`
 
 **&shard <have/need> remove <shikigami>**
     Removes the specified shikigami from the specified list. This does not update the number, but deletes the entire entry.
