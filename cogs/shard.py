@@ -322,7 +322,7 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_need.command(name="add")
+    @shard_set_need.command(name="add", alias=['set'])
     async def shard_set_need_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
@@ -376,7 +376,7 @@ For more help, tag Zynro and he'll be happy to assist.
         trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
-    @shard_set_have.command(name="add")
+    @shard_set_have.command(name="add", alias=['set'])
     async def shard_set_have_add_replace(self, ctx, *, entry=None):
         if not entry:
             return await ctx.send("You must enter a Shikigami to add to the list!")
