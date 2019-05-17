@@ -457,15 +457,16 @@ For more help, tag Zynro and he'll be happy to assist.
             &shard status off
         ---------------------
         """
-        self.shard_load_json()
-        try:
-            temp = self.shard_trading_db[str(ctx.author.id)]['status']
-        except KeyError:
-            self.shard_trading_db[str(ctx.author.id)]['status'] = True
-            self.shard_file_writeout();
-            return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
-        trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
-        return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
+        if ctx.invoked_subcommand is None:
+            self.shard_load_json()
+            try:
+                temp = self.shard_trading_db[str(ctx.author.id)]['status']
+            except KeyError:
+                self.shard_trading_db[str(ctx.author.id)]['status'] = True
+                self.shard_file_writeout();
+                return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
+            trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
+            return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
 
     @shard_status.command(name="on")
     async def shard_status_set_on(self, ctx):
