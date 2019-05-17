@@ -457,8 +457,6 @@ For more help, tag Zynro and he'll be happy to assist.
             &shard status off
         ---------------------
         """
-        if bracket_check(arg):
-            return await ctx.send(bracket_check(arg))
         self.shard_load_json()
         try:
             temp = self.shard_trading_db[str(ctx.author.id)]['status']
