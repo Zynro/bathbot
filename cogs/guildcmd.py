@@ -48,7 +48,6 @@ class GuildCmd(commands.Cog):
             return
 
     @commands.group()
-    @commands.check(guild_leader_check)
     async def schedule(self, ctx):
         self.guild_json_load()
         if not ctx.invoked_subcommand:
