@@ -4,8 +4,20 @@ import asyncio
 import requests
 import config
 import bot_token
+import json
 
-initial_extensions = ['cogs.admin', 'cogs.voicecmd', 'cogs.shikigami', 'cogs.shard', 'cogs.guildcmd']
+base_extensions = [
+                    'cogs.admin',
+                    'cogs.voicecmd'
+                    ]
+onmyoji_extensions =  [
+                    'modules.onmyoji.cogs.shikigami',
+                    'modules.onmyoji.cogs.shard',
+                    'modules.onmyoji.cogs.guildcmd'
+                    ]
+
+initial_extensions = base_extensions + onmyoji_extensions
+
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
@@ -13,6 +25,9 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')
+
+with open(f'module_access.json') as file:
+    bot.module_access = json.loads(file.read())
 
 @bot.event
 async def on_ready():
