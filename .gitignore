@@ -1,13 +1,14 @@
 # User-Added
 *.pyc
 bottoken.py
-bathbot-memes/
 cogs/archive
 bot_token.py
 config.py
+config_old.py
 bbt_credentials.json
-lists/
+modules/onmyoji/lists
 cogs/dev.py
 cog_functions.py
-/images/guild
-
+modules/onmyoji/images/guild
+module_access.json
+modules/bathmemes
