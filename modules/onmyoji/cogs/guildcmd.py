@@ -23,6 +23,9 @@ class GuildCmd(commands.Cog):
         self.guild_json_load()
         self.bot = bot
 
+    async def cog_check(self, ctx):
+        return ctx.guild.id in self.bot.module_access["onmyoji"]
+
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
 
