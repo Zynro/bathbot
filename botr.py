@@ -10,7 +10,8 @@ base_extensions = [
                     'cogs.admin',
                     'cogs.voicecmd'
                     ]
-onmyoji_extensions =  [
+
+onmyoji_extensions = [
                     'modules.onmyoji.cogs.shikigami',
                     'modules.onmyoji.cogs.shard',
                     'modules.onmyoji.cogs.guildcmd'
@@ -25,6 +26,8 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')
+
+bot.cog_list = extensions + ["cogs.dev"]
 
 with open(f'module_access.json') as file:
     bot.module_access = json.loads(file.read())

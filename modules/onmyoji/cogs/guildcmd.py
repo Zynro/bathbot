@@ -14,6 +14,9 @@ editor_list = config.editor_list
 def get_ext(path):
     return os.path.splitext(path)[1].strip().lower()
 
+def get_user_id(user):
+    return int("".join([x for x in user if x.isdigit()]))
+
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
         try:
@@ -141,6 +144,25 @@ class GuildCmd(commands.Cog):
     async def schedule_set_message_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.send("You do not have permission to uuse this command.")
+
+    @commands.command(name='newmem')
+    async def new_member(self, ctx, member=None, nickname=None):
+        new_member_channel = self.bot.get_channel(387464477173481472)
+        #guild_role = ctx.guild.get_role(config.new_member_role_id)
+        #new_member_channel = self.bot.get_channel(config.new_member_channel_id)
+        if not member or not nickname or "@" not in member:
+            
+            await ctx.send("Both a @user and their nickname is required. Please try the command again with both inputs.")
+            return
+        new_member = ctx.guild.get_member(get_user_id(member))
+        if not new_member:
+            await ctx.send(f"User {member} not found.")
+            return
+        if ctx.channel is not new_member_channel:
+            return
+        await new_member.edit(nick=nickname)
+        await ctx.send(f"Success! {new_member}'s nickname is now {new_member.nick}!")
+
 
 def setup(bot):
     bot.add_cog(GuildCmd(bot))
