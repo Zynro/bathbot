@@ -80,6 +80,8 @@ class Shard(commands.Cog, Embeds):
     async def has_permission(ctx):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
 
+    async def cog_check(self, ctx):
+        return ctx.guild.id in self.bot.module_access["onmyoji"]
 
     def user_validation(self, ctx, other_user_raw):
         if "@" in other_user_raw:

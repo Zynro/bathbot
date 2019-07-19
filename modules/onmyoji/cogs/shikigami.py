@@ -22,7 +22,7 @@ editor_list = config.editor_list
 
 recommend = re.compile(r'recommend',re.IGNORECASE)
 
-with open('lists/stats.json') as file:
+with open(f'{config.list_path}/stats.json') as file:
     stats_json = json.loads(file.read())
 
 number_dict = {'1':'First', '2':'Second', '3':'Third', '4':'Fourth', '5':'Fifth', '6':'Sixth', '7':'Seventh',1:'First', 2:'Second', 3:'Third', 4:'Fourth', 5:'Fifth', 6:'Sixth', 7:'Seventh'}
