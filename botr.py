@@ -8,7 +8,8 @@ import json
 
 base_extensions = [
                     'cogs.admin',
-                    'cogs.voicecmd'
+                    'cogs.voicecmd',
+                    'cogs.basic'
                     ]
 
 onmyoji_extensions = [
