@@ -19,12 +19,20 @@ def get_user_id(user):
 
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
+        self.bot = bot
         try:
             os.makedirs("./images/guild")
         except FileExistsError:
             pass
-        self.guild_json_load()
-        self.bot = bot
+        self.guild_json_load_all()
+        if not os.path.exists(f"{self.bot.modules['onmyoji'].path}/guilds"):
+            os.mkdir(f"{self.bot.modules['onmyoji'].path}/guilds")
+        for guild in self.bot.module_access['onmyoji']:
+            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{str(guild)}"
+            if not os.path.exists(path_to_guild):
+                os.mkdir(path_to_guild)
+                os.mkdir(f'{path_to_guild}/lists')
+                os.mkdir(f'{path_to_guild}/images')
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["onmyoji"]
@@ -35,58 +43,79 @@ class GuildCmd(commands.Cog):
     def guild_leader_check(ctx):
         return ctx.guild.owner.id == ctx.author.id or ctx.author.id in owner_list
 
-    def guild_json_load(self):
+    def guild_json_load(self, guild_id):
+        """Loads guild_info.json from the Guild ID-specific folder."""
+        path_to_file = f'{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json'
         try:
-            with open(f'{config.list_path}/guild_info.json', 'r') as guild_file:
+            with open(path_to_file, 'r') as guild_file:
                 self.guild_info = json.loads(guild_file.read())
         except FileNotFoundError:
-            with open(f'{config.list_path}/guild_info.json', 'w') as guild_file:
+            with open(path_to_file, 'w') as guild_file:
                 self.guild_info = {}
-                self.guild_info["schedule"] = {}
-                self.guild_info["schedule"]["message"] = None
-                self.guild_info["schedule"]["file_path"] = None
-                json.dump(self.guild_info, guild_file, indent=4)
+                self.guild_info[guild] = {}
+                self.guild_info[guild]["schedule"] = {}
+                self.guild_info[guild]["schedule"]["message"] = None
+                self.guild_info[guild]["schedule"]["file_path"] = None
+                json.dump(self.guild_info[guild], guild_file, indent=4)
                 print('New Guild Info Json file generated!')
 
-    def guild_json_writeout(self):
+    def guild_json_load_all(self):
+        """Loads guild_info.json from the Guild ID-specific folder."""
+        for guild in self.bot.module_acces['onmyoji']:
+            path_to_file = f'{self.bot.modules['onmyoji'].path}/guilds/{guild}/guild_info.json'
+            try:
+                with open(path_to_file, 'r') as guild_file:
+                    self.guild_info[guild] = json.loads(guild_file.read())
+            except FileNotFoundError:
+                with open(path_to_file, 'w') as guild_file:
+                    self.guild_info = {}
+                    self.guild_info["schedule"] = {}
+                    self.guild_info["schedule"]["message"] = None
+                    self.guild_info["schedule"]["file_path"] = None
+                    json.dump(self.guild_info, guild_file, indent=4)
+                    print('New Guild Info Json file generated!')
+
+    def guild_json_writeout(self, guild_id):
+        """Writes to guild_info.json in the Guild ID-specific folder."""
+        path_to_file = f'{config.list_path}/{guild_id}/guild_info.json'
         with open(f'{config.list_path}/guild_info.json', 'w+') as guild_file:
             json.dump(self.guild_info, guild_file, indent=4)
             return
 
     @commands.group()
     async def schedule(self, ctx):
-        self.guild_json_load()
+        self.guild_json_load(ctx.guild.id)
         if not ctx.invoked_subcommand:
             try:
-                message = self.guild_info["schedule"]["message"]
+                message = self.guild_info[ctx.guild.id]["schedule"]["message"]
             except KeyError:
                 message = None
             try:
-                image = self.guild_info["schedule"]["file_path"]
+                image = self.guild_info[ctx.guild.id]["schedule"]["file_path"]
             except KeyError:
                 image = None
             if not message and not image:
                 return await ctx.send("No schedule is set.\nTo set an image, use `&schedule image <link to image>`.\nTo set an accompanying message, use `&schedule message <message>`\nYou can set both or just one.")
             if not message:
-                return await ctx.send(file = File(self.guild_info["schedule"]["file_path"]))
+                return await ctx.send(file = File(self.guild_info[ctx.guild.id]["schedule"]["file_path"]))
             if not image:
-                return await ctx.send(self.guild_info["schedule"]["message"])
-            return await ctx.send(self.guild_info["schedule"]["message"], file = File(self.guild_info["schedule"]["file_path"]))
+                return await ctx.send(self.guild_info[ctx.guild.id]["schedule"]["message"])
+            return await ctx.send(self.guild_info[ctx.guild.id]["schedule"]["message"], file = File(self.guild_info["schedule"]["file_path"]))
 
     @schedule.command(name = "image")
     @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
-        guild_img_path = f"./images/guild"
+        guild_img_path = f"./{self.bot.modules['onmyoji'].path}/{ctx.guild.id}/images"
         try:
-            schedule_image_file = self.guild_info["schedule"]["file_path"]
+            schedule_image_file = self.guild_info[ctx.guild.id]["schedule"]["file_path"]
         except KeyError:
             for file in os.listdir(guild_img_path):
                 if "schedule" in file:
                     try:
-                        guild_img_path = self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
+                        guild_img_path = self.guild_info[ctx.guild.id]["schedule"]["file_path"] = f"{guild_img_path}/{file}"
                     except KeyError:
                         self.guild_info["schedule"] = {} 
-                        guild_img_path = self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/{file}"
+                        guild_img_path = self.guild_info[ctx.guild.id]["schedule"]["file_path"] = f"{guild_img_path}/{file}"
                         self.guild_json_writeout()
                     break
         if not arg:

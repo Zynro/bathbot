@@ -72,7 +72,7 @@ class Embeds:
 class Shard(commands.Cog, Embeds):
     def __init__(self, bot):
         self.bot = bot
-        self.shard_load_json()
+        self.shard_load_all_json()
         self.Shikigami = self.bot.get_cog("Shikigami")
         self.shikigami_db = self.bot.get_cog("Shikigami").shikigami_db
 
@@ -97,26 +97,40 @@ class Shard(commands.Cog, Embeds):
                     break
         return other_user
 
-    def shard_load_json(self):
+    def shard_load_all_json(self):
         """
         Loads the json shard database file. 
         Generates a new empty one if it does not exist.
         """
-        try:
+        self.shard_trading_db = {}
+        for guild in self.bot.module_access['onmyoji']:
+            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}"
+            path_to_file = f"{path_to_guild}/lists/shard-trading-db.json"
             try:
-                with open(f'{config.list_path}/shard-trading-db.json', 'r') as shard_file:
-                    self.shard_trading_db = json.loads(shard_file.read())
-            except ValueError:
-                self.shard_trading_db = {}
-        except FileNotFoundError:
-            with open(f'{config.list_path}/shard-trading-db.json', 'w') as shard_file:
-                self.shard_trading_db = {}
-                print('New Json file generated!')
+                try:
+                    with open(path_to_file, 'r') as shard_file:
+                        self.shard_trading_db[guild] = json.loads(shard_file.read())
+                except ValueError:
+                    self.shard_trading_db[guild] = {}
+            except FileNotFoundError:
+                if not os.path.exists(f'{path_to_guild}/lists'):
+                    os.mkdir(f'{path_to_guild}/lists')
+                with open(path_to_file, 'w') as shard_file:
+                    self.shard_trading_db[guild] = {}
+                    print('New Json file generated!')
+                    json.dump(self.shard_trading_db[guild], shard_file, indent=4)                       
 
-    def shard_file_writeout(self):
+    def shard_load_guild_json(self, guild_id):
+        path_to_file = f"{self.bot.modules['onmyoji'].path}/{guild_id}/lists/shard-trading-db.json"
+        with open(path_to_file, 'r') as file:
+            self.shard_trading_db[guild_id] = json.loads(file.read())
+
+    def shard_file_writeout_all(self):
         """Writes to Json shard database file."""
-        with open(f'{config.list_path}/shard-trading-db.json', 'w+') as shard_file:
-            json.dump(self.shard_trading_db, shard_file, indent=4)
+        for guild in self.bot.module_access['onmyoji']:
+            path_to_file = f"{self.bot.modules['onmyoji'].path}/{guild}/lists/shard-trading-db.json"
+            with open(path_to_file, 'w+') as shard_file:
+                json.dump(self.shard_trading_db, shard_file, indent=4)
         return
 
     def shard_split_variable(self, arg, op):
@@ -162,7 +176,7 @@ class Shard(commands.Cog, Embeds):
         Initializes the dicitonary entry of the user in the shard trading database.
         """
         self.shard_trading_db[str(ctx.message.author.id)] = {'status': True, 'notes':'', 'have':'', 'need':''}
-        self.shard_file_writeout()
+        self.shard_file_writeout_all()
         return
 
     @commands.group()
@@ -257,7 +271,7 @@ For more help, tag Zynro and he'll be happy to assist.
         except KeyError:
             self.shard_trading_db[str(ctx.message.author.id)] = {}
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
-        self.shard_file_writeout()
+        self.shard_file_writeout_all()
         return None
 
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
@@ -277,11 +291,11 @@ For more help, tag Zynro and he'll be happy to assist.
                 entry_name = "".join(char.strip() for char in self.shard_trading_db[user][list_name][index_num] if not char.isdigit())
                 if mod == "add":
                     self.shard_trading_db[user][list_name][index_num] = f"{numbers} {shiki_class_name}" if numbers else f"{shiki_class_name}"
-                    self.shard_file_writeout()
+                    self.shard_file_writeout_all()
                     return f"**{shiki_class_name}** already exists in your {list_name} list. The amount has been updated to __{numbers}__."
                 if mod == "remove":
                     removed_item = self.shard_trading_db[user][list_name].pop(index_num)
-                    self.shard_file_writeout()
+                    self.shard_file_writeout_all()
                     if removed_item:
                         return f"**{entry_name}** has been removed from your __{list_name}__ list."
                     else:
@@ -291,7 +305,7 @@ For more help, tag Zynro and he'll be happy to assist.
                 self.shard_trading_db[user][list_name].append(f"{numbers} {shiki_class_name}")
             else:
                 self.shard_trading_db[user][list_name].append(shiki_class_name)
-            self.shard_file_writeout()
+            self.shard_file_writeout_all()
             return f"You have added the entry: **{numbers} {shiki_class_name}** to your __{list_name}__ list."
         elif mod == "remove":
             return f"Removal failed, **{input_shiki}** is not present in your __{list_name}__ list. "
@@ -346,7 +360,7 @@ For more help, tag Zynro and he'll be happy to assist.
     async def shard_set_need_clear(self, ctx):
         self.shard_load_json()
         self.shard_trading_db[str(ctx.message.author.id)]["need"] = []
-        self.shard_file_writeout()
+        self.shard_file_writeout_all()
         return await ctx.send("Your need list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
 
 
@@ -400,7 +414,7 @@ For more help, tag Zynro and he'll be happy to assist.
     async def shard_set_have_clear(self, ctx):
         self.shard_load_json()
         self.shard_trading_db[str(ctx.message.author.id)]["have"] = []
-        self.shard_file_writeout()
+        self.shard_file_writeout_all()
         return await ctx.send("Your have list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
 
     @shard.command(name="notes")
@@ -429,18 +443,18 @@ For more help, tag Zynro and he'll be happy to assist.
         if not args:
             self.shard_trading_db[str(ctx.author.id)]['notes'] = ''
             await ctx.send(f"Notes disabled.\nYou are currently {bold(trading_status)} for trading.")
-            self.shard_file_writeout()
+            self.shard_file_writeout_all()
         else:
             self.shard_trading_db[str(ctx.author.id)]['notes'] = args
             await ctx.send(f"Your Shard Trading entry Notes have been set to:\n```{args}```\nYou are currently {bold(trading_status)} for trading.")
-            self.shard_file_writeout()
+            self.shard_file_writeout_all()
 
     def check_trading_status(self, user):
         try:
             return self.shard_trading_db[str(user)]['status']
         except KeyError:
             self.shard_trading_db[str(user)]['status'] = True
-            self.shard_file_writeout()
+            self.shard_file_writeout_all()
             return True
 
     @shard.group(name="status")
@@ -465,7 +479,7 @@ For more help, tag Zynro and he'll be happy to assist.
                 temp = self.shard_trading_db[str(ctx.author.id)]['status']
             except KeyError:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
-                self.shard_file_writeout();
+                self.shard_file_writeout_all();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
             trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
             return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
@@ -473,13 +487,13 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_status.command(name="on")
     async def shard_status_set_on(self, ctx):
         self.shard_trading_db[str(ctx.author.id)]['status'] = True
-        self.shard_file_writeout();
+        self.shard_file_writeout_all();
         return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
 
     @shard_status.command(name="off")
     async def shard_status_set_off(self, ctx):
         self.shard_trading_db[str(ctx.author.id)]['status'] = False
-        self.shard_file_writeout();
+        self.shard_file_writeout_all();
         return await ctx.send(f"{ctx.author.mention} is now unavailable to be searched for trading.")
 
     def get_shiki_set(self, user, list_name):
