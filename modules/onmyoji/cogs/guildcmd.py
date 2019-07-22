@@ -146,12 +146,13 @@ class GuildCmd(commands.Cog):
             await ctx.send("You do not have permission to uuse this command.")
 
     @commands.command(name='newmem')
+    @commands.has_permissions(manage_roles=True)
     async def new_member(self, ctx, member=None, nickname=None):
-        new_member_channel = self.bot.get_channel(387464477173481472)
+        new_member_channel = self.bot.get_channel(config.new_member_channel_id)
+        new_member_role = ctx.guild.get_role(config.new_member_role_id)
         #guild_role = ctx.guild.get_role(config.new_member_role_id)
         #new_member_channel = self.bot.get_channel(config.new_member_channel_id)
         if not member or not nickname or "@" not in member:
-            
             await ctx.send("Both a @user and their nickname is required. Please try the command again with both inputs.")
             return
         new_member = ctx.guild.get_member(get_user_id(member))
@@ -161,7 +162,7 @@ class GuildCmd(commands.Cog):
         if ctx.channel is not new_member_channel:
             return
         await new_member.edit(nick=nickname)
-        await ctx.send(f"Success! {new_member}'s nickname is now {new_member.nick}!")
+        #await ctx.send(f"Success! {new_member}'s nickname is now {new_member.nick}!")
 
 
 def setup(bot):
