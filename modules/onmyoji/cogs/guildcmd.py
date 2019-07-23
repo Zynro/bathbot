@@ -84,6 +84,28 @@ class GuildCmd(commands.Cog):
             return
 
     @commands.group()
+    async def guild(self, ctx):
+        if not ctx.invoked_subcommand:
+            return
+        else:
+            pass
+
+    @guild.command()
+    async def help(self, ctx):
+        await ctx.author.send("""
+Hi there! My name is Bathbot and I assist the BubbleTea Discord and it's functions!
+Currently I am able to use two main functions: Bounties and Shard trading.
+
+`&bounty` is a simple bounty search that returns a list of recommended bounty locations for that shikigami.
+An example would be: `&bounty Hahakigami`
+I do not require the full name, but if I find multiple matches that seem close to your requested shikigami, I'll let you know.
+
+`&shard` is my shard trading function. To learn more about that, go to #fox-abuse and use the command `&shard help`.
+
+Unfortunately, currently my commands cannot be accessed in this window, so please head back to the #fox-abuse channel to use them.
+""")
+
+    @commands.group()
     async def schedule(self, ctx):
         self.guild_json_load(ctx.guild.id)
         if not ctx.invoked_subcommand:
@@ -184,7 +206,8 @@ class GuildCmd(commands.Cog):
     @commands.has_permissions(manage_roles=True)
     async def new_member(self, ctx, member=None, nickname=None):
         new_member_channel = self.bot.get_channel(config.new_member_channel_id)
-        new_member_role = ctx.guild.get_role(config.new_member_role_id)
+        #new_member_role = ctx.guild.get_role(config.new_member_role_id)
+        new_member_role = ctx.guild.get_role(177994521940983809)
         #guild_role = ctx.guild.get_role(config.new_member_role_id)
         #new_member_channel = self.bot.get_channel(config.new_member_channel_id)
         if not member or not nickname or "@" not in member:
@@ -194,9 +217,21 @@ class GuildCmd(commands.Cog):
         if not new_member:
             await ctx.send(f"User {member} not found.")
             return
-        if ctx.channel is not new_member_channel:
-            return
+        """if ctx.channel is not new_member_channel:
+            return"""
         await new_member.edit(nick=nickname)
+        await new_member.add_roles(new_member_role)
+        if not new_member.nick:
+            new_member_name = new_member.name
+        else:
+            new_member_name = new_member.nick
+        await self.bot.get_channel(config.bubbletea_general_channel_id).send(f"""
+__Welcome, {new_member_name}, to the BubbleTea Discord!__
+I am BathBot and I have some nifty functions to help out around the house.
+To see them all, please type `&guild help` in the #fox-abuse channel.
+
+For our schedule, simply type `&schedule`.
+            """)
         #await ctx.send(f"Success! {new_member}'s nickname is now {new_member.nick}!")
 
 
