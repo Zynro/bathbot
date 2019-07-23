@@ -24,6 +24,7 @@ class GuildCmd(commands.Cog):
             os.makedirs("./images/guild")
         except FileExistsError:
             pass
+        self.guild_info = {}
         self.guild_json_load_all()
         if not os.path.exists(f"{self.bot.modules['onmyoji'].path}/guilds"):
             os.mkdir(f"{self.bot.modules['onmyoji'].path}/guilds")
@@ -45,41 +46,41 @@ class GuildCmd(commands.Cog):
 
     def guild_json_load(self, guild_id):
         """Loads guild_info.json from the Guild ID-specific folder."""
-        path_to_file = f'{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json'
+        path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json"
         try:
             with open(path_to_file, 'r') as guild_file:
-                self.guild_info = json.loads(guild_file.read())
+                self.guild_info[guild_id] = json.loads(guild_file.read())
         except FileNotFoundError:
             with open(path_to_file, 'w') as guild_file:
-                self.guild_info = {}
-                self.guild_info[guild] = {}
-                self.guild_info[guild]["schedule"] = {}
-                self.guild_info[guild]["schedule"]["message"] = None
-                self.guild_info[guild]["schedule"]["file_path"] = None
-                json.dump(self.guild_info[guild], guild_file, indent=4)
+                self.guild_info[guild_id] = {}
+                self.guild_info[guild_id]["schedule"] = {}
+                self.guild_info[guild_id]["schedule"]["message"] = None
+                self.guild_info[guild_id]["schedule"]["file_path"] = None
+                json.dump(self.guild_info, guild_file, indent=4)
                 print('New Guild Info Json file generated!')
 
     def guild_json_load_all(self):
         """Loads guild_info.json from the Guild ID-specific folder."""
-        for guild in self.bot.module_acces['onmyoji']:
-            path_to_file = f'{self.bot.modules['onmyoji'].path}/guilds/{guild}/guild_info.json'
+        for guild in self.bot.module_access['onmyoji']:
+            path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}/guild_info.json"
             try:
                 with open(path_to_file, 'r') as guild_file:
                     self.guild_info[guild] = json.loads(guild_file.read())
             except FileNotFoundError:
                 with open(path_to_file, 'w') as guild_file:
                     self.guild_info = {}
-                    self.guild_info["schedule"] = {}
-                    self.guild_info["schedule"]["message"] = None
-                    self.guild_info["schedule"]["file_path"] = None
-                    json.dump(self.guild_info, guild_file, indent=4)
+                    self.guild_info[guild] = {}
+                    self.guild_info[guild]["schedule"] = {}
+                    self.guild_info[guild]["schedule"]["message"] = None
+                    self.guild_info[guild]["schedule"]["file_path"] = None
+                    json.dump(self.guild_info[guild], guild_file, indent=4)
                     print('New Guild Info Json file generated!')
 
     def guild_json_writeout(self, guild_id):
         """Writes to guild_info.json in the Guild ID-specific folder."""
-        path_to_file = f'{config.list_path}/{guild_id}/guild_info.json'
-        with open(f'{config.list_path}/guild_info.json', 'w+') as guild_file:
-            json.dump(self.guild_info, guild_file, indent=4)
+        path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json"
+        with open(path_to_file, 'w+') as guild_file:
+            json.dump(self.guild_info[guild_id], guild_file, indent=4)
             return
 
     @commands.group()
@@ -116,17 +117,17 @@ class GuildCmd(commands.Cog):
                     except KeyError:
                         self.guild_info["schedule"] = {} 
                         guild_img_path = self.guild_info[ctx.guild.id]["schedule"]["file_path"] = f"{guild_img_path}/{file}"
-                        self.guild_json_writeout()
+                        self.guild_json_writeout(ctx.guild.id)
                     break
         if not arg:
             try:
                 await ctx.send("The schedule image is currently:", file = File(schedule_image_file))
                 return
             except:
-                await ctx.send("There is no current schedule image. Re-use the command with a link to the image to set one. Can be any format.\ne.g. `&schedule image https://link.com/to_image.jpeg`")
+                await ctx.send("There is no current schedule image. Re-use the command with a link to the image to set one. Can be any format.\ne.g. `&schedule image https://link.com/to_image.jpg`")
                 return
         elif "clear" in arg:
-            self.guild_info["schedule"]["file_path"] = None
+            self.guild_info[ctx.guild.id]["schedule"]["file_path"] = None
             await ctx.send("Schedule image cleared.")
         else:
             ext = get_ext(arg)
@@ -137,37 +138,42 @@ class GuildCmd(commands.Cog):
                     with open(f"{guild_img_path}/schedule{ext}", 'wb') as f:
                         r.raw.decode_content = True
                         shutil.copyfileobj(r.raw, f)
-                        self.guild_info["schedule"]["file_path"] = f"{guild_img_path}/schedule{ext}"
-                        await ctx.send("The schedule image is now:", file = File(self.guild_info["schedule"]["file_path"]))
+                        self.guild_info[ctx.guild.id]["schedule"]["file_path"] = f"{guild_img_path}/schedule{ext}"
+                        await ctx.send("The schedule image is now:", file = File(self.guild_info[ctx.guild.id]["schedule"]["file_path"]))
             except Exception as e:
                 await ctx.send(f"An error occured: {e}")
-        self.guild_json_writeout()
+        self.guild_json_writeout(ctx.guild.id)
 
     @schedule_set_image.error
     async def schedule_set_image_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
-            await ctx.send("You do not have permission to uuse this command.")
+            await ctx.send("You do not have permission to use this command.")
 
     @schedule.command(name = "message")
     @commands.check(guild_leader_check)
     async def schedule_set_message(self, ctx, *, arg=None):
         if not arg:
             try:
-                await ctx.send(f'Your current message is currently: {self.guild_info["schedule"]["message"]}')
+                await ctx.send(f"Your current message is currently: {self.guild_info[ctx.guild.id]['schedule']['message']}")
             except KeyError:
                 await ctx.send("You currently have no schedule message set. Reuse the command with a message to set one.\ne.g. `&schedule message This is a message.`")
             return
         elif "clear" in arg:
-            self.guild_info["schedule"]["message"] = None
+            self.guild_info[ctx.guild.id]["schedule"]["message"] = None
             await ctx.send("Schedule message cleared.")
         else:
             try:
-                self.guild_info["schedule"]["message"] = arg
+                self.guild_info[ctx.guild.id]["schedule"]["message"] = arg
             except KeyError:
-                self.guild_info["schedule"] = {}
-                self.guild_info["schedule"]["message"] = arg
-            await ctx.send(f"Your current schedule message is now set to: {arg}")
-        self.guild_json_writeout()
+                try:
+                    self.guild_info[ctx.guild.id]["schedule"] = {}
+                    self.guild_info[ctx.guild.id]["schedule"]["message"] = arg
+                except KeyError:
+                    self.guild_info[ctx.guild.id] = {}
+                    self.guild_info[ctx.guild.id]["schedule"] = {}
+                    self.guild_info[ctx.guild.id]["schedule"]["message"] = arg
+            await ctx.send(f"Your current schedule message is now set to: {self.guild_info[ctx.guild.id]['schedule']['message']}")
+        self.guild_json_writeout(ctx.guild.id)
 
     @schedule_set_message.error
     async def schedule_set_message_error(self, ctx, error):

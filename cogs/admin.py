@@ -26,10 +26,13 @@ class Admin(commands.Cog):
     async def load_cog(self, ctx, *, arg: str):
         """Command which Loads a cog."""
         try:
-            cog = self.cog_locator(arg)
-            if not cog:
-                return await ctx.send(f'Cog "{arg}" does not exist.')
-            self.bot.load_extension(cog)
+            if "." in arg:
+                self.bot.load_extension(arg)
+            else:
+                cog = self.cog_locator(arg)
+                if not cog:
+                    return await ctx.send(f'Cog "{arg}" does not exist.')
+                self.bot.load_extension(cog)
         except Exception as e:
             await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
             traceback.print_exc()
@@ -46,10 +49,13 @@ class Admin(commands.Cog):
     async def unload_cog(self, ctx, *, arg: str):
         """Command which Unloads a cog."""
         try:
-            cog = self.cog_locator(arg)
-            if not cog:
-                return await ctx.send(f'Cog "{arg}" does not exist.')
-            self.bot.unload_extension(cog)
+            if "." in arg:
+                self.bot.unload_extension(arg)
+            else:
+                cog = self.cog_locator(arg)
+                if not cog:
+                    return await ctx.send(f'Cog "{arg}" does not exist.')
+                self.bot.unload_extension(cog)
         except Exception as e:
             await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
         else:
@@ -65,11 +71,14 @@ class Admin(commands.Cog):
         """Command which Reloads a Module.
         Remember to use dot path. e.g: cogs.owner"""
         try:
-            cog = self.cog_locator(arg)
-            if not cog:
-                return await ctx.send(f'Cog "{arg}" does not exist.')
-            self.bot.unload_extension(cog)
-            self.bot.load_extension(cog)
+            if "." in arg:
+                self.bot.load_extension(arg)
+            else:
+                cog = self.cog_locator(arg)
+                if not cog:
+                    return await ctx.send(f'Cog "{arg}" does not exist.')
+                self.bot.unload_extension(cog)
+                self.bot.load_extension(cog)
         except Exception as e:
             await ctx.send(f'**Error:** {type(e).__name__} - {e}')
             traceback.print_exc()
