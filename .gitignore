@@ -12,3 +12,5 @@ cog_functions.py
 modules/onmyoji/images/guild
 module_access.json
 modules/bathmemes
+guild_info.json
+shard-trading-db.json

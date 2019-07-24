@@ -6,18 +6,26 @@ import config
 import bot_token
 import json
 
+class Module:
+    def __init__(self, name, path=None, cog_list=None, guild_access=None):
+        self.name = name
+        self.path = path
+        self.cog_list = cog_list
+        self.access = guild_access
+
 base_extensions = [
                     'cogs.admin',
-                    'cogs.voicecmd'
+                    'cogs.voicecmd',
+                    'cogs.basic'
                     ]
-onmyoji_extensions =  [
+
+onmyoji_extensions = [
+                    'modules.onmyoji.cogs.guildcmd',
                     'modules.onmyoji.cogs.shikigami',
-                    'modules.onmyoji.cogs.shard',
-                    'modules.onmyoji.cogs.guildcmd'
+                    'modules.onmyoji.cogs.shard'                    
                     ]
 
 initial_extensions = base_extensions + onmyoji_extensions
-
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
@@ -26,8 +34,20 @@ def get_prefix(bot, message):
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')
 
-with open(f'module_access.json') as file:
+with open(f'tokens/module_access.json') as file:
     bot.module_access = json.loads(file.read())
+
+bot.cog_list = extensions + ["cogs.dev"]
+
+bot.modules = {}
+bot.modules['memes'] = Module('memes', 
+                        config.memes_module_path, 
+                        config.meme_extensions, 
+                        bot.module_access['onmyoji'])
+bot.modules['onmyoji'] = Module('onmyoji', 
+                        config.onmyoji_module_path, 
+                        onmyoji_extensions, 
+                        bot.module_access['onmyoji'])
 
 @bot.event
 async def on_ready():
