@@ -500,9 +500,9 @@ For more help, tag Zynro and he'll be happy to assist.
     def get_shiki_set(self, user, list_name):
         return set([''.join(i for i in value if not i.isdigit()).strip().lower() for value in self.shard_trading_db[user][list_name]])
 
-    def compare_shard_db(self, main_user, other_user):
+    def compare_shard_db(self, main_user, other_user, guild):
         try:
-            if self.check_trading_status(main_user) == False or self.check_trading_status(other_user) == False:
+            if self.check_trading_status(main_user, guild) == False or self.check_trading_status(other_user, guild) == False:
                 return None, None
             user1_have_list = self.get_shiki_set(main_user, 'have')
             user1_need_list = self.get_shiki_set(main_user, 'need')
@@ -537,7 +537,7 @@ For more help, tag Zynro and he'll be happy to assist.
             for user in self.shard_trading_db:
                 if user == main_user:
                     continue
-                you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, user)
+                you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, user, ctx.guild.id)
                 if not you_have_they_need:
                     continue
                 if len(you_have_they_need) >= 1 and len(you_need_they_have) >= 1:
@@ -567,7 +567,7 @@ Use `&search user` where user is one of the ones listed above to check which sha
         other_user = self.user_validation(ctx, other_user_raw)
         if not other_user:
             return await ctx.send("I could not find that user, or you typed an improper keyword.")
-        you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user)
+        you_have_they_need, you_need_they_have = self.compare_shard_db(main_user, other_user, ctx.guild.id)
         if not you_have_they_need:
             await ctx.send("Either you or the user you're checking doesn't have entries in the shard database, or one of you isn't available for trading.")
             return
