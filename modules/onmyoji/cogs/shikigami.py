@@ -52,7 +52,7 @@ def lev_dist_similar(a, b):
 
 class DriveAPI:
     """Manages the Google Drive API Auth and retreiving the CSV database."""
-    SERVICE_ACCOUNT_FILE = 'bbt_credentials.json'
+    SERVICE_ACCOUNT_FILE = 'tokens/bbt_credentials.json'
     credentials = service_account.Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE, scopes=config.SCOPES_DRIVE_READONLY)
     drive_service = build('drive', 'v3', credentials = credentials)
