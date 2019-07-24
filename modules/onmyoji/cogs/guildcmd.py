@@ -127,7 +127,7 @@ Unfortunately, currently my commands cannot be accessed in this window, so pleas
     @schedule.command(name = "image")
     @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
-        guild_img_path = f"./guilds/{ctx.guild.id}/{self.bot.modules['onmyoji'].path}/images"
+        guild_img_path = f"./guilds/{ctx.guild.id}/{self.bot.modules['onmyoji'].path}"
         try:
             schedule_image_file = self.guild_info[ctx.guild.id]["schedule"]["file_path"]
         except KeyError:
