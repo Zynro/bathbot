@@ -25,10 +25,8 @@ class GuildCmd(commands.Cog):
         self.guild_json_load_all()
 
     def initial_dir_creation(self):
-        if not os.path.exists(f"{self.bot.modules['onmyoji'].path}/guilds"):
-            os.mkdir(f"{self.bot.modules['onmyoji'].path}/guilds")
         for guild in self.bot.module_access['onmyoji']:
-            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}"
+            path_to_guild = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}"
             if not os.path.exists(path_to_guild):
                 os.mkdir(path_to_guild)
             if not os.path.exists(f'{path_to_guild}/lists'):
@@ -47,7 +45,7 @@ class GuildCmd(commands.Cog):
 
     def guild_json_load(self, guild_id):
         """Loads guild_info.json from the Guild ID-specific folder."""
-        path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json"
+        path_to_file = f"guilds/{guild_id}/{self.bot.modules['onmyoji'].path}/guild_info.json"
         try:
             with open(path_to_file, 'r') as guild_file:
                 self.guild_info[guild_id] = json.loads(guild_file.read())
@@ -63,7 +61,7 @@ class GuildCmd(commands.Cog):
     def guild_json_load_all(self):
         """Loads guild_info.json from the Guild ID-specific folder."""
         for guild in self.bot.module_access['onmyoji']:
-            path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}/guild_info.json"
+            path_to_file = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}/guild_info.json"
             try:
                 with open(path_to_file, 'r') as guild_file:
                     self.guild_info[guild] = json.loads(guild_file.read())
@@ -79,7 +77,7 @@ class GuildCmd(commands.Cog):
 
     def guild_json_writeout(self, guild_id):
         """Writes to guild_info.json in the Guild ID-specific folder."""
-        path_to_file = f"{self.bot.modules['onmyoji'].path}/guilds/{guild_id}/guild_info.json"
+        path_to_file = f"guilds/{guild_id}/{self.bot.modules['onmyoji'].path}/guild_info.json"
         with open(path_to_file, 'w+') as guild_file:
             json.dump(self.guild_info[guild_id], guild_file, indent=4)
             return
@@ -129,7 +127,7 @@ Unfortunately, currently my commands cannot be accessed in this window, so pleas
     @schedule.command(name = "image")
     @commands.check(guild_leader_check)
     async def schedule_set_image(self, ctx, *, arg=None):
-        guild_img_path = f"./{self.bot.modules['onmyoji'].path}/{ctx.guild.id}/images"
+        guild_img_path = f"./{ctx.guild.id}/{self.bot.modules['onmyoji'].path}/images"
         try:
             schedule_image_file = self.guild_info[ctx.guild.id]["schedule"]["file_path"]
         except KeyError:

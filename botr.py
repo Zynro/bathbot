@@ -5,6 +5,7 @@ import requests
 import config
 import bot_token
 import json
+import os
 
 class Module:
     def __init__(self, name, path=None, cog_list=None, guild_access=None):
@@ -40,14 +41,16 @@ with open(f'tokens/module_access.json') as file:
 bot.cog_list = extensions + ["cogs.dev"]
 
 bot.modules = {}
-bot.modules['memes'] = Module('memes', 
+bot.modules['bathmemes'] = Module('bathmemes', 
                         config.memes_module_path, 
                         config.meme_extensions, 
-                        bot.module_access['onmyoji'])
+                        bot.module_access['bathmemes'])
 bot.modules['onmyoji'] = Module('onmyoji', 
                         config.onmyoji_module_path, 
                         onmyoji_extensions, 
                         bot.module_access['onmyoji'])
+
+
 
 @bot.event
 async def on_ready():
@@ -58,6 +61,24 @@ async def on_ready():
     #bot.remove_command('help')
     await bot.change_presence(activity=discord.Game(name='Shower With Your Dad Simulator 2015: Do You Still Shower With Your Dad'))
     if __name__ == '__main__':
+
+        #Create all necessary guild folders
+        if not os.path.exists(f"guilds"):
+                os.mkdir(f"guilds")
+        required_dir_list = ['images', 'lists', 'modules']
+        for guild in bot.guilds:
+            if not os.path.exists(f"guilds/{guild.id}"):
+                os.mkdir(f"guilds/{guild.id}")
+            for folder in required_dir_list:
+                if not os.path.exists(f"guilds/{guild.id}/{folder}"):
+                    os.mkdir(f"guilds/{guild.id}/{folder}")
+            for module in bot.modules:
+                module = bot.modules[module]
+                if int(guild.id) in module.access:
+                    if not os.path.exists(f"guilds/{guild.id}/{module.path}"):
+                        os.mkdir(f"guilds/{guild.id}/{module.path}")
+
+        #Load all extensions
         for extension in extensions:
             try:
                 bot.load_extension(extension)
@@ -70,6 +91,7 @@ async def on_ready():
     if not discord.opus.is_loaded():
             discord.opus.load_opus('libopus.so')
             print('Opus has been loaded!')
+
 
 @bot.check
 async def guild_only_commands(ctx):

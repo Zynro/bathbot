@@ -31,17 +31,18 @@ def bold(text):
         return text
 
 class Embeds:
-    def shard_trading_embed(self, user):
-        user_id_string = str(user.id)
-        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['need']])
-        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[user_id_string]['have']])
-        nick = user.name if not user.nick else user.nick
-        trading_status = 'available' if  self.check_trading_status(user_id_string) else 'unavailable'
+    def shard_trading_embed(self, ctx):
+        user = ctx.author
+        user_id_string = str(ctx.author.id)
+        need_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[ctx.guild.id][user_id_string]['need']])
+        have_list = '\n'.join([self.shard_split_variable(arg, 'bold') for arg in self.shard_trading_db[ctx.guild.id][user_id_string]['have']])
+        nick = ctx.author.name if not ctx.author.nick else ctx.author.nick
+        trading_status = 'available' if  self.check_trading_status(ctx.author.id, ctx.guild.id) else 'unavailable'
         try:
-            if self.shard_trading_db[user_id_string]['notes']:
+            if self.shard_trading_db[ctx.guild.id][user_id_string]['notes']:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", 
                     colour=discord.Colour(generate_random_color()), 
-                    description=f"__**Notes:**__ {self.shard_trading_db[user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.")
+                    description=f"__**Notes:**__ {self.shard_trading_db[ctx.guild.id][user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.")
             else:
                 embed = discord.Embed(title=f"{nick}'s Shard Trading List", colour=discord.Colour(generate_random_color()), description=f"{nick} is **{trading_status}** for trading.")  
         except KeyError:
@@ -104,7 +105,7 @@ class Shard(commands.Cog, Embeds):
         """
         self.shard_trading_db = {}
         for guild in self.bot.module_access['onmyoji']:
-            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}"
+            path_to_guild = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}"
             path_to_file = f"{path_to_guild}/lists/shard-trading-db.json"
             try:
                 try:
@@ -121,14 +122,14 @@ class Shard(commands.Cog, Embeds):
                     json.dump(self.shard_trading_db[guild], shard_file, indent=4)                       
 
     def shard_load_guild_json(self, guild_id):
-        path_to_file = f"{self.bot.modules['onmyoji'].path}/{guild_id}/lists/shard-trading-db.json"
+        path_to_file = f"guilds/{guild_id}/{self.bot.modules['onmyoji'].path}/lists/shard-trading-db.json"
         with open(path_to_file, 'r') as file:
             self.shard_trading_db[guild_id] = json.loads(file.read())
 
     def shard_file_writeout_all(self):
         """Writes to Json shard database file."""
         for guild in self.bot.module_access['onmyoji']:
-            path_to_file = f"{self.bot.modules['onmyoji'].path}/{guild}/lists/shard-trading-db.json"
+            path_to_file = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}/lists/shard-trading-db.json"
             with open(path_to_file, 'w+') as shard_file:
                 json.dump(self.shard_trading_db, shard_file, indent=4)
         return
@@ -153,10 +154,10 @@ class Shard(commands.Cog, Embeds):
         <Amount> <Shiki>
         Each on a new line.
         """
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         if list_name == 'have':
             have_list = []
-            for entry in self.shard_trading_db[user]['have']:
+            for entry in self.shard_trading_db[ctx.guild.id][user]['have']:
                 if not entry:
                     continue
                 numbers, shiki = self.shard_split_variable(entry, 'split')
@@ -164,7 +165,7 @@ class Shard(commands.Cog, Embeds):
             return have_list
         elif list_name == 'need':
             need_list = []
-            for entry in self.shard_trading_db[user]['need']:
+            for entry in self.shard_trading_db[ctx.guild.id][user]['need']:
                 if not entry:
                     continue
                 numbers, shiki = self.shard_split_variable(entry, 'split')
@@ -175,7 +176,7 @@ class Shard(commands.Cog, Embeds):
         """
         Initializes the dicitonary entry of the user in the shard trading database.
         """
-        self.shard_trading_db[str(ctx.message.author.id)] = {'status': True, 'notes':'', 'have':'', 'need':''}
+        self.shard_trading_db[ctx.guild.id][str(ctx.message.author.id)] = {'status': True, 'notes':'', 'have':'', 'need':''}
         self.shard_file_writeout_all()
         return
 
@@ -210,26 +211,26 @@ For more help, tag Zynro and he'll be happy to assist.
         If given a user's name, nickname, or @tag, returns their list if their trading status is available.
             &shard list zynro
         """
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         user_id = str(ctx.author.id) if not target else self.user_validation(ctx, target)
         user = ctx.author if not target else ctx.guild.get_member(int(user_id))
         if not target:
             try:
-                temp = self.shard_trading_db[user_id]
+                temp = self.shard_trading_db[ctx.guild.id][user_id]
             except KeyError:
                 self.shard_entry_init
-            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+            if not self.shard_trading_db[ctx.guild.id][user_id]['need'] or not self.shard_trading_db[ctx.guild.id][user_id]['have']:
                 return await ctx.send("You must have both a 'need' and a 'have' list before you use this command.")
         else:
             try:
-                temp = self.shard_trading_db[user_id]
+                temp = self.shard_trading_db[ctx.guild.id][user_id]
             except KeyError:
                 return await ctx.send("That user has not used the shard command group before and has no lists.")
-            if not self.shard_trading_db[user_id]['need'] or not self.shard_trading_db[user_id]['have']:
+            if not self.shard_trading_db[ctx.guild.id][user_id]['need'] or not self.shard_trading_db[ctx.guild.id][user_id]['have']:
                 return await ctx.send("That user must have both 'need' and 'have' lists before you can check their shards.")
-        if self.shard_trading_db[user_id]['status'] == False:
+        if self.shard_trading_db[ctx.guild.id][user_id]['status'] == False:
             return await ctx.send("That user is currently not available for trading.")
-        embed = self.shard_trading_embed(user)
+        embed = self.shard_trading_embed(ctx)
         await ctx.send(embed=embed)
 
     def shard_set_list(self, ctx, args, list_name):
@@ -265,7 +266,7 @@ For more help, tag Zynro and he'll be happy to assist.
                 result = f"{result}\n*Did you mean:* `{guess}`\n"
             result += "\nExact spelling is important, else searches won't work. Please try again."
             return result
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         try: 
             self.shard_trading_db[str(ctx.message.author.id)][list_name] = arg_list
         except KeyError:
@@ -275,7 +276,7 @@ For more help, tag Zynro and he'll be happy to assist.
         return None
 
     def mod_shikigami_to_list(self, user, input_shiki, list_name, mod):
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         numbers, shiki = self.shard_split_variable(input_shiki.lower(), 'split')
         if mod == "add":
             shiki_list = self.Shikigami.shiki_validate(shiki, self.shikigami_db)
@@ -335,7 +336,7 @@ For more help, tag Zynro and he'll be happy to assist.
         if return_message:
             return await ctx.send(return_message) 
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['need'])
-        trading_status = 'available' if self.check_trading_status(ctx.author.id) else 'unavailable'
+        trading_status = 'available' if self.check_trading_status(ctx.author.id, ctx.guild.id) else 'unavailable'
         await ctx.send(f'The shards you need are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard_set_need.command(name="add", aliases=['set'])
@@ -358,7 +359,7 @@ For more help, tag Zynro and he'll be happy to assist.
 
     @shard_set_need.command(name="clear")
     async def shard_set_need_clear(self, ctx):
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         self.shard_trading_db[str(ctx.message.author.id)]["need"] = []
         self.shard_file_writeout_all()
         return await ctx.send("Your need list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
@@ -389,7 +390,7 @@ For more help, tag Zynro and he'll be happy to assist.
         if return_message:
             return await ctx.send(return_message)
         arg_string = '\n'.join(self.shard_trading_db[str(ctx.message.author.id)]['have'])
-        trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
+        trading_status = 'available' if  self.check_trading_status(ctx.author.id, ctx.guild.id) else 'unavailable'
         await ctx.send(f'The shards you have are now set to: ```\n{arg_string}```\nYou are currently {bold(trading_status)} for trading.')
 
     @shard_set_have.command(name="add", aliases=['set'])
@@ -412,7 +413,7 @@ For more help, tag Zynro and he'll be happy to assist.
 
     @shard_set_have.command(name="clear")
     async def shard_set_have_clear(self, ctx):
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         self.shard_trading_db[str(ctx.message.author.id)]["have"] = []
         self.shard_file_writeout_all()
         return await ctx.send("Your have list has been cleared. Note that you will not be able to use `&shard list` until both lists have entires.")
@@ -435,8 +436,8 @@ For more help, tag Zynro and he'll be happy to assist.
         args = ' '.join(notes)
         if bracket_check(args):
             return await ctx.send(bracket_check(args))
-        self.shard_load_json()
-        if self.check_trading_status(ctx.author.id) == True:
+        self.shard_load_guild_json(ctx.guild.id)
+        if self.check_trading_status(ctx.author.id, ctx.guild.id) == True:
             trading_status = "available"
         else:
             trading_status = "unavailable"
@@ -449,11 +450,11 @@ For more help, tag Zynro and he'll be happy to assist.
             await ctx.send(f"Your Shard Trading entry Notes have been set to:\n```{args}```\nYou are currently {bold(trading_status)} for trading.")
             self.shard_file_writeout_all()
 
-    def check_trading_status(self, user):
+    def check_trading_status(self, user, guild):
         try:
-            return self.shard_trading_db[str(user)]['status']
+            return self.shard_trading_db[guild][str(user)]['status']
         except KeyError:
-            self.shard_trading_db[str(user)]['status'] = True
+            self.shard_trading_db[guild][str(user)]['status'] = True
             self.shard_file_writeout_all()
             return True
 
@@ -474,14 +475,14 @@ For more help, tag Zynro and he'll be happy to assist.
         ---------------------
         """
         if ctx.invoked_subcommand is None:
-            self.shard_load_json()
+            self.shard_load_guild_json(ctx.guild.id)
             try:
                 temp = self.shard_trading_db[str(ctx.author.id)]['status']
             except KeyError:
                 self.shard_trading_db[str(ctx.author.id)]['status'] = True
                 self.shard_file_writeout_all();
                 return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
-            trading_status = 'available' if  self.check_trading_status(ctx.author.id) else 'unavailable'
+            trading_status = 'available' if  self.check_trading_status(ctx.author.id, ctx.guild.id) else 'unavailable'
             return await ctx.send(f"{ctx.author.mention} is currently {trading_status} to be searched for trading.")
 
     @shard_status.command(name="on")
@@ -528,7 +529,7 @@ For more help, tag Zynro and he'll be happy to assist.
         Specify a name, or an @user tag to compare to that single user:
             &shard search Zynro
         """
-        self.shard_load_json()
+        self.shard_load_guild_json(ctx.guild.id)
         main_user = str(ctx.message.author.id)
         other_user = None
         if not other_user_raw:
