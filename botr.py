@@ -34,7 +34,7 @@ def get_prefix(bot, message):
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')
 
-with open(f'module_access.json') as file:
+with open(f'tokens/module_access.json') as file:
     bot.module_access = json.loads(file.read())
 
 bot.cog_list = extensions + ["cogs.dev"]
