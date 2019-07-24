@@ -487,7 +487,7 @@ For more help, tag Zynro and he'll be happy to assist.
     @shard_status.command(name="on")
     async def shard_status_set_on(self, ctx):
         self.shard_trading_db[str(ctx.author.id)]['status'] = True
-        self.shard_file_writeout_all();
+        self.shard_file_writeout_all()
         return await ctx.send(f"{ctx.author.mention} is now available to be searched for trading.")
 
     @shard_status.command(name="off")
