@@ -20,19 +20,20 @@ def get_user_id(user):
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        try:
-            os.makedirs("./images/guild")
-        except FileExistsError:
-            pass
+        self.initial_dir_creation()
         self.guild_info = {}
         self.guild_json_load_all()
+
+    def initial_dir_creation(self):
         if not os.path.exists(f"{self.bot.modules['onmyoji'].path}/guilds"):
             os.mkdir(f"{self.bot.modules['onmyoji'].path}/guilds")
         for guild in self.bot.module_access['onmyoji']:
-            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{str(guild)}"
+            path_to_guild = f"{self.bot.modules['onmyoji'].path}/guilds/{guild}"
             if not os.path.exists(path_to_guild):
                 os.mkdir(path_to_guild)
+            if not os.path.exists(f'{path_to_guild}/lists'):
                 os.mkdir(f'{path_to_guild}/lists')
+            if not os.path.exists(f'{path_to_guild}/images'):
                 os.mkdir(f'{path_to_guild}/images')
 
     async def cog_check(self, ctx):
