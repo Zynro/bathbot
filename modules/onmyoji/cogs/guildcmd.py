@@ -21,11 +21,12 @@ class GuildCmd(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.initial_dir_creation()
-        self.guild_info = {}
         self.guild_json_load_all()
 
     def initial_dir_creation(self):
+        self.guild_info = {}
         for guild in self.bot.module_access['onmyoji']:
+            self.guild_info[guild] = {}
             path_to_guild = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}"
             if not os.path.exists(path_to_guild):
                 os.mkdir(path_to_guild)
@@ -60,6 +61,7 @@ class GuildCmd(commands.Cog):
 
     def guild_json_load_all(self):
         """Loads guild_info.json from the Guild ID-specific folder."""
+        self.guild_info = {}
         for guild in self.bot.module_access['onmyoji']:
             path_to_file = f"guilds/{guild}/{self.bot.modules['onmyoji'].path}/guild_info.json"
             try:
@@ -67,7 +69,6 @@ class GuildCmd(commands.Cog):
                     self.guild_info[guild] = json.loads(guild_file.read())
             except FileNotFoundError:
                 with open(path_to_file, 'w') as guild_file:
-                    self.guild_info = {}
                     self.guild_info[guild] = {}
                     self.guild_info[guild]["schedule"] = {}
                     self.guild_info[guild]["schedule"]["message"] = None
@@ -122,7 +123,7 @@ Unfortunately, currently my commands cannot be accessed in this window, so pleas
                 return await ctx.send(file = File(self.guild_info[ctx.guild.id]["schedule"]["file_path"]))
             if not image:
                 return await ctx.send(self.guild_info[ctx.guild.id]["schedule"]["message"])
-            return await ctx.send(self.guild_info[ctx.guild.id]["schedule"]["message"], file = File(self.guild_info["schedule"]["file_path"]))
+            return await ctx.send(self.guild_info[ctx.guild.id]["schedule"]["message"], file = File(self.guild_info[ctx.guild.id]["schedule"]["file_path"]))
 
     @schedule.command(name = "image")
     @commands.check(guild_leader_check)
