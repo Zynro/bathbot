@@ -207,7 +207,7 @@ Unfortunately, currently my commands cannot be accessed in this window, so pleas
     async def new_member(self, ctx, member=None, nickname=None):
         new_member_channel = self.bot.get_channel(config.new_member_channel_id)
         #new_member_role = ctx.guild.get_role(config.new_member_role_id)
-        new_member_role = ctx.guild.get_role(177994521940983809)
+        new_member_role = ctx.guild.get_role(438500859400159233)
         #guild_role = ctx.guild.get_role(config.new_member_role_id)
         #new_member_channel = self.bot.get_channel(config.new_member_channel_id)
         if not member or not nickname or "@" not in member:
