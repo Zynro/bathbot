@@ -40,8 +40,13 @@ class GuildCmd(commands.Cog):
         self.bot = bot
         self.tweepy_api = tweepy.API(twitter_auth(2))
 
+    async def cog_check(self, ctx):
+        return ctx.guild.id in self.bot.module_access["twitter"]
+
     @commands.Cog.listener()
     async def on_message (self, message):
+        if message.guild.id not in self.bot.module_access["twitter"]:
+            return
         if "twitter" in message.content and "http" in message.content:
             tweet_id = extract_id(message.content)
             tweet = self.tweepy_api.get_status(tweet_id)
