@@ -31,7 +31,7 @@ twitter_extensions = [
                     'modules.twitter.twitter'                    
                     ]
 
-initial_extensions = base_extensions + onmyoji_extensions
+initial_extensions = base_extensions + onmyoji_extensions + twitter_extensions
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
