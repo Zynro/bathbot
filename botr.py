@@ -18,13 +18,17 @@ base_extensions = [
                     'cogs.admin',
                     'cogs.voicecmd',
                     'cogs.basic',
-                    'modules.twitter.twitter'
+                    'cogs.modules'
                     ]
 
 onmyoji_extensions = [
                     'modules.onmyoji.cogs.guildcmd',
                     'modules.onmyoji.cogs.shikigami',
                     'modules.onmyoji.cogs.shard'                    
+                    ]
+
+twitter_extensions = [
+                    'modules.twitter.twitter'                    
                     ]
 
 initial_extensions = base_extensions + onmyoji_extensions
@@ -50,8 +54,10 @@ bot.modules['onmyoji'] = Module('onmyoji',
                         config.onmyoji_module_path, 
                         onmyoji_extensions, 
                         bot.module_access['onmyoji'])
-
-
+bot.modules['twitter'] = Module('twitter', 
+                        config.twitter_module_path, 
+                        twitter_extensions, 
+                        bot.module_access['twitter'])
 
 @bot.event
 async def on_ready():
