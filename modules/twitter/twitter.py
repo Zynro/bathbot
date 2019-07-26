@@ -19,11 +19,15 @@ def twitter_auth(type):
         return
     if type == 1:
         auth = tweepy.OAuthHandler(tweepy_auth['consumer_token'], tweepy_auth['consumer_secret'])
-        auth.secure = True
-        auth.set_access_token(tweepy_auth['access_token'], tweepy_auth['access_secret'])
+        auth.set_access_token(tweepy_authaccess_token, tweepy_authaccess_secret)
     elif type == 2:
-        print (tweepy_auth)
-        return tweepy.AppAuthHandler(tweepy_auth['consumer_token'], tweepy_auth['consumer_secret'])
+        auth = tweepy.AppAuthHandler(tweepy_auth['consumer_token'], tweepy_auth['consumer_secret'])
+    return auth
+
+def extract_id(tweet_id):
+    tweet_id = tweet_id.split('/')
+    tweet_id = int(tweet_id[-1])
+    return tweet_id
 
 def get_ext(path):
     return os.path.splitext(path)[1].strip().lower()
@@ -34,35 +38,22 @@ def get_user_id(user):
 class GuildCmd(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        """
-        path_to_file = f"tokens/twitter_credentials.json"
-        try:
-            with open(path_to_file, 'r') as file:
-                tweepy_auth = json.loads(file.read())
-        except FileNotFoundError:
-            print("Credentials file not found")
-            return
-        auth = tweepy.OAuthHandler(tweepy_auth['consumer_token'], tweepy_auth['consumer_secret'])
-        try:
-            redirect_url = auth.get_authorization_url()
-        except tweepy.TweepError:
-            print('Error! Failed to get request token.')
-        session.set('request_token', auth.request_token['oauth_token'])
-        token = session.get('request_token')
-        session.delete('request_token')
-        auth.request_token = { 'oauth_token' : token,
-                                 'oauth_token_secret' : verifier }
+        self.tweepy_api = tweepy.API(twitter_auth(2))
 
-        try:
-            auth.get_access_token(verifier)
-        except tweepy.TweepError:
-            print('Error! Failed to get access token.')"""
-        auth = twitter_auth(1)
-        api = tweepy.API(auth)
-        for tweet in tweepy.Cursor(api.search, q='tweepy').items(10):
-            print(tweet.text)
-        for tweet in tweepy.api.statuses_lookup([759043035355312128]):
-            print(tweet.text)
+    @commands.Cog.listener()
+    async def on_message (self, message):
+        if "twitter" in message.content and "http" in message.content:
+            tweet_id = extract_id(message.content)
+            tweet = self.tweepy_api.get_status(tweet_id)
+            #print(tweet.extended_entities)
+            tweet_list = []
+            for each in tweet.extended_entities['media']:
+                tweet_list.append(each['media_url'])
+            if len(tweet_list) == 1:
+                return
+            tweet_list.pop(0)
+            await message.channel.send('\n'.join(tweet_list))
+
 
 
 
