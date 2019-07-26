@@ -17,7 +17,8 @@ class Module:
 base_extensions = [
                     'cogs.admin',
                     'cogs.voicecmd',
-                    'cogs.basic'
+                    'cogs.basic',
+                    'modules.twitter.twitter'
                     ]
 
 onmyoji_extensions = [
