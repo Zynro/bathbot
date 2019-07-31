@@ -26,8 +26,19 @@ def twitter_auth(type):
 
 def extract_id(tweet_id):
     tweet_id = tweet_id.split('/')
-    tweet_id = int(tweet_id[-1])
-    return tweet_id
+    tweet_id_extracted = ""
+    for char in tweet_id[-1]:
+        if char.isdigit():
+            tweet_id_extracted += char
+        else:
+            break
+    """print("=========================")
+    print("=========================")
+    print(tweet_id_extracted)
+    print("=========================")
+    print("=========================")"""
+    tweet_id_extracted = int(tweet_id_extracted)
+    return tweet_id_extracted
 
 def get_ext(path):
     return os.path.splitext(path)[1].strip().lower()
@@ -58,6 +69,15 @@ class GuildCmd(commands.Cog):
                 return
             tweet_list.pop(0)
             await message.channel.send('\n'.join(tweet_list))
+
+    @commands.command()
+    async def tweet_dump(self, ctx, arg):
+        path_to_file = "tweet_dump.json"
+        tweet_id = extract_id(arg)
+        tweet = self.tweepy_api.get_status(tweet_id)
+        print(tweet)
+        with open(path_to_file, 'w') as shard_file:
+            json.dump(tweet._json, shard_file, indent=4)     
 
 
 
