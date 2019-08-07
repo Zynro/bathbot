@@ -60,7 +60,7 @@ class GuildCmd(commands.Cog):
             return
         if "twitter" in message.content and "http" in message.content:
             tweet_id = extract_id(message.content)
-            tweet = self.tweepy_api.get_status(tweet_id)
+            tweet = self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
             #print(tweet.extended_entities)
             tweet_list = []
             for each in tweet.extended_entities['media']:
@@ -70,11 +70,12 @@ class GuildCmd(commands.Cog):
             tweet_list.pop(0)
             await message.channel.send('\n'.join(tweet_list))
 
-    @commands.command()
+    @commands.command(name="dump")
     async def tweet_dump(self, ctx, arg):
         path_to_file = "tweet_dump.json"
         tweet_id = extract_id(arg)
-        tweet = self.tweepy_api.get_status(tweet_id)
+        tweet = self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
+        #tweet = self.tweepy_api.get_status(tweet_id)
         print(tweet)
         with open(path_to_file, 'w') as shard_file:
             json.dump(tweet._json, shard_file, indent=4)     
