@@ -121,6 +121,8 @@ class GuildCmd(commands.Cog):
         if "twitter" in message.content and "http" in message.content:
             result_message = self.get_media_urls(message.content)
             embedded_link = self.check_tweet_for_embedded_links(message.content)
+            if not result_message:
+                return
             return await message.channel.send(result_message)
             """if not result_message and not embedded_link:
                 return
