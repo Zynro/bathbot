@@ -63,20 +63,14 @@ class GuildCmd(commands.Cog):
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["twitter"]
 
-    async def check_tweet_for_embedded_links(self, message):
-        tweet_id = extract_id(message)
+    def check_tweet_for_embedded_links(self, tweet_link):
+        tweet_id = extract_id(tweet_link)
         tweet = self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
-        if "t.co" in tweet.full_text:
-            split_tweet = tweet.full_text.split(" ")
-            for segment in split_tweet:
-                if "t.co" in segment:
-                    link = segment
-                    break
-                else:
-                    pass
-            return link
-        else:
-            return
+        for each in tweet._json['entities']['urls']:
+            print(each)
+            if 'http' in each['expanded_url'] and 'twitter' in each['expanded_url']:
+                return each['expanded_url']
+        return None
 
     def get_tweet(self, tweet_id):
         return self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
@@ -103,27 +97,35 @@ class GuildCmd(commands.Cog):
             return
         if message.guild.id not in self.bot.module_access["twitter"]:
             return
-        if "t.co" in message.content:
+        split = message.content.split(" ")
+        for each in split:
+            if ("http" in each and "twitter" in each) or ("t.co" in each):
+                split = each
+                print(split)
+        if "t.co" in split:
             async with aiohttp.ClientSession() as session:
-                async with session.get(message.content) as response:
+                async with session.get(split) as response:
                     true_url = str(response.url)
                     if "twitter" in true_url and "http" in true_url:
                         tweet_id = extract_id(true_url)
                         tweet_author = self.get_tweet_author(true_url)
                         true_url = f"http://twitter.com/{tweet_author}/status/{tweet_id}"
+                        embedded_link = self.check_tweet_for_embedded_links(true_url)
                         await message.channel.send(true_url)
-                        if not self.get_media_urls(true_url):
-                            return 
-                        else:
-                            return await message.channel.send(self.get_media_urls(true_url))
+                        if self.get_media_urls(true_url):
+                            await message.channel.send(self.get_media_urls(true_url)) 
+                        if embedded_link:
+                            return await message.channel.send(embedded_link)
                     else:
                         return
-        if "twitter" in message.content and "http" in message.content:
-            result_message = self.get_media_urls(message.content)
-            embedded_link = self.check_tweet_for_embedded_links(message.content)
-            if not result_message:
-                return
-            return await message.channel.send(result_message)
+        if "twitter" in split and "http" in split:
+            result_message = self.get_media_urls(split)
+            embedded_link = self.check_tweet_for_embedded_links(split)
+            if result_message:
+                await message.channel.send(result_message)
+            if embedded_link:
+                await message.channel.send(embedded_link)
+            return
             """if not result_message and not embedded_link:
                 return
             elif not embedded_link:
