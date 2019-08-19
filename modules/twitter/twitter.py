@@ -26,6 +26,7 @@ def twitter_auth(type):
     return auth
 
 def extract_id(tweet_id):
+    tweet_id = str(tweet_id)
     tweet_id_list = tweet_id.split('/')
     tweet_id_extracted = ""
     index = 0
@@ -55,7 +56,7 @@ def get_ext(path):
 def get_user_id(user):
     return int("".join([x for x in user if x.isdigit()]))
 
-class GuildCmd(commands.Cog):
+class Twitter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.tweepy_api = tweepy.API(twitter_auth(2))
@@ -66,13 +67,18 @@ class GuildCmd(commands.Cog):
     def check_tweet_for_embedded_links(self, tweet_link):
         tweet_id = extract_id(tweet_link)
         tweet = self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
-        for each in tweet._json['entities']['urls']:
-            print(each)
-            if 'http' in each['expanded_url'] and 'twitter' in each['expanded_url']:
-                return each['expanded_url']
-        return None
+        try:
+            return_quote = tweet._json['quoted_status_permalink']['expanded']
+            return return_quote
+        except KeyError:
+            return None
 
     def get_tweet(self, tweet_id):
+        try:
+            if "http" in tweet_id:
+                tweet_id = extract_id(tweet_id)
+        except TypeError:
+            pass
         return self.tweepy_api.get_status(tweet_id, tweet_mode = "extended")
 
     def get_tweet_author(self, string):
@@ -89,7 +95,7 @@ class GuildCmd(commands.Cog):
             tweet_list.pop(0)
             return '\n'.join(tweet_list)
         except AttributeError:
-            return
+            return None
 
     @commands.Cog.listener()
     async def on_message (self, message):
@@ -101,8 +107,29 @@ class GuildCmd(commands.Cog):
         for each in split:
             if ("http" in each and "twitter" in each) or ("t.co" in each):
                 split = each
-                print(split)
+            else:
+                return
         if "t.co" in split:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(split) as response:
+                    true_url = str(response.url)
+        else:
+            true_url = split
+        tweet = self.get_tweet(true_url)
+        while True:
+            tweet_id = tweet._json['id']
+            media_urls = self.get_media_urls(tweet_id)
+            if media_urls:
+                await message.channel.send(media_urls)
+            quote_url = self.check_tweet_for_embedded_links(tweet_id)
+            if quote_url:
+                await message.channel.send(quote_url)
+                tweet = self.get_tweet(quote_url)
+            else:
+                break
+                return
+
+        """if "t.co" in split:
             async with aiohttp.ClientSession() as session:
                 async with session.get(split) as response:
                     true_url = str(response.url)
@@ -126,7 +153,7 @@ class GuildCmd(commands.Cog):
             if embedded_link:
                 await message.channel.send(embedded_link)
             return
-            """if not result_message and not embedded_link:
+            if not result_message and not embedded_link:
                 return
             elif not embedded_link:
                 return await message.channel.send(result_message)
@@ -148,4 +175,4 @@ class GuildCmd(commands.Cog):
     
 
 def setup(bot):
-    bot.add_cog(GuildCmd(bot))
+    bot.add_cog(Twitter(bot))
