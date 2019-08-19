@@ -129,40 +129,6 @@ class Twitter(commands.Cog):
                 break
                 return
 
-        """if "t.co" in split:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(split) as response:
-                    true_url = str(response.url)
-                    if "twitter" in true_url and "http" in true_url:
-                        tweet_id = extract_id(true_url)
-                        tweet_author = self.get_tweet_author(true_url)
-                        true_url = f"http://twitter.com/{tweet_author}/status/{tweet_id}"
-                        embedded_link = self.check_tweet_for_embedded_links(true_url)
-                        await message.channel.send(true_url)
-                        if self.get_media_urls(true_url):
-                            await message.channel.send(self.get_media_urls(true_url)) 
-                        if embedded_link:
-                            return await message.channel.send(embedded_link)
-                    else:
-                        return
-        if "twitter" in split and "http" in split:
-            result_message = self.get_media_urls(split)
-            embedded_link = self.check_tweet_for_embedded_links(split)
-            if result_message:
-                await message.channel.send(result_message)
-            if embedded_link:
-                await message.channel.send(embedded_link)
-            return
-            if not result_message and not embedded_link:
-                return
-            elif not embedded_link:
-                return await message.channel.send(result_message)
-            elif not result_message:
-                return await message.channel.send(embedded_link)
-            else:
-                await message.channel.send(result_message)
-                await message.channel.send(embedded_link)"""
-
     @commands.command(name="dump")
     async def tweet_dump(self, ctx, arg):
         path_to_file = "tweet_dump.json"
