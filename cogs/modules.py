@@ -31,9 +31,10 @@ class Modules(commands.Cog):
             return
 
     @module.command(name='check')
-    async def check_access_to_module(self, ctx, module):
+    async def check_access_to_module(self, ctx, module=None):
+        """Checks what modules the current guild has access to."""
         if not module:
-            return
+            return await ctx.send("A module name is required.")
         else:
             guild_list = []
             for guild in self.bot.modules[module].access:
@@ -44,6 +45,7 @@ class Modules(commands.Cog):
 
     @module.command(name='add')
     async def add_access_to_module(self, ctx, module):
+        """Allows thisg guild to access <module>."""
         if module not in self.bot.modules:
             return await ctx.send(f"Module '{module}' does not exist.")
         if ctx.guild.id in self.bot.modules[module].access:
@@ -54,6 +56,7 @@ class Modules(commands.Cog):
 
     @module.command(name='remove', aliases=['rm'])
     async def remove_access_to_module(self, ctx, module):
+        """Removes this guilds access to <module>."""
         if module not in self.bot.modules:
             return await ctx.send(f"Module '{module}' does not exist.")
         if ctx.guild.id not in self.bot.modules[module].access:
@@ -64,6 +67,18 @@ class Modules(commands.Cog):
             return await ctx.send("Although the guild has access, I could not remove it from the dict.")
         self.module_access_writeout()
         await ctx.send(f"Guild *{ctx.guild.name}* with ID '{ctx.guild.id}' has been removed from the access list for module '{module}'.")
+
+    @module.command(name='gcheck')
+    async def check_guilds_acces(self, ctx):
+        """Returns a list of modules the current guild has access to."""
+        origin_guild = ctx.guild.id
+        access_list = []
+        for module in self.bot.modules:
+            for guild in self.bot.modules[module].access:
+                if origin_guild == guild:
+                    access_list.append(module)
+        access_list = "\n".join(access_list)
+        await ctx.send(f"__This guild has access to the following modules:__\n{access_list}")
 
 
 def setup(bot):
