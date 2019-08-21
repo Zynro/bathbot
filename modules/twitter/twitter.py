@@ -104,17 +104,18 @@ class Twitter(commands.Cog):
         if message.guild.id not in self.bot.module_access["twitter"]:
             return
         split = message.content.split(" ")
+        true_url = None
         for each in split:
-            if ("http" in each and "twitter" in each) or ("t.co" in each):
-                split = each
-            else:
-                return
-        if "t.co" in split:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(split) as response:
-                    true_url = str(response.url)
-        else:
-            true_url = split
+            if (("http" in each and "twitter" in each) or ("t.co" in each)):
+                true_url = each
+                break
+            if "t.co" in split:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(split) as response:
+                        true_url = str(response.url)
+                        break
+        if not true_url:
+            return
         tweet = self.get_tweet(true_url)
         while True:
             tweet_id = tweet._json['id']
