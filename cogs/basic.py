@@ -1,9 +1,16 @@
+import discord
 from discord.ext import commands
+import random
 import sys
 import config
 import traceback
+from howlongtobeatpy import HowLongToBeat
 
+hltb = HowLongToBeat
 owner_list = config.owner_list
+
+def generate_random_color():
+    return random.randint(0, 0xFFFFFF)
 
 class Basic(commands.Cog):
     def __init__(self, bot):
@@ -27,6 +34,34 @@ class Basic(commands.Cog):
         except TypeError:
             await ctx.send("Must be a whole number of an amount.")
         return
+
+    @commands.command(name='hltb', aliases=['howlong'])
+    async def how_long_to_beat(self, ctx, *, arg: str = None):
+        """Searches the site How Long To Beat to see how long it takes to beat the game inputted.
+        
+        Usage:
+            &hltb game"""
+        if not arg:
+            await ctx.send("A game name must be entered.")
+        results = await HowLongToBeat().async_search(arg)
+        if not results:
+            return await ctx.send(f"Game '{arg}' not found.")
+        else:
+            if len(results) > 0:
+                game_result = max(results, key=lambda element: element.similarity)
+                embed = discord.Embed(title=f"HLTB: {game_result.game_name}",
+                    colour=discord.Colour(generate_random_color()),
+                    description=game_result.game_web_link)
+                embed.set_thumbnail(url=game_result.game_image_url)
+                if game_result.gameplay_main_label:
+                    embed.add_field(name=game_result.gameplay_main_label, value=f"{game_result.gameplay_main} Hours")
+                if game_result.gameplay_main_extra_label:
+                    embed.add_field(name=game_result.gameplay_main_extra_label, value=f"{game_result.gameplay_main_extra} Hours")
+                if game_result.gameplay_completionist_label:
+                    embed.add_field(name=game_result.gameplay_completionist_label, value=f"{game_result.gameplay_completionist} Hours")
+                return await ctx.send(embed=embed)
+                
+
     
 
 def setup(bot):
