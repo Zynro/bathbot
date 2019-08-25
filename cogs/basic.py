@@ -17,6 +17,7 @@ class Basic(commands.Cog):
         self.bot = bot
     
     @commands.command(name='purge', aliases=['prune','wipe','delete'])
+    @commands.has_permissions(manage_messages=True)
     async def prune(self, ctx, amount: int = None):
         """
         Deletes the previous x amount of messages, including the prune command line.
