@@ -54,11 +54,11 @@ class Basic(commands.Cog):
                     description=game_result.game_web_link)
                 embed.set_thumbnail(url=game_result.game_image_url)
                 if game_result.gameplay_main_label:
-                    embed.add_field(name=game_result.gameplay_main_label, value=f"{game_result.gameplay_main} Hours")
+                    embed.add_field(name=game_result.gameplay_main_label, value=f"{game_result.gameplay_main} Hours", inline = False)
                 if game_result.gameplay_main_extra_label:
-                    embed.add_field(name=game_result.gameplay_main_extra_label, value=f"{game_result.gameplay_main_extra} Hours")
+                    embed.add_field(name=game_result.gameplay_main_extra_label, value=f"{game_result.gameplay_main_extra} Hours", inline = False)
                 if game_result.gameplay_completionist_label:
-                    embed.add_field(name=game_result.gameplay_completionist_label, value=f"{game_result.gameplay_completionist} Hours")
+                    embed.add_field(name=game_result.gameplay_completionist_label, value=f"{game_result.gameplay_completionist} Hours", inline = False)
                 return await ctx.send(embed=embed)
                 
 

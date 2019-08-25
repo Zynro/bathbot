@@ -28,6 +28,15 @@ class Modules(commands.Cog):
     @commands.group()
     async def module(self, ctx):
         if not ctx.invoked_subcommand:
+            if ctx.author.id == config.owner:
+                return await ctx.send("""Current Commands:
+```&module check - Checks accesses in current guild.
+&module add <module>
+    Adds current guild to specified module.
+&module remove <module>
+    Removes current guild from specified module.
+&module gcheck
+    Returns a list of modules current guild has access to.```""")
             return
 
     @module.command(name='check')

@@ -28,10 +28,14 @@ onmyoji_extensions = [
                     ]
 
 twitter_extensions = [
-                    'modules.twitter.twitter'                    
+                    'modules.twitter.cogs.twitter'                    
                     ]
 
-initial_extensions = base_extensions + onmyoji_extensions + twitter_extensions
+dragalia_extensions = [
+                    'modules.dragalia.cogs.wyrmprints'                    
+                    ]
+
+initial_extensions = base_extensions + onmyoji_extensions + twitter_extensions + dragalia_extensions
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
@@ -45,7 +49,18 @@ with open(f'tokens/module_access.json') as file:
 
 bot.cog_list = extensions + ["cogs.dev"]
 
+bot_directory_modules = [name for name in os.listdir("./modules")]
+bot_access_modules = [name for name in bot.module_access.keys()]
+diff_list = list(set(bot_directory_modules).difference(bot_access_modules))
+if len(diff_list) > 0:
+    writeout = True
+    for each in diff_list:
+        bot.module_access[each] = []
+else:
+    writeout = False
+
 bot.modules = {}
+
 bot.modules['bathmemes'] = Module('bathmemes', 
                         config.memes_module_path, 
                         config.meme_extensions, 
@@ -58,6 +73,19 @@ bot.modules['twitter'] = Module('twitter',
                         config.twitter_module_path, 
                         twitter_extensions, 
                         bot.module_access['twitter'])
+bot.modules['dragalia'] = Module('dragalia', 
+                        config.dragalia_module_path, 
+                        dragalia_extensions, 
+                        bot.module_access['dragalia'])
+if writeout == True:
+    module_access_dict = {}
+    for module in bot.modules.values():
+        module_access_dict[module.name] = []
+        for guild_id in module.access:
+            module_access_dict[module.name].append(guild_id)
+    path_to_file = f'tokens/module_access.json'
+    with open(path_to_file, 'w+') as file:
+        json.dump(module_access_dict, file, indent = 4)
 
 @bot.event
 async def on_ready():
@@ -69,10 +97,21 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name='Shower With Your Dad Simulator 2015: Do You Still Shower With Your Dad'))
     if __name__ == '__main__':
 
+        #Creates all module base folders
+        module_base_folder_list = ['cogs', 'images', 'lists']
+        if not os.path.exists("modules"):
+            os.mmkdir("modules")
+        for module in bot.modules.keys():
+            if not os.path.exists(f"modules/{module}"):
+                os.mkdir(f"modules/{module}")
+            for folder in module_base_folder_list:
+                if not os.path.exists(f"modules/{module}/{folder}"):
+                    os.mkdir(f"modules/{module}/{folder}")
+
         #Create all necessary guild folders
+        required_dir_list = ['images', 'lists', 'modules']
         if not os.path.exists(f"guilds"):
                 os.mkdir(f"guilds")
-        required_dir_list = ['images', 'lists', 'modules']
         for guild in bot.guilds:
             if not os.path.exists(f"guilds/{guild.id}"):
                 os.mkdir(f"guilds/{guild.id}")
@@ -81,9 +120,8 @@ async def on_ready():
                     os.mkdir(f"guilds/{guild.id}/{folder}")
             for module in bot.modules:
                 module = bot.modules[module]
-                if int(guild.id) in module.access:
-                    if not os.path.exists(f"guilds/{guild.id}/{module.path}"):
-                        os.mkdir(f"guilds/{guild.id}/{module.path}")
+                if not os.path.exists(f"guilds/{guild.id}/{module.path}"):
+                    os.mkdir(f"guilds/{guild.id}/{module.path}")
 
         #Load all extensions
         for extension in extensions:
