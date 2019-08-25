@@ -112,7 +112,7 @@ class Wyrmprints(commands.Cog, Adventurer):
         embed.set_thumbnail(url=character.image)
         for combo in character.comboes.keys():
             embed.add_field(name = combo, value = "\n".join(character.comboes[combo]), inline = False)
-        embed.set_footer(text = 'Data seem outdated? Run the "&print-update" command to pull new data.')
+        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
         return embed
 
     async def return_multiple_results_embed(self, multiple_results):
@@ -142,7 +142,7 @@ class Wyrmprints(commands.Cog, Adventurer):
         embed = await self.return_character_embed(character_dict_entry)
         return await ctx.send(embed)
 
-    @commands.command(name="print-get", aliases=['printdownload'])
+    @commands.command(name="print-get", aliases=['printdownload', 'print-update'])
     @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
     async def get_json_print_source(self, ctx):
         await ctx.send('Bathbot is now updating the recommend wyrmprint combinations from source, please wait...')
