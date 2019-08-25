@@ -143,6 +143,7 @@ class Wyrmprints(commands.Cog, Adventurer):
         return await ctx.send(embed)
 
     @commands.command(name="print-get", aliases=['printdownload'])
+    @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
     async def get_json_print_source(self, ctx):
         await ctx.send('Bathbot is now updating the recommend wyrmprint combinations from source, please wait...')
         try:
