@@ -337,6 +337,10 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
 
     @commands.command()
     async def bounty(self, ctx, *,search=None):
+        """Enter a Shikigami to search for it's recommended bounties.
+        
+        Parameters:
+        search (str): The Shikigami to search for."""
         final_shikigami = []
         if not search:
             await ctx.send('Search term cannot be blank, try again.')
@@ -356,11 +360,6 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
     async def tengu(self, ctx):
         """hurrhurrhurr"""
         await ctx.send(file=discord.File('./images/tengu.jpg'))
-
-    @commands.command(name = "br")
-    async def test_br(self, ctx, *, entry = None):
-        for shiki_object in self.shiki_validate(entry, self.shikigami_db):
-            await ctx.send(shiki_object.name)
 
 def setup(bot):
     bot.add_cog(Shikigami(bot))

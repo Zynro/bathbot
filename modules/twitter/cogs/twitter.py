@@ -42,11 +42,6 @@ def extract_id(tweet_id):
             tweet_id_extracted += char
         else:
             break
-    """print("=========================")
-    print("=========================")
-    print(tweet_id_extracted)
-    print("=========================")
-    print("=========================")"""
     tweet_id_extracted = int(tweet_id_extracted)
     return tweet_id_extracted
 
@@ -130,7 +125,7 @@ class Twitter(commands.Cog):
                 break
                 return
 
-    @commands.command(name="dump")
+    @commands.command(name="dump", hidden=True)
     async def tweet_dump(self, ctx, arg):
         path_to_file = "tweet_dump.json"
         tweet_id = extract_id(arg)

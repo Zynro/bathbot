@@ -101,7 +101,7 @@ class Admin(commands.Cog):
         if isinstance(error, commands.CheckFailure):
             await ctx.send(permission)
 
-    @commands.command(name='list-servers')
+    @commands.command(name='list-servers', hidden=True)
     async def list_connected_servers(self, ctx):
         servers = ''
         for each in self.bot.guilds:
