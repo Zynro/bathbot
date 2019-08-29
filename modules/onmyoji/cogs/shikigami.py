@@ -126,6 +126,7 @@ class Embeds:
         embed.set_thumbnail(url=f"attachment://{shikigami_object.icon_name}")
         embed.add_field(name="OnmyoGuide Bounty Locations (Probably Outdated):", 
             value=self.location_finder(shikigami_object))
+        embed.set_footer(text = "Bugs? Bad Info? Issues? Message @zynro to report them!")
 
         if "None" not in shikigami_object.user_database_locations:
             all_locations = []
