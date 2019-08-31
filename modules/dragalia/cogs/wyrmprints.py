@@ -104,22 +104,22 @@ class Wyrmprints(commands.Cog, Adventurer):
         high_score = 0
         for char in self.adventurer_db:
             char = self.adventurer_db[char]
-            if char_input == char.name:
+            if char_input == char.name.lower():
                 return [char]
             try:
                 if char_input == char.shortcut:
                     return [char]
             except AttributeError:
                 pass
-            temp_score = lev_dist_similar(char_input, char.name)
+            temp_score = lev_dist_similar(char_input, char.name.lower())
             if temp_score > high_score:
                 high_score = temp_score
         for char in self.adventurer_db:
             char = self.adventurer_db[char]
-            score = lev_dist_similar(char_input, char.name)
+            score = lev_dist_similar(char_input, char.name.lower())
             if high_score - 5 <= score <= high_score + 5:
                 char_result_list.append(char)
-            return list(set(char_result_list))
+        return list(set(char_result_list))
 
     async def return_character_embed(self, character):
         embed = discord.Embed(title=f"__**{character.name}**__",
@@ -154,6 +154,8 @@ class Wyrmprints(commands.Cog, Adventurer):
                 return await ctx.send(embed = await self.return_multiple_results_embed(matched_list))
             else:
                 return await ctx.send(embed = await self.return_character_embed(matched_list[0]))
+        else:
+            return await ctx.send("Errored.")
         embed = await self.return_character_embed(character_dict_entry)
         return await ctx.send(embed)
 
