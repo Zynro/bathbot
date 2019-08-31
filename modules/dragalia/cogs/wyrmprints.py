@@ -24,6 +24,10 @@ class Adventurer:
         self.name = character_dict['name']
         self.rarity = character_dict['rarity']
         self.limited = character_dict['limited']
+        try:
+            self.shortcut = character_dict['shortcut']
+        except KeyError:
+            pass
         image = "".join([c.lower() for c in self.name if c in string.ascii_letters])
         self.image = f"http://phoenixfieryn.com/img/dragalia/characters/{image}/i1.png"
         self.comboes = self.generate_comboes_list(character_dict['combination'])
@@ -44,15 +48,21 @@ class Wyrmprints(commands.Cog, Adventurer):
         json_file = requests.get(WYRMPRINT_URL).json()
         print_db_raw = json_file['characters']
         print_db = self.rename_dict_keys(print_db_raw)
-        self.character_list = print_db.keys()
         with open (self.path_to_print_json_file, 'w') as file:
             json.dump(print_db, file, indent = 4)
         self.adventurer_db = self.create_classes(print_db)
 
+
     def rename_dict_keys(self, raw_db):
         print_db = {}
         for each in raw_db:
-            print_db[each['name'].lower()] = each
+            entry_name = each['name'].lower()
+            print_db[entry_name] = each
+            name_string = each['name'].split(" ")
+            if len(name_string) > 1:
+                first_letter = name_string[0][0].lower()
+                shortcut = first_letter + name_string[1].lower()
+                print_db[entry_name]['shortcut'] = shortcut
         return print_db
 
     async def async_rename_dict_keys(self, raw_db):
@@ -90,23 +100,28 @@ class Wyrmprints(commands.Cog, Adventurer):
 
     async def character_validate(self, char_input):
         char_input = char_input.lower()
-        if char_input in self.character_list:
-            return [char_input]
-        else:
-            char_result_list = []
-            high_score = 0
-            for char in self.character_list:
-                temp_score = lev_dist_similar(char_input, char)
-                if temp_score > high_score:
-                    high_score = temp_score
-            for char in self.character_list:
-                score = lev_dist_similar(char_input, char)
-                if high_score - 5 <= score <= high_score + 5:
-                    char_result_list.append(char)
+        char_result_list = []
+        high_score = 0
+        for char in self.adventurer_db:
+            char = self.adventurer_db[char]
+            if char_input == char.name:
+                return [char]
+            try:
+                if char_input == char.shortcut:
+                    return [char]
+            except AttributeError:
+                pass
+            temp_score = lev_dist_similar(char_input, char.name)
+            if temp_score > high_score:
+                high_score = temp_score
+        for char in self.adventurer_db:
+            char = self.adventurer_db[char]
+            score = lev_dist_similar(char_input, char.name)
+            if high_score - 5 <= score <= high_score + 5:
+                char_result_list.append(char)
             return list(set(char_result_list))
 
     async def return_character_embed(self, character):
-        character = self.adventurer_db[character]
         embed = discord.Embed(title=f"__**{character.name}**__",
                     colour=discord.Colour(generate_random_color()))
         embed.set_thumbnail(url=character.image)
@@ -118,7 +133,7 @@ class Wyrmprints(commands.Cog, Adventurer):
     async def return_multiple_results_embed(self, multiple_results):
         char_result_list = []
         for each in multiple_results:
-            char_result_list.append(self.adventurer_db[each].name)
+            char_result_list.append(each.name)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(title="I found multiple results for your search:", 
                                 colour=discord.Colour(generate_random_color()),
