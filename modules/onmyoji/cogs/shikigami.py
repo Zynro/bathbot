@@ -328,7 +328,8 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         await ctx.send("Now updating... Please wait while BathBot pulls the latest database.")
         DriveAPI.get_gdrive_sheet_database()
         DriveAPI.generate_csv_databases()
-        self.create_classes()
+        self.shikigami_db = self.create_classes()
+        self.shikigami_db['all'] = self.shikigami_full_list
         await ctx.send("The Shikigami bounty list database has been successfully updated!")
 
     @download_shikigami_update_excel.error
