@@ -142,42 +142,100 @@ async def on_ready():
 async def guild_only_commands(ctx):
     return ctx.guild != None
 
-'''@bot.command(name='load',hidden=True)
-async def cog_load(bot, ctx, *, cog: str):
-    """Command which Loads a Module.
-    Remember to use dot path. e.g: cogs.owner"""
+async def permission_check(ctx):
+    return ctx.author.id in config.owner_list
+
+async def cog_locator(arg):
+    found_cog = None
+    for cog in bot.cog_list:
+        cog_name = cog.split('.')[-1]
+        if arg in cog_name:
+            found_cog = cog
+    return found_cog
+
+# Hidden means it won't show up on the default help.
+@bot.command(name='load', hidden=True)
+@commands.check(permission_check)
+async def load_cog(ctx, *, arg: str):
+    """Command which Loads a cog."""
     try:
-        bot.load_extension('cogs.'+cog)
+        if "." in arg:
+            bot.load_extension(arg)
+        else:
+            cog = await cog_locator(arg)
+            if not cog:
+                return await ctx.send(f'Cog "{arg}" does not exist.')
+            bot.load_extension(cog)
+    except Exception as e:
+        await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
+        traceback.print_exc()
+    else:
+        await ctx.send('**Success: ** '+cog+' has been loaded!')
+
+@load_cog.error
+async def load_error_cog(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(permission)
+
+
+@bot.command(name='unload', hidden=True)
+@commands.check(permission_check)
+async def unload_cog(ctx, *, arg: str):
+    """Command which Unloads a cog."""
+    try:
+        if "." in arg:
+            bot.unload_extension(arg)
+        else:
+            cog = await cog_locator(arg)
+            if not cog:
+                return await ctx.send(f'Cog "{arg}" does not exist.')
+            bot.unload_extension(cog)
     except Exception as e:
         await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
     else:
-        await ctx.send('**Success: **cogs.'+cog+' has been loaded!')
+        await ctx.send('**Success:** '+cog+' has been unloaded!')
 
-@bot.command(name='unload',hidden=True)
-async def cog_unload(ctx, *, cog: str):
-    """Command which Unloads a Module.
-    Remember to use dot path. e.g: cogs.owner"""
-    if ctx.message.author.id != owner:
-        await ctx.send(config.permission)
-        return
-    else:
-        try:
-            bot.unload_extension('cogs.'+cog)
-        except Exception as e:
-            await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
-        else:
-            await ctx.send('**Success:** cogs.'+cog+' has been unloaded!')
+@unload_cog.error
+async def unload_error_cog(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(permission)
 
 @bot.command(name='reload', hidden=True)
-async def cog_reload(ctx, *, cog: str):
+@commands.check(permission_check)
+async def reload_cog(ctx, *, arg: str):
     """Command which Reloads a Module.
     Remember to use dot path. e.g: cogs.owner"""
     try:
-        bot.reload_extension('cogs.'+cog)
+        if "." in arg:
+            bot.load_extension(arg)
+        else:
+            cog = await cog_locator(arg)
+            if not cog:
+                return await ctx.send(f'Cog "{arg}" does not exist.')
+            bot.unload_extension(cog)
+            bot.load_extension(cog)
     except Exception as e:
         await ctx.send(f'**Error:** {type(e).__name__} - {e}')
+        traceback.print_exc()
     else:
-        await ctx.send('**Success:** cogs.'+cog+' has been reloaded!')'''
+        await ctx.send('**Success:** '+cog+' has been reloaded!')
+
+@reload_cog.error
+async def reload_error_cog(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(permission)
+
+@bot.command(name='kill', hidden=True)
+@commands.check(permission_check)
+async def kill_bot(ctx):
+    '''Kills the bot. Only useable by Zynro.'''
+    await ctx.send("Well, it's time to take a bath. See you soon! \nBathBot is now exiting.")
+    sys.exit()
+
+@kill_bot.error
+async def kill_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(permission)
 
 
 bot.run(bot_token.TOKEN)
