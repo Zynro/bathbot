@@ -53,7 +53,8 @@ class Wyrmprints(commands.Cog, Adventurer):
         self.bot = bot
         char_db = {}
         self.path_to_csv_file = f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
-        adventurer_dict = self.get_source_csv(self.path_to_csv_file)
+        char_dict = self.build_adventurer_database(self.get_source_csv(self.path_to_csv_file))
+        print(char_dict['gcleo'])
         #self.adventurer_db = self.create_classes(adventurer_dict)
 
     async def cog_check(self, ctx):
@@ -104,34 +105,34 @@ class Wyrmprints(commands.Cog, Adventurer):
 
     def build_adventurer_database(self, response_dict):
         full_char_dict = {}
-        for parse in response_dict.keys():
-            del response_dict[parse][0]
-            if parse == '180':
-                parse = response_dict[parse]
-                for row in parse:
-                    row = row.split(",")
-                    #print(row)
-                    try:
-                        var = row[1]
-                    except IndexError:
+        damage = {}
+        for parse_value in response_dict.keys():
+            del response_dict[parse_value][0]
+            parse = response_dict[parse_value]
+            for row in parse:
+                row = row.split(",")
+                #print(row)
+                try:
+                    var = row[1]
+                except IndexError:
+                    continue
+                if "_c_" in row[1]:
                         continue
-                    if "_c_" in row[1]:
-                            continue
-                    if "Fleur" in row[1]:
-                        del row[9]
-                    if "_" in row[1]:
-                        name = row[1].replace("_", "").lower().strip()
-                        alt = True
-                    else:
-                        name = row[1].lower().strip()
-                        alt = False
+                if "Fleur" in row[1]:
+                    del row[9]
+                if "_" in row[1]:
+                    name = row[1].replace("_", "").lower().strip()
+                    alt = True
+                else:
+                    name = row[1].lower().strip()
+                    alt = False
+                if parse_value == "180":
                     amulets = row[6].split("][")
                     wyrmprints = amulets[0].split("+")
                     wyrmprints = remove_brackets(" + ".join(wyrmprints).replace("_", " "))
                     dragon = remove_brackets(amulets[1])
                     full_char_dict[name] = {
-                                              'name' : row[1],
-                                              'dps': row[0],
+                                              'name' : name,
                                               'rarity': row[2],
                                               'element': row[3],
                                               'weapon': row[4],
@@ -142,16 +143,17 @@ class Wyrmprints(commands.Cog, Adventurer):
                                               'comment': row[8],
                                               'alt' : alt
                                               }
-        print(full_char_dict['marth'])
-                
+                damage[parse_value] = {}
+                damage_list = row[9:]
+                for damage_type in damage_list:
+                    damage_type = damage_type.split(":")
+                    damage_name = damage_type[0].replace("_", " ").title()
+                    damage[parse_value][damage_name] = damage_type[1]
+                    damage[parse_value]['dps'] = row[0]
+                full_char_dict[name]['damage'] = damage
+        return full_char_dict
 
     def create_classes(self, input_db):
-        adventurer_db = {}
-        for character in input_db.keys():
-            adventurer_db[character.lower()] = Adventurer(input_db[character])
-        return adventurer_db
-
-    async def async_create_classes(self, input_db):
         adventurer_db = {}
         for character in input_db.keys():
             adventurer_db[character.lower()] = Adventurer(input_db[character])
@@ -204,7 +206,7 @@ class Wyrmprints(commands.Cog, Adventurer):
     async def wp(self, ctx, *, character: str = None):
         """
         """
-        await self.build_adventurer_database(await self.async_get_source_csv(self.path_to_csv_file))
+        self.build_adventurer_database(await self.async_get_source_csv(self.path_to_csv_file))
         return
 
         if not character:
