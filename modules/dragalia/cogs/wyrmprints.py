@@ -139,8 +139,6 @@ class Wyrmprints(commands.Cog, Adventurer):
                                               'str': row[5],
                                               'wyrmprints': wyrmprints,
                                               'dragon' : dragon,
-                                              'condition': row[7].replace("<", "").replace(">", ""),
-                                              'comment': row[8],
                                               'alt' : alt
                                               }
                 damage[parse_value] = {}
@@ -148,9 +146,11 @@ class Wyrmprints(commands.Cog, Adventurer):
                 for damage_type in damage_list:
                     damage_type = damage_type.split(":")
                     damage_name = damage_type[0].replace("_", " ").title()
-                    damage[parse_value][damage_name] = damage_type[1]
-                    damage[parse_value]['dps'] = row[0]
-                full_char_dict[name]['damage'] = damage
+                    damage[damage_name] = damage_type[1]
+                    damage['dps'] = row[0]
+                full_char_dict[name][parse_value]['damage'] = damage
+                full_char_dict[name][parse_value]['condition'] = row[7].replace("<", "").replace(">", ""),
+                full_char_dict[name][parse_value]['comment'] =  row[8]
         return full_char_dict
 
     def create_classes(self, input_db):
