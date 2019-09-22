@@ -14,28 +14,36 @@ class Module:
         self.cog_list = cog_list
         self.access = guild_access
 
-base_extensions = [
-                    'cogs.admin',
-                    'cogs.voicecmd',
-                    'cogs.basic',
-                    'cogs.modules'
-                    ]
+extension_dict = {}
 
-onmyoji_extensions = [
-                    'modules.onmyoji.cogs.guildcmd',
-                    'modules.onmyoji.cogs.shikigami',
-                    'modules.onmyoji.cogs.shard'                    
-                    ]
+extension_dict['base'] = [
+                                    'cogs.admin',
+                                    'cogs.voicecmd',
+                                    'cogs.basic',
+                                    'cogs.modules'
+                                    ]
 
-twitter_extensions = [
-                    'modules.twitter.cogs.twitter'                    
-                    ]
+extension_dict['onmyoji'] = [
+                                    'modules.onmyoji.cogs.guildcmd',
+                                    'modules.onmyoji.cogs.shikigami',
+                                    'modules.onmyoji.cogs.shard'                    
+                                    ]
 
-dragalia_extensions = [
-                    'modules.dragalia.cogs.wyrmprints'                    
-                    ]
+extension_dict['twitter'] = [
+                                    'modules.twitter.cogs.twitter'                    
+                                    ]
 
-initial_extensions = base_extensions + onmyoji_extensions + twitter_extensions + dragalia_extensions
+extension_dict['dragalia'] = [
+                                    'modules.dragalia.cogs.wyrmprints'                    
+                                    ]
+
+extension_dict['mastodon'] = [
+                                    'modules.mastodon.cogs.mastodon_cog'                    
+                                    ]
+
+initial_extensions = []
+for group in extension_dict:
+    initial_extensions.extend(extension_dict[group])
 extensions = initial_extensions + config.meme_extensions
 
 def get_prefix(bot, message):
@@ -60,23 +68,16 @@ else:
     writeout = False
 
 bot.modules = {}
+for extension in extension_dict.keys():
+    if extension == 'base':
+        continue
+    bot.modules[extension] = Module(
+                                    extension, 
+                                    f'modules/{extension}',
+                                    extension_dict[extension],
+                                    bot.module_access[extension]
+                                    )
 
-bot.modules['bathmemes'] = Module('bathmemes', 
-                        config.memes_module_path, 
-                        config.meme_extensions, 
-                        bot.module_access['bathmemes'])
-bot.modules['onmyoji'] = Module('onmyoji', 
-                        config.onmyoji_module_path, 
-                        onmyoji_extensions, 
-                        bot.module_access['onmyoji'])
-bot.modules['twitter'] = Module('twitter', 
-                        config.twitter_module_path, 
-                        twitter_extensions, 
-                        bot.module_access['twitter'])
-bot.modules['dragalia'] = Module('dragalia', 
-                        config.dragalia_module_path, 
-                        dragalia_extensions, 
-                        bot.module_access['dragalia'])
 if writeout == True:
     module_access_dict = {}
     for module in bot.modules.values():
