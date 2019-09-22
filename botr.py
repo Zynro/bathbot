@@ -44,7 +44,7 @@ extension_dict['mastodon'] = [
 initial_extensions = []
 for group in extension_dict:
     initial_extensions.extend(extension_dict[group])
-extensions = initial_extensions + config.meme_extensions
+extensions = initial_extensions + config.memes_extensions
 
 def get_prefix(bot, message):
     prefixes = ['&']
@@ -54,6 +54,7 @@ bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.
 
 with open(f'tokens/module_access.json') as file:
     bot.module_access = json.loads(file.read())
+    bot.module_access['bathmemes'] = config.memes_access
 
 bot.cog_list = extensions + ["cogs.dev"]
 
@@ -80,8 +81,8 @@ for extension in extension_dict.keys():
 bot.modules['bathmemes'] = Module(
                                   'bathmemes',
                                   config.memes_module_path,
-                                  config.meme_extensions,
-                                  []
+                                  config.memes_extensions,
+                                  config.memes_access
                                   )
 
 if writeout == True:
