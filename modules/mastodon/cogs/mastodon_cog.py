@@ -4,7 +4,6 @@ import config
 from mastodon import Mastodon
 import pickle
 
-URL = "https://elekk.xyz/@eightbitsamurai/102831412456884776"
 default_mastodon_url = 'https://mastodon.social'
 
 async def extract_id(toot_id):
@@ -93,11 +92,13 @@ class MastodonCog(commands.Cog):
         for each in http_split:
             if "http" in each:
                 toot_url = each
+                break
         split_list = toot_url.split('/')
         node_url = None
         for each in self.mastodon_node_list:
             if split_list[2] in each:
                 node_url = each
+                break
         if not node_url:
             return
         else:
