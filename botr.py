@@ -77,6 +77,12 @@ for extension in extension_dict.keys():
                                     extension_dict[extension],
                                     bot.module_access[extension]
                                     )
+bot.modules['bathmemes'] = Module(
+                                  'bathmemes',
+                                  config.memes_module_path,
+                                  config.meme_extensions,
+                                  []
+                                  )
 
 if writeout == True:
     module_access_dict = {}
