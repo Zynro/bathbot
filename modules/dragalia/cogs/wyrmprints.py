@@ -28,25 +28,52 @@ def remove_brackets(input_str):
 async def async_remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
 
+class Parse:
+    def __init__(self, parse_dict):
+        self.dps = parse_dict['damage']['dps']
+        self.damage_types = parse_dict['damage']['types']
+        self.condition = parse_dict['condition']
+        self.comment = parse_dict['comment']
+
+    def type_to_string(self):
+        to_string_list = []
+        for dmg_type in self.damage_types.keys():
+            appending = f"{dmg_type}: {self.damage_types[dmg_type]}"
+            to_string_list.append(appending)
+        return "\n".join(to_string_list)
+
 class Adventurer:
     def __init__(self, character_dict):
-        self.name = name
-        self.dps = character_dict['dps']
+        self.name = character_dict['name']
         self.rarity = character_dict['rarity']
         self.element = character_dict['element']
         self.weapon = character_dict['weapon']
         self.str = character_dict['str']
         self.wyrmprints = character_dict['wyrmprints']
         self.dragon = character_dict['dragon']
-        self.condition = character_dict['condition']
-        self.comment = character_dict['comment']
-        self.damage = character_dict['damage']
-        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{name}.png"
+        self.parse = {}
+        self.parse['180'] = Parse(character_dict['parse']['180'])
+        self.parse['120'] = Parse(character_dict['parse']['120'])
+        self.parse['60'] = Parse(character_dict['parse']['60'])
+        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{self.name}.png"
         return
 
-"""class DPS:
-    def __init__(self, dps_dict):
-        self.dps = dps_dict[]"""
+    def __call__(self, embed):
+        embed.set_thumbnail(url=self.image)
+        for parse_value in self.parse.keys():
+            damage_type_string = ""
+            for damage_type in self.parse[parse_value].damage_types.keys():
+                damage_type_string += f"__{damage_type}:__ {self.parse[parse_value].damage_types[damage_type]})"
+            value = f"""__**DPS:** {self.parse[parse_value].dps}__
+__**Condition:** {self.parse[parse_value].condition}__
+__**Comment:** {self.parse[parse_value].comment}__
+
+__**Damage Types:**__
+{damage_type_string}
+"""
+            embed.add_field(name = parse_value, value = value, inline = False)
+        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
+        return embed
 
 class Wyrmprints(commands.Cog, Adventurer):
     def __init__(self, bot):
@@ -54,8 +81,8 @@ class Wyrmprints(commands.Cog, Adventurer):
         char_db = {}
         self.path_to_csv_file = f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
         char_dict = self.build_adventurer_database(self.get_source_csv(self.path_to_csv_file))
-        print(char_dict['gcleo'])
-        #self.adventurer_db = self.create_classes(adventurer_dict)
+        self.adventurer_db = self.create_classes(char_dict)
+        print(self.adventurer_db['gcleo'].str)
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
@@ -141,16 +168,19 @@ class Wyrmprints(commands.Cog, Adventurer):
                                               'dragon' : dragon,
                                               'alt' : alt
                                               }
-                damage[parse_value] = {}
+                    full_char_dict[name]['parse']= {}
+                damage = {}
                 damage_list = row[9:]
+                damage['dps'] = row[0]
+                damage['types'] = {}
                 for damage_type in damage_list:
                     damage_type = damage_type.split(":")
                     damage_name = damage_type[0].replace("_", " ").title()
-                    damage[damage_name] = damage_type[1]
-                    damage['dps'] = row[0]
-                full_char_dict[name][parse_value]['damage'] = damage
-                full_char_dict[name][parse_value]['condition'] = row[7].replace("<", "").replace(">", ""),
-                full_char_dict[name][parse_value]['comment'] =  row[8]
+                    damage['types'][damage_name] = damage_type[1]
+                full_char_dict[name]['parse'][parse_value] = {}
+                full_char_dict[name]['parse'][parse_value]['damage'] = damage
+                full_char_dict[name]['parse'][parse_value]['condition'] = row[7].replace("<", "").replace(">", ""),
+                full_char_dict[name]['parse'][parse_value]['comment'] =  row[8]
         return full_char_dict
 
     def create_classes(self, input_db):
@@ -185,10 +215,11 @@ class Wyrmprints(commands.Cog, Adventurer):
     async def return_character_embed(self, character):
         embed = discord.Embed(title=f"__**{character.name}**__",
                     colour=discord.Colour(await generate_random_color()))
-        embed.set_thumbnail(url=character.image)
+        """embed.set_thumbnail(url=character.image)
         for combo in character.comboes.keys():
             embed.add_field(name = combo, value = "\n".join(character.comboes[combo]), inline = False)
-        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
+        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')"""
+
         return embed
 
     async def return_multiple_results_embed(self, multiple_results):
