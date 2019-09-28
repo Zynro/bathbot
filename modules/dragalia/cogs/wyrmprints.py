@@ -32,6 +32,7 @@ def strip_tuple(input_tuple):
     input_tuple = input_tuple.replace("(", "")
     input_tuple = input_tuple.replace(")", "")
     input_tuple = input_tuple.replace("'", "")
+    input_tuple = input_tuple.strip()
     return input_tuple
 
 def dps_emoji_generator(dps: str = None):
@@ -91,7 +92,8 @@ class Adventurer:
         embed.add_field(name = "__Dragon:__", value = self.dragon, inline = True)
         embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = True)
         embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse].type_to_string(), inline = False)
-        embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
+        if self.parse[parse].condition:
+            embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
         if self.parse[parse].comment:
             embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
         embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
@@ -219,7 +221,7 @@ class Wyrmprints(commands.Cog):
         try:
             character = self.adventurer_db[char_input]
             return [character]
-        except IndexError:
+        except KeyError:
             pass
         for char in self.adventurer_db.keys():
             char = self.adventurer_db[char]
@@ -232,7 +234,7 @@ class Wyrmprints(commands.Cog):
             char = self.adventurer_db[char]
             score = await lev_dist_similar(char_input, char.name.lower())
             if high_score - 5 <= score <= high_score + 5:
-                char_result_list.append(char.internal_name)
+                char_result_list.append(char)
         return list(set(char_result_list))
 
     async def return_character_embed(self, character):
