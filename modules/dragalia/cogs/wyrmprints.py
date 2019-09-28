@@ -86,7 +86,8 @@ class Adventurer:
     def populate_embed(self, embed, parse):
         embed.set_thumbnail(url=self.image)
         embed.add_field(name = "__DPS:__", value = dps_emoji_generator(self.parse[parse].dps), inline = False)
-        embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = False)
+        embed.add_field(name = "__Dragon:__", value = self.dragon, inline = True)
+        embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = True)
         embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse].type_to_string(), inline = False)
         embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
         embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
