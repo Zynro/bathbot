@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import random
 import sys
+import csv
 import config
 import traceback
 import requests
@@ -11,124 +12,229 @@ import json
 import string
 from fuzzywuzzy import fuzz
 
-WYRMPRINT_URL = "http://phoenixfieryn.com/dragalia/wp-guide-data.json"
+DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
+DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
+DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
-def generate_random_color():
+async def generate_random_color():
     return random.randint(0, 0xFFFFFF)
 
-def lev_dist_similar(a, b):
+async def lev_dist_similar(a, b):
     return fuzz.partial_ratio(a.lower(), b.lower())
+
+def remove_brackets(input_str):
+    return input_str.replace("[", "").replace("]", "")
+
+async def async_remove_brackets(input_str):
+    return input_str.replace("[", "").replace("]", "")
+
+def strip_tuple(input_tuple):
+    input_tuple = input_tuple.replace("(", "")
+    input_tuple = input_tuple.replace(")", "")
+    input_tuple = input_tuple.replace("'", "")
+    return input_tuple
+
+def dps_emoji_generator(dps: str = None):
+    number_emoji_dict = {'1': ":one:",
+                         '2': ":two:",
+                         '3': ":three:", 
+                         '4': ":four:", 
+                         '5': ":five:", 
+                         '6': ":six:", 
+                         '7': ":seven:", 
+                         '8': ":eight:", 
+                         '9': ":nine:", 
+                         '0': ":zero:"}
+    dps_string = ""
+    for digit in dps:
+        dps_string += number_emoji_dict[digit]
+    return dps_string
+
+
+class Parse:
+    def __init__(self, parse_dict):
+        self.dps = strip_tuple(str(parse_dict['damage']['dps']))
+        self.damage_types = parse_dict['damage']['types']
+        self.condition = strip_tuple(str(parse_dict['condition']))
+        self.comment = strip_tuple(str(parse_dict['comment']))
+
+    def type_to_string(self):
+        to_string_list = []
+        for dmg_type in self.damage_types.keys():
+            appending = f"{dmg_type}: {self.damage_types[dmg_type]}"
+            to_string_list.append(appending)
+        return "\n".join(to_string_list)
 
 class Adventurer:
     def __init__(self, character_dict):
         self.name = character_dict['name']
+        self.internal_name = character_dict['internal_name']
         self.rarity = character_dict['rarity']
-        self.limited = character_dict['limited']
-        try:
-            self.shortcut = character_dict['shortcut']
-        except KeyError:
-            pass
-        image = "".join([c.lower() for c in self.name if c in string.ascii_letters])
-        self.image = f"http://phoenixfieryn.com/img/dragalia/characters/{image}/i1.png"
-        self.comboes = self.generate_comboes_list(character_dict['combination'])
+        self.element = character_dict['element']
+        self.weapon = character_dict['weapon']
+        self.str = character_dict['str']
+        self.wyrmprints = character_dict['wyrmprints']
+        self.dragon = character_dict['dragon']
+        self.parse = {}
+        self.parse['180'] = Parse(character_dict['parse']['180'])
+        self.parse['120'] = Parse(character_dict['parse']['120'])
+        self.parse['60'] = Parse(character_dict['parse']['60'])
+        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{self.internal_name}.png"
+        self.alt = character_dict['alt']
+        return
 
-    def generate_comboes_list(self, combo_dict):
-        for each in combo_dict.keys():
-            val = 0
-            for desc in combo_dict[each]:
-                combo_dict[each][val] = " + ".join(desc)
-                val += 1
-        return combo_dict
+    def populate_embed(self, embed, parse):
+        embed.set_thumbnail(url=self.image)
+        embed.add_field(name = "__DPS:__", value = dps_emoji_generator(self.parse[parse].dps), inline = False)
+        embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = False)
+        embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse].type_to_string(), inline = False)
+        embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
+        embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
+        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
+        return embed
 
-class Wyrmprints(commands.Cog, Adventurer):
+class Wyrmprints(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        print_db = {}
-        self.path_to_print_json_file = f'{self.bot.modules["dragalia"].path}/lists/print_db.json'
-        json_file = requests.get(WYRMPRINT_URL).json()
-        print_db_raw = json_file['characters']
-        print_db = self.rename_dict_keys(print_db_raw)
-        with open (self.path_to_print_json_file, 'w') as file:
-            json.dump(print_db, file, indent = 4)
-        self.adventurer_db = self.create_classes(print_db)
-
-
-    def rename_dict_keys(self, raw_db):
-        print_db = {}
-        for each in raw_db:
-            entry_name = each['name'].lower()
-            print_db[entry_name] = each
-            name_string = each['name'].split(" ")
-            if len(name_string) > 1:
-                first_letter = name_string[0][0].lower()
-                shortcut = first_letter + name_string[1].lower()
-                print_db[entry_name]['shortcut'] = shortcut
-        return print_db
-
-    async def async_rename_dict_keys(self, raw_db):
-        print_db = {}
-        for each in raw_db:
-            print_db[each['name'].lower()] = each
-        return print_db
-
-    def create_classes(self, input_db):
-        adventurer_db = {}
-        for character in input_db:
-            adventurer_db[input_db[character]['name'].lower()] = Adventurer(input_db[character])
-        return adventurer_db
-
-    async def async_create_classes(self, input_db):
-        adventurer_db = {}
-        for character in input_db:
-            adventurer_db[input_db[character]['name'].lower()] = Adventurer(input_db[character])
-        return adventurer_db
+        char_db = {}
+        self.path_to_csv_file = f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
+        char_dict = self.build_adventurer_database(self.get_source_csv(self.path_to_csv_file))
+        self.adventurer_db = self.create_classes(char_dict)
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
-    async def character_print_json_dump(self, json_info):
-        with open(self.path_to_print_json_file, 'w') as file:
-            json.dump(json_info, file, indent = 4)
+    def get_source_csv(self, path):
+        response_dict = {}
+        response_dict['180'] = requests.get(DPS_URL_180).text
+        response_dict['120'] = requests.get(DPS_URL_120).text
+        response_dict['60'] = requests.get(DPS_URL_60).text
+        for parse in response_dict.keys():
+            path_to_file = f"{path}_{parse}.csv"
+            with open(path_to_file, "w", newline="", encoding='utf-8') as file:
+                writer = csv.writer(file)
+                response_dict[parse] = response_dict[parse].split("\n")
+                for row in response_dict[parse]:
+                    row = row.split(',')
+                    try:
+                        var = row[1]
+                    except IndexError:
+                        continue
+                    writer.writerow(row)
+        return response_dict
 
-    async def pull_json_file_from_source(self):
+    async def async_get_source_csv(self, path):
+        response_dict = {}
         async with aiohttp.ClientSession() as session:
-            async with session.get(WYRMPRINT_URL) as response:
-                json_file = await response.json()
-                print_db = await self.async_rename_dict_keys(json_file['characters'])
-                await self.character_print_json_dump(print_db)
-                self.adventurer_db = await self.async_create_classes(print_db)
+            async with session.get(DPS_URL_180) as response:
+                response_dict['180'] = await response.text()
+            async with session.get(DPS_URL_120) as response:
+                response_dict['120'] = await response.text()
+            async with session.get(DPS_URL_60) as response:
+                response_dict['60'] = await response.text()
+        for parse in response_dict.keys():
+            path_to_file = f"{path}_{parse}.csv"
+            with open(path_to_file, "w", newline="", encoding='utf-8') as file:
+                writer = csv.writer(file)
+                response_dict[parse] = response_dict[parse].split("\n")
+                for row in response_dict[parse]:
+                    row = row.split(',')
+                    try:
+                        var = row[1]
+                    except IndexError:
+                        continue
+                    writer.writerow(row)
+        return response_dict
+
+
+    def build_adventurer_database(self, response_dict):
+        full_char_dict = {}
+        damage = {}
+        for parse_value in response_dict.keys():
+            del response_dict[parse_value][0]
+            parse = response_dict[parse_value]
+            for row in parse:
+                row = row.split(",")
+                #print(row)
+                try:
+                    var = row[1]
+                except IndexError:
+                    continue
+                if "_c_" in row[1]:
+                        continue
+                if "Fleur" in row[1]:
+                    del row[9]
+                internal_name = row[1]
+                if "_" in row[1]:
+                    name = row[1].replace("_", "").lower().strip()
+                    alt = True
+                else:
+                    name = row[1].lower().strip()
+                    alt = False
+                if parse_value == "180":
+                    amulets = row[6].split("][")
+                    wyrmprints = amulets[0].split("+")
+                    wyrmprints = remove_brackets(" + ".join(wyrmprints).replace("_", " "))
+                    dragon = remove_brackets(amulets[1])
+                    full_char_dict[name] = {
+                                              'name' : name,
+                                              'internal_name' : internal_name,
+                                              'rarity': row[2],
+                                              'element': row[3],
+                                              'weapon': row[4],
+                                              'str': row[5],
+                                              'wyrmprints': wyrmprints,
+                                              'dragon' : dragon,
+                                              'alt' : alt
+                                              }
+                    full_char_dict[name]['parse']= {}
+                damage = {}
+                damage_list = row[9:]
+                damage['dps'] = row[0]
+                damage['types'] = {}
+                for damage_type in damage_list:
+                    damage_type = damage_type.split(":")
+                    damage_name = damage_type[0].replace("_", " ").title()
+                    damage['types'][damage_name] = damage_type[1]
+                full_char_dict[name]['parse'][parse_value] = {}
+                full_char_dict[name]['parse'][parse_value]['damage'] = damage
+                full_char_dict[name]['parse'][parse_value]['condition'] = row[7].replace("<", "").replace(">", ""),
+                full_char_dict[name]['parse'][parse_value]['comment'] =  row[8]
+        return full_char_dict
+
+    def create_classes(self, input_db):
+        adventurer_db = {}
+        for character in input_db.keys():
+            adventurer_db[character.lower()] = Adventurer(input_db[character])
+        return adventurer_db
 
     async def character_validate(self, char_input):
         char_input = char_input.lower()
         char_result_list = []
         high_score = 0
-        for char in self.adventurer_db:
+        try:
+            character = self.adventurer_db[char_input]
+            return [character]
+        except IndexError:
+            pass
+        for char in self.adventurer_db.keys():
             char = self.adventurer_db[char]
             if char_input == char.name.lower():
                 return [char]
-            try:
-                if char_input == char.shortcut:
-                    return [char]
-            except AttributeError:
-                pass
-            temp_score = lev_dist_similar(char_input, char.name.lower())
+            temp_score = await lev_dist_similar(char_input, char.name.lower())
             if temp_score > high_score:
                 high_score = temp_score
         for char in self.adventurer_db:
             char = self.adventurer_db[char]
-            score = lev_dist_similar(char_input, char.name.lower())
+            score = await lev_dist_similar(char_input, char.name.lower())
             if high_score - 5 <= score <= high_score + 5:
                 char_result_list.append(char)
         return list(set(char_result_list))
 
     async def return_character_embed(self, character):
-        embed = discord.Embed(title=f"__**{character.name}**__",
-                    colour=discord.Colour(generate_random_color()))
-        embed.set_thumbnail(url=character.image)
-        for combo in character.comboes.keys():
-            embed.add_field(name = combo, value = "\n".join(character.comboes[combo]), inline = False)
-        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
-        return embed
+        embed = discord.Embed(title=f"__**{character.internal_name}**__",
+                    colour=discord.Colour(await generate_random_color()))
+        return character.populate_embed(parse = "180", embed = embed)
 
     async def return_multiple_results_embed(self, multiple_results):
         char_result_list = []
@@ -136,7 +242,7 @@ class Wyrmprints(commands.Cog, Adventurer):
             char_result_list.append(each.name)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(title="I found multiple results for your search:", 
-                                colour=discord.Colour(generate_random_color()),
+                                colour=discord.Colour(await generate_random_color()),
                                 description = char_result_list)
         embed.set_footer(text="Try your search again with a adventurer specified.")
         return embed
@@ -156,8 +262,6 @@ class Wyrmprints(commands.Cog, Adventurer):
                 return await ctx.send(embed = await self.return_character_embed(matched_list[0]))
         else:
             return await ctx.send("Errored.")
-        embed = await self.return_character_embed(character_dict_entry)
-        return await ctx.send(embed)
 
     @commands.command(name="print-get", aliases=['printdownload', 'print-update'])
     @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
