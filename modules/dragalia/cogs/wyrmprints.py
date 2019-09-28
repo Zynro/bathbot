@@ -56,6 +56,7 @@ class Parse:
         self.dps = strip_tuple(str(parse_dict['damage']['dps']))
         self.damage_types = parse_dict['damage']['types']
         self.condition = strip_tuple(str(parse_dict['condition']))
+        self.condition = self.condition.replace(",", "")
         self.comment = strip_tuple(str(parse_dict['comment']))
 
     def type_to_string(self):
@@ -68,7 +69,7 @@ class Parse:
 class Adventurer:
     def __init__(self, character_dict):
         self.name = character_dict['name']
-        self.internal_name = character_dict['internal_name']
+        internal_name = character_dict['internal_name']
         self.rarity = character_dict['rarity']
         self.element = character_dict['element']
         self.weapon = character_dict['weapon']
@@ -79,7 +80,8 @@ class Adventurer:
         self.parse['180'] = Parse(character_dict['parse']['180'])
         self.parse['120'] = Parse(character_dict['parse']['120'])
         self.parse['60'] = Parse(character_dict['parse']['60'])
-        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{self.internal_name}.png"
+        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{internal_name}.png"
+        self.internal_name = internal_name.replace("_", " ")
         self.alt = character_dict['alt']
         return
 
@@ -90,7 +92,8 @@ class Adventurer:
         embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = True)
         embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse].type_to_string(), inline = False)
         embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
-        embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
+        if self.parse[parse].comment:
+            embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
         embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
         return embed
 
@@ -225,22 +228,22 @@ class Wyrmprints(commands.Cog):
             temp_score = await lev_dist_similar(char_input, char.name.lower())
             if temp_score > high_score:
                 high_score = temp_score
-        for char in self.adventurer_db:
+        for char in self.adventurer_db.keys():
             char = self.adventurer_db[char]
             score = await lev_dist_similar(char_input, char.name.lower())
             if high_score - 5 <= score <= high_score + 5:
-                char_result_list.append(char)
+                char_result_list.append(char.internal_name)
         return list(set(char_result_list))
 
     async def return_character_embed(self, character):
         embed = discord.Embed(title=f"__**{character.internal_name}**__",
                     colour=discord.Colour(await generate_random_color()))
-        return character.populate_embed(parse = "180", embed = embed)
+        return character.populate_embed(embed = embed, parse = "180")
 
     async def return_multiple_results_embed(self, multiple_results):
         char_result_list = []
         for each in multiple_results:
-            char_result_list.append(each.name)
+            char_result_list.append(each.internal_name)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(title="I found multiple results for your search:", 
                                 colour=discord.Colour(await generate_random_color()),
