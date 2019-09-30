@@ -76,7 +76,13 @@ class Adventurer:
         self.weapon = character_dict['weapon']
         self.str = character_dict['str']
         self.wyrmprints = character_dict['wyrmprints']
-        self.dragon = character_dict['dragon']
+        if "dps" in character_dict['dragon']:
+            split = character_dict['dragon'].split(";")
+            dps_range = split[1].lower().replace("dpsrange:", "DPS Range: ")
+            dps_range = dps_range.replace("~", " ~ ")
+            self.dragon = f"{split[0]}\n*{dps_range}*"
+        else:
+            self.dragon = character_dict['dragon']
         self.parse = {}
         self.parse['180'] = Parse(character_dict['parse']['180'])
         self.parse['120'] = Parse(character_dict['parse']['120'])
@@ -274,7 +280,8 @@ class Wyrmprints(commands.Cog):
     async def get_json_print_source(self, ctx):
         await ctx.send('Bathbot is now updating the recommend wyrmprint combinations from source, please wait...')
         try:
-            await self.pull_json_file_from_source()
+            char_dict = self.build_adventurer_database(await self.async_get_source_csv(self.path_to_csv_file))
+            self.adventurer_db = self.create_classes(char_dict)
         except Exception as e:
             return await ctx.send(f"Update failed: {e}")
         await ctx.send('Update complete!')

@@ -5,6 +5,7 @@ from mastodon import Mastodon
 import pickle
 
 default_mastodon_url = 'https://mastodon.social'
+MODULE_LISTS_DIR = 'modules/mastodon/lists/mastodon_list_pickle'
 
 async def extract_id(toot_id):
     toot_id = str(toot_id)
@@ -25,7 +26,7 @@ class MastodonCog(commands.Cog):
         try:
             self.mastodon_node_list = self.unpickle_node_list()
         except FileNotFoundError:
-            with open('lists/mastodon_list_pickle', 'wb') as file:
+            with open(MODULE_LISTS_DIR, 'wb') as file:
                 self.mastodon_node_list = [default_mastodon_url]
                 pickle.dump(self.mastodon_node_list, file)
 
@@ -33,11 +34,11 @@ class MastodonCog(commands.Cog):
         return ctx.guild.id in self.bot.module_access["mastodon"]
 
     def pickle_node_list(self, node_list):
-        with open('lists/mastodon_list_pickle', 'wb') as file:
+        with open(MODULE_LISTS_DIR, 'wb') as file:
             pickle.dump(self.mastodon_node_list, file)
 
     def unpickle_node_list(self):
-        with open ('lists/mastodon_list_pickle', 'rb') as file:
+        with open (MODULE_LISTS_DIR, 'rb') as file:
             return pickle.load(file)
 
     async def create_mastodon_api_instance(self, url, create_type = 'check'):
