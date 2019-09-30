@@ -10,6 +10,7 @@ import aiohttp
 import os
 import json
 import string
+import asyncio
 from fuzzywuzzy import fuzz
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
@@ -287,6 +288,20 @@ class Wyrmprints(commands.Cog):
         await ctx.send('Update complete!')
         return
         
+
+    @commands.command()
+    async def trigger_embed(self, ctx):
+        embed = discord.Embed(title = "Testing Embed edits.",
+             colour = discord.Colour(await generate_random_color()),
+             description = "This is the first step.")
+        message = await ctx.send(embed = embed)
+        await ctx.send("First embed sent, now changing in 5 seconds...")
+        await asyncio.sleep(5)
+        embed = discord.Embed(title = "Testing Embed edits.",
+             colour = discord.Colour(await generate_random_color()),
+             description = "Showing this means the test works.")
+        await message.edit(embed = embed)
+
 
 def setup(bot):
     bot.add_cog(Wyrmprints(bot))
