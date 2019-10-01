@@ -1,5 +1,6 @@
 # User-Added
 *.pyc
+.idea
 bottoken.py
 cogs/archive
 bot_token.py
@@ -19,3 +20,6 @@ shard-trading-db.json
 /lists
 tweet_dump.json
 print_db.json
+/modules/dragalia/lists
+old_code.py
+*_backup.py
