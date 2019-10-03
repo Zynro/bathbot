@@ -291,11 +291,6 @@ class Wyrmprints(commands.Cog):
         down_arrow = "⬇"
         embed = reaction.message.embeds[0]
         adventurer = strip_all(embed.title).lower()
-        #try:
-        #    adventurer = self.adventurer_db[adventurer]
-        #except KeyError:
-        #    print("KEYERROR U FUKT UP")
-        #    return
         character = self.adventurer_db[adventurer]
         if reaction.emoji == up_arrow:
             if "60" in embed.description:
