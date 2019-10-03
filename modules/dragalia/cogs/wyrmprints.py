@@ -10,6 +10,7 @@ import aiohttp
 import os
 import json
 import string
+import asyncio
 from fuzzywuzzy import fuzz
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
@@ -27,6 +28,9 @@ def remove_brackets(input_str):
 
 async def async_remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
+
+def strip_all(input_str):
+    return "".join([x for x in input_str if x.isalpha()])
 
 def strip_tuple(input_tuple):
     input_tuple = input_tuple.replace("(", "")
@@ -92,17 +96,17 @@ class Adventurer:
         self.alt = character_dict['alt']
         return
 
-    def populate_embed(self, embed, parse):
+    def populate_embed(self, embed, parse_value):
         embed.set_thumbnail(url=self.image)
-        embed.add_field(name = "__DPS:__", value = dps_emoji_generator(self.parse[parse].dps), inline = False)
+        embed.add_field(name = "__DPS:__", value = dps_emoji_generator(self.parse[parse_value].dps), inline = False)
         embed.add_field(name = "__Dragon:__", value = self.dragon, inline = True)
         embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = True)
-        embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse].type_to_string(), inline = False)
-        if self.parse[parse].condition:
-            embed.add_field(name = "__Condition:__", value = self.parse[parse].condition)
-        if self.parse[parse].comment:
-            embed.add_field(name = "__Comment:__", value = self.parse[parse].comment)
-        embed.set_footer(text = 'Data seem outdated? Run the "&print-get" command to pull new data.')
+        embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse_value].type_to_string(), inline = False)
+        if self.parse[parse_value].condition:
+            embed.add_field(name = "__Condition:__", value = self.parse[parse_value].condition)
+        if self.parse[parse_value].comment:
+            embed.add_field(name = "__Comment:__", value = self.parse[parse_value].comment)
+        embed.set_footer(text = 'Use the up/down arrows to increase or decrease parse time.')
         return embed
 
 class Wyrmprints(commands.Cog):
@@ -243,10 +247,11 @@ class Wyrmprints(commands.Cog):
                 char_result_list.append(char)
         return list(set(char_result_list))
 
-    async def return_character_embed(self, character):
+    async def return_character_embed(self, character, parse):
         embed = discord.Embed(title=f"__**{character.internal_name}**__",
+                    description = f"*Parse: {parse} Seconds*",
                     colour=discord.Colour(await generate_random_color()))
-        return character.populate_embed(embed = embed, parse = "180")
+        return character.populate_embed(embed = embed, parse_value = parse)
 
     async def return_multiple_results_embed(self, multiple_results):
         char_result_list = []
@@ -271,9 +276,44 @@ class Wyrmprints(commands.Cog):
             if len(matched_list) > 1:
                 return await ctx.send(embed = await self.return_multiple_results_embed(matched_list))
             else:
-                return await ctx.send(embed = await self.return_character_embed(matched_list[0]))
+                parse = "60"
+                message = await ctx.send(embed = await self.return_character_embed(matched_list[0], parse))
+                #await message.add_reaction('⬇')
+                await message.add_reaction('⬆')
         else:
             return await ctx.send("Errored.")
+
+    @commands.Cog.listener()
+    async def on_reaction_add (self, reaction, user):
+        if user == self.bot.user:
+            return
+        up_arrow = "⬆"
+        down_arrow = "⬇"
+        embed = reaction.message.embeds[0]
+        adventurer = strip_all(embed.title).lower()
+        character = self.adventurer_db[adventurer]
+        if reaction.emoji == up_arrow:
+            if "60" in embed.description:
+                parse = "120"
+            elif "120" in embed.description:
+                parse = "180"
+        elif reaction.emoji == down_arrow:
+            if "180" in embed.description:
+                parse = "120"
+            if "120" in embed.description:
+                parse = "60"
+        else:
+            return
+        await reaction.message.edit(embed = await self.return_character_embed(character, parse = parse))
+        await reaction.message.clear_reactions()
+        if parse == "60":
+            await reaction.message.add_reaction(up_arrow)
+        elif parse == "120":
+            await reaction.message.add_reaction(down_arrow)
+            await reaction.message.add_reaction(up_arrow)
+        elif parse == "180":
+            await reaction.message.add_reaction(down_arrow)
+
 
     @commands.command(name="print-get", aliases=['printdownload', 'print-update'])
     @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
@@ -287,6 +327,16 @@ class Wyrmprints(commands.Cog):
         await ctx.send('Update complete!')
         return
         
+
+    @commands.command()
+    async def trigger_embed(self, ctx, arg):
+        """embed = discord.Embed(title = "Testing Embed edits.",
+             colour = discord.Colour(await generate_random_color()),
+             description = "This is the first step.")
+        message = await ctx.send(embed = embed)
+        await ctx.send(message.embeds[0].title)"""
+        await ctx.send(arg)
+
 
 def setup(bot):
     bot.add_cog(Wyrmprints(bot))
