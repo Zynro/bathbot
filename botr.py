@@ -1,11 +1,10 @@
 import discord
 from discord.ext import commands
-import asyncio
-import requests
 import config
 import bot_token
 import json
 import os
+
 
 class Module:
     def __init__(self, name, path=None, cog_list=None, guild_access=None):
@@ -14,8 +13,8 @@ class Module:
         self.cog_list = cog_list
         self.access = guild_access
 
-extension_dict = {}
 
+extension_dict = {}
 extension_dict['base'] = [
                                     'cogs.admin',
                                     'cogs.voicecmd',
@@ -26,19 +25,19 @@ extension_dict['base'] = [
 extension_dict['onmyoji'] = [
                                     'modules.onmyoji.cogs.guildcmd',
                                     'modules.onmyoji.cogs.shikigami',
-                                    'modules.onmyoji.cogs.shard'                    
+                                    'modules.onmyoji.cogs.shard'
                                     ]
 
 extension_dict['twitter'] = [
-                                    'modules.twitter.cogs.twitter'                    
+                                    'modules.twitter.cogs.twitter'
                                     ]
 
 extension_dict['dragalia'] = [
-                                    'modules.dragalia.cogs.wyrmprints'                    
+                                    'modules.dragalia.cogs.wyrmprints'
                                     ]
 
 extension_dict['mastodon'] = [
-                                    'modules.mastodon.cogs.mastodon_cog'                    
+                                    'modules.mastodon.cogs.mastodon_cog'
                                     ]
 
 initial_extensions = []
@@ -46,9 +45,11 @@ for group in extension_dict:
     initial_extensions.extend(extension_dict[group])
 extensions = initial_extensions + config.memes_extensions
 
+
 def get_prefix(bot, message):
     prefixes = ['&']
     return commands.when_mentioned_or(*prefixes)(bot, message)
+
 
 bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I meme.')
 
@@ -95,6 +96,7 @@ if writeout == True:
     with open(path_to_file, 'w+') as file:
         json.dump(module_access_dict, file, indent = 4)
 
+
 @bot.event
 async def on_ready():
     print('Logged in as')
@@ -119,7 +121,7 @@ async def on_ready():
         #Create all necessary guild folders
         required_dir_list = ['images', 'lists', 'modules']
         if not os.path.exists(f"guilds"):
-                os.mkdir(f"guilds")
+            os.mkdir(f"guilds")
         for guild in bot.guilds:
             if not os.path.exists(f"guilds/{guild.id}"):
                 os.mkdir(f"guilds/{guild.id}")
@@ -136,22 +138,24 @@ async def on_ready():
             try:
                 bot.load_extension(extension)
                 print(extension +' has been loaded!')
-            except Exception as e:
+            except Exception:
                 print(f'Failed to load extension {extension}.', file=sys.stderr)
                 traceback.print_exc()
     print('------')
     print(f'Bathbot is fully ready!')
     if not discord.opus.is_loaded():
-            discord.opus.load_opus('libopus.so')
-            print('Opus has been loaded!')
+        discord.opus.load_opus('libopus.so')
+        print('Opus has been loaded!')
 
 
 @bot.check
 async def guild_only_commands(ctx):
     return ctx.guild != None
 
+
 async def permission_check(ctx):
     return ctx.author.id in config.owner_list
+
 
 async def cog_locator(arg):
     found_cog = None
@@ -180,11 +184,6 @@ async def load_cog(ctx, *, arg: str):
     else:
         await ctx.send('**Success: ** '+cog+' has been loaded!')
 
-@load_cog.error
-async def load_error_cog(ctx, error):
-    if isinstance(error, commands.CheckFailure):
-        await ctx.send(permission)
-
 
 @bot.command(name='unload', hidden=True)
 @commands.check(permission_check)
@@ -203,10 +202,12 @@ async def unload_cog(ctx, *, arg: str):
     else:
         await ctx.send('**Success:** '+cog+' has been unloaded!')
 
+
 @unload_cog.error
 async def unload_error_cog(ctx, error):
     if isinstance(error, commands.CheckFailure):
         await ctx.send(permission)
+
 
 @bot.command(name='reload', hidden=True)
 @commands.check(permission_check)
@@ -228,10 +229,12 @@ async def reload_cog(ctx, *, arg: str):
     else:
         await ctx.send('**Success:** '+cog+' has been reloaded!')
 
+
 @reload_cog.error
 async def reload_error_cog(ctx, error):
     if isinstance(error, commands.CheckFailure):
         await ctx.send(permission)
+
 
 @bot.command(name='kill', hidden=True)
 @commands.check(permission_check)
@@ -239,6 +242,7 @@ async def kill_bot(ctx):
     '''Kills the bot. Only useable by Zynro.'''
     await ctx.send("Well, it's time to take a bath. See you soon! \nBathBot is now exiting.")
     sys.exit()
+
 
 @kill_bot.error
 async def kill_error(ctx, error):

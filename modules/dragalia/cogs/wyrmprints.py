@@ -1,36 +1,36 @@
 import discord
 from discord.ext import commands
 import random
-import sys
 import csv
 import config
-import traceback
 import requests
 import aiohttp
-import os
-import json
-import string
-import asyncio
 from fuzzywuzzy import fuzz
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
+
 async def generate_random_color():
     return random.randint(0, 0xFFFFFF)
+
 
 async def lev_dist_similar(a, b):
     return fuzz.partial_ratio(a.lower(), b.lower())
 
+
 def remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
+
 
 async def async_remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
 
+
 def strip_all(input_str):
     return "".join([x for x in input_str if x.isalpha()])
+
 
 def strip_tuple(input_tuple):
     input_tuple = input_tuple.replace("(", "")
@@ -38,6 +38,7 @@ def strip_tuple(input_tuple):
     input_tuple = input_tuple.replace("'", "")
     input_tuple = input_tuple.strip()
     return input_tuple
+
 
 def dps_emoji_generator(dps: str = None):
     number_emoji_dict = {'1': ":one:",
@@ -70,6 +71,7 @@ class Parse:
             appending = f"{dmg_type}: {self.damage_types[dmg_type]}"
             to_string_list.append(appending)
         return "\n".join(to_string_list)
+
 
 class Adventurer:
     def __init__(self, character_dict):
@@ -108,6 +110,7 @@ class Adventurer:
             embed.add_field(name = "__Comment:__", value = self.parse[parse_value].comment)
         embed.set_footer(text = 'Use the up/down arrows to increase or decrease parse time.')
         return embed
+
 
 class Wyrmprints(commands.Cog):
     def __init__(self, bot):
@@ -162,7 +165,6 @@ class Wyrmprints(commands.Cog):
                     writer.writerow(row)
         return response_dict
 
-
     def build_adventurer_database(self, response_dict):
         full_char_dict = {}
         damage = {}
@@ -177,7 +179,7 @@ class Wyrmprints(commands.Cog):
                 except IndexError:
                     continue
                 if "_c_" in row[1]:
-                        continue
+                    continue
                 if "Fleur" in row[1]:
                     del row[9]
                 internal_name = row[1]
@@ -249,8 +251,8 @@ class Wyrmprints(commands.Cog):
 
     async def return_character_embed(self, character, parse):
         embed = discord.Embed(title=f"__**{character.internal_name}**__",
-                    description = f"*Parse: {parse} Seconds*",
-                    colour=discord.Colour(await generate_random_color()))
+                              description = f"*Parse: {parse} Seconds*",
+                              colour=discord.Colour(await generate_random_color()))
         return character.populate_embed(embed = embed, parse_value = parse)
 
     async def return_multiple_results_embed(self, multiple_results):
@@ -259,8 +261,8 @@ class Wyrmprints(commands.Cog):
             char_result_list.append(each.internal_name)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(title="I found multiple results for your search:", 
-                                colour=discord.Colour(await generate_random_color()),
-                                description = char_result_list)
+                              colour=discord.Colour(await generate_random_color()),
+                              description=char_result_list)
         embed.set_footer(text="Try your search again with a adventurer specified.")
         return embed
 
@@ -314,7 +316,6 @@ class Wyrmprints(commands.Cog):
         elif parse == "180":
             await reaction.message.add_reaction(down_arrow)
 
-
     @commands.command(name="print-get", aliases=['printdownload', 'print-update'])
     @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
     async def get_json_print_source(self, ctx):
@@ -326,7 +327,6 @@ class Wyrmprints(commands.Cog):
             return await ctx.send(f"Update failed: {e}")
         await ctx.send('Update complete!')
         return
-        
 
     @commands.command()
     async def trigger_embed(self, ctx, arg):
