@@ -11,6 +11,8 @@ DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
+dragalia_elements = ['fire', 'water', 'wind', 'light', 'shadow']
+
 
 async def generate_random_color():
     return random.randint(0, 0xFFFFFF)
@@ -112,13 +114,14 @@ class Adventurer:
         return embed
 
 
-class Wyrmprints(commands.Cog):
+class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         char_db = {}
         self.path_to_csv_file = f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
         char_dict = self.build_adventurer_database(self.get_source_csv(self.path_to_csv_file))
         self.adventurer_db = self.create_classes(char_dict)
+        self.dps_rankings = self.create_rankings()
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
@@ -221,10 +224,17 @@ class Wyrmprints(commands.Cog):
         return full_char_dict
 
     def create_classes(self, input_db):
-        adventurer_db = {}
-        for character in input_db.keys():
-            adventurer_db[character.lower()] = Adventurer(input_db[character])
-        return adventurer_db
+        return {character.lower(): Adventurer(input_db[character]) for character in input_db.keys()}
+
+    def create_rankings(self):
+        rankings_db = {}
+        parses = ['180', '120', '60']
+        for parse in parses:
+            rankings_db[parse] = {}
+            rankings_db[parse]['all'] = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys()], key=lambda x: x[1], reverse=True)
+            for element in dragalia_elements:
+                rankings_db[parse][element] = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys() if self.adventurer_db[char].element == element], key=lambda x: x[1], reverse=True)
+        return rankings_db
 
     async def character_validate(self, char_input):
         char_input = char_input.lower()
@@ -266,8 +276,13 @@ class Wyrmprints(commands.Cog):
         embed.set_footer(text="Try your search again with a adventurer specified.")
         return embed
 
-    @commands.command()
-    async def wp(self, ctx, *, character: str = None):
+    @commands.group(aliases=['drag', 'd'])
+    async def dragalia(self, ctx):
+        if not ctx.invoked_subcommand:
+            return
+
+    @dragalia.command()
+    async def dps(self, ctx, *, character: str = None):
         """
         """
         if not character:
@@ -284,6 +299,26 @@ class Wyrmprints(commands.Cog):
                 await message.add_reaction('⬆')
         else:
             return await ctx.send("Errored.")
+
+    @dragalia.command()
+    async def rankings(self, ctx, parse = None, element = None):
+        if not parse:
+            return await ctx.send('Must include a parse, either 60, 120, or 180.')
+        if element:
+            for each in dragalia_elements:
+                if element.lower().strip() in each:
+                    element = each
+                    break
+        else:
+            element = 'all'
+        rank_list = []
+        for char in self.dps_rankings[parse][element]:
+            if len(rank_list) == 10:
+                break
+            else:
+                rank_list.append(f"{char[0].title()}: {char[1]}")
+        return await ctx.send("\n".join(rank_list))
+
 
     @commands.Cog.listener()
     async def on_reaction_add (self, reaction, user):
@@ -316,7 +351,7 @@ class Wyrmprints(commands.Cog):
         elif parse == "180":
             await reaction.message.add_reaction(down_arrow)
 
-    @commands.command(name="print-get", aliases=['printdownload', 'print-update'])
+    @dragalia.command(name="print-get", aliases=['printdownload', 'print-update', 'update'])
     @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
     async def get_json_print_source(self, ctx):
         await ctx.send('Bathbot is now updating the recommend wyrmprint combinations from source, please wait...')
@@ -339,4 +374,4 @@ class Wyrmprints(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Wyrmprints(bot))
+    bot.add_cog(Dragalia(bot))

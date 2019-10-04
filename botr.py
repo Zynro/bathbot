@@ -33,7 +33,7 @@ extension_dict['twitter'] = [
                                     ]
 
 extension_dict['dragalia'] = [
-                                    'modules.dragalia.cogs.wyrmprints'
+                                    'modules.dragalia.cogs.dragalia'
                                     ]
 
 extension_dict['mastodon'] = [
