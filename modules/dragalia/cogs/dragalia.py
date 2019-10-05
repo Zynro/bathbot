@@ -132,7 +132,7 @@ class Adventurer:
                         inline=True)
         element_rank = add_number_suffix(self.parse[parse_value].rank_element)
         overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
-        embed.add_field(name="__Rankings:__", 
+        embed.add_field(name="__Rankings:__",
                         value=f"**{self.element.title()}:** {element_rank} \n**Overall:** {overall_rank}")
         embed.add_field(name="__Dragon:__", value=self.dragon, inline=True)
         embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
@@ -364,7 +364,7 @@ class Dragalia(commands.Cog):
         else:
             return await ctx.send("Errored.")
 
-    @dragalia.command(name="rankings", aliases=['rank', 'ranking'])
+    @dragalia.command(name="rankings", aliases=['rank', 'ranks', 'ranking'])
     async def rankings(self, ctx, parse=None, element=None):
         """
         Retreive a list of top ten Adventurers based on the DPS Simulator for an element, or overall.
