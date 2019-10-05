@@ -4,6 +4,7 @@ import config
 import bot_token
 import json
 import os
+import traceback
 
 
 class Module:
@@ -108,7 +109,7 @@ async def on_ready():
     if __name__ == '__main__':
 
         #Creates all module base folders
-        module_base_folder_list = ['cogs', 'images', 'lists']
+        module_base_folder_list = ['cogs', 'images', 'lists', 'models']
         if not os.path.exists("modules"):
             os.mmkdir("modules")
         for module in bot.modules.keys():

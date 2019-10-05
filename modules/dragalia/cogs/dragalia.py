@@ -6,6 +6,7 @@ import config
 import requests
 import aiohttp
 from fuzzywuzzy import fuzz
+from modules.dragalia.models.adventurer import Adventurer
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -38,111 +39,6 @@ async def async_remove_brackets(input_str):
 
 def strip_all(input_str):
     return "".join([x for x in input_str if x.isalpha()])
-
-
-def strip_tuple(input_tuple):
-    input_tuple = input_tuple.replace("(", "")
-    input_tuple = input_tuple.replace(")", "")
-    input_tuple = input_tuple.replace("'", "")
-    input_tuple = input_tuple.strip()
-    return input_tuple
-
-
-def number_emoji_generator(dps: str = None):
-    number_emoji_dict = {'1': ":one:",
-                         '2': ":two:",
-                         '3': ":three:",
-                         '4': ":four:",
-                         '5': ":five:",
-                         '6': ":six:",
-                         '7': ":seven:",
-                         '8': ":eight:",
-                         '9': ":nine:",
-                         '0': ":zero:"}
-    dps_string = ""
-    for digit in dps:
-        dps_string += number_emoji_dict[digit]
-    return dps_string
-
-
-def add_number_suffix(number):
-    number = int(number)
-    suffixes = {1: 'st',
-                2: 'nd',
-                3: 'rd'}
-    if number in [11, 12, 13]:
-        return str(number) + 'th'
-    elif number in suffixes.keys():
-        return str(number) + suffixes[number]
-    else:
-        return str(number) + 'th'
-
-
-class Parse:
-    def __init__(self, parse_dict):
-        self.dps = strip_tuple(str(parse_dict['damage']['dps']))
-        self.damage_types = parse_dict['damage']['types']
-        self.condition = strip_tuple(str(parse_dict['condition']))
-        self.condition = self.condition.replace(",", "")
-        self.comment = strip_tuple(str(parse_dict['comment']))
-        self.rank_element = None
-        self.rank_overall = None
-
-    def type_to_string(self):
-        to_string_list = []
-        for dmg_type in self.damage_types.keys():
-            appending = f"{dmg_type}: {self.damage_types[dmg_type]}"
-            to_string_list.append(appending)
-        return "\n".join(to_string_list)
-
-
-class Adventurer:
-    def __init__(self, character_dict):
-        self.name = character_dict['name']
-        internal_name = character_dict['internal_name']
-        self.rarity = character_dict['rarity']
-        self.element = character_dict['element']
-        self.weapon = character_dict['weapon']
-        self.str = character_dict['str']
-        self.wyrmprints = character_dict['wyrmprints']
-        if "dps" in character_dict['dragon']:
-            split = character_dict['dragon'].split(";")
-            dps_range = split[1].lower().replace("dpsrange:", "DPS Range: ")
-            dps_range = dps_range.replace("~", " ~ ")
-            self.dragon = f"{split[0]}\n*{dps_range}*"
-        else:
-            self.dragon = character_dict['dragon']
-        self.parse = {}
-        for parse_value in ['180', '120', '60']:
-            self.parse[parse_value] = Parse(character_dict['parse'][parse_value])
-        self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{internal_name}.png"
-        self.internal_name = internal_name.replace("_", " ")
-        self.alt = character_dict['alt']
-        return
-
-    def update_rank(self, rank_dict):
-        for parse_value in self.parse:
-            self.parse[parse_value].rank_element = str(rank_dict[parse_value][self.element].index(self.name) + 1)
-            self.parse[parse_value].rank_overall = str(rank_dict[parse_value]['all'].index(self.name) + 1)
-
-    def populate_embed(self, embed, parse_value):
-        embed.set_thumbnail(url=self.image)
-        embed.add_field(name="__DPS:__",
-                        value=number_emoji_generator(self.parse[parse_value].dps),
-                        inline=True)
-        element_rank = add_number_suffix(self.parse[parse_value].rank_element)
-        overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
-        embed.add_field(name="__Rankings:__",
-                        value=f"**{self.element.title()}:** {element_rank} \n**Overall:** {overall_rank}")
-        embed.add_field(name="__Dragon:__", value=self.dragon, inline=True)
-        embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
-        embed.add_field(name="__Damage Breakdown:__", value=self.parse[parse_value].type_to_string(), inline=False)
-        if self.parse[parse_value].condition:
-            embed.add_field(name="__Condition:__", value=self.parse[parse_value].condition)
-        if self.parse[parse_value].comment:
-            embed.add_field(name="__Comment:__", value=self.parse[parse_value].comment)
-        embed.set_footer(text='Use the up/down arrows to increase or decrease parse time.')
-        return embed
 
 
 class Dragalia(commands.Cog):
@@ -364,18 +260,7 @@ class Dragalia(commands.Cog):
         else:
             return await ctx.send("Errored.")
 
-    @dragalia.command(name="rankings", aliases=['rank', 'ranks', 'ranking'])
-    async def rankings(self, ctx, parse=None, element=None):
-        """
-        Retreive a list of top ten Adventurers based on the DPS Simulator for an element, or overall.
-
-        Usage:
-            &[drag/d] [rank/ranking/rankings] <parse> <element>
-
-        Element can be any element, or 'all' for overall top 10 list.
-        """
-        if not parse:
-            return await ctx.send('Must include a parse, either 60, 120, or 180.')
+    async def return_rankings_embed(self, element, parse):
         if element:
             for each in dragalia_elements:
                 if element.lower().strip() in each:
@@ -403,17 +288,33 @@ class Dragalia(commands.Cog):
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=dragalia_elements_images[element])
-        await ctx.send(embed=embed)
+        return embed
+
+    @dragalia.command(name="rankings", aliases=['rank', 'ranks', 'ranking'])
+    async def rankings(self, ctx, element=None):
+        """
+        Retreive a list of top ten Adventurers based on the DPS Simulator for an element, or overall.
+
+        Usage:
+            &[drag/d] [rank/ranking/rankings] <element>
+
+        Element can be any element, or 'all' for overall top 10 list.
+        """
+        embed = await self.return_rankings_embed(element=element, parse='60')
+        message = await ctx.send(embed=embed)
+        await message.add_reaction('⬆')
 
     @commands.Cog.listener()
-    async def on_reaction_add (self, reaction, user):
-        if user == self.bot.user:
+    async def on_reaction_add(self, reaction, user):
+        if user == self.bot.user or not reaction.message.embeds:
+            return
+        if reaction.message.author != self.bot.user:
+            return
+        if "Parse" not in reaction.message.embeds[0].description:
             return
         up_arrow = "⬆"
         down_arrow = "⬇"
         embed = reaction.message.embeds[0]
-        adventurer = strip_all(embed.title).lower()
-        character = self.adventurer_db[adventurer]
         if reaction.emoji == up_arrow:
             if "60" in embed.description:
                 parse = "120"
@@ -426,7 +327,19 @@ class Dragalia(commands.Cog):
                 parse = "60"
         else:
             return
-        await reaction.message.edit(embed = await self.return_character_embed(character, parse = parse))
+        if str(embed.author.name) == "Embed.Empty":
+            check = embed.title
+        else:
+            check = emebed.author.name
+            
+        if "Adven" in check:
+            adventurer = strip_all(embed.title).lower()
+            character = self.adventurer_db[adventurer]
+            await reaction.message.edit(embed=await self.return_character_embed(character, parse=parse))
+        elif "Rank" in check:
+            element = reaction.message.embeds[0].title.split(" ")[0]
+            element = strip_all(element)
+            await reaction.message.edit(embed=await self.return_rankings_embed(element=element, parse=parse))
         await reaction.message.clear_reactions()
         if parse == "60":
             await reaction.message.add_reaction(up_arrow)
@@ -436,9 +349,11 @@ class Dragalia(commands.Cog):
         elif parse == "180":
             await reaction.message.add_reaction(down_arrow)
 
-    @dragalia.command(name="print-get", aliases=['printdownload', 'print-update', 'update'])
-    @commands.cooldown(rate = 1, per = 60.00, type = commands.BucketType.default)
-    async def get_json_print_source(self, ctx):
+    @dragalia.command(name="print-get", aliases=['printdownload',
+                                                 'print-update',
+                                                 'update'])
+    @commands.cooldown(rate=1, per=60.00, type=commands.BucketType.default)
+    async def update_draglia_data(self, ctx):
         await ctx.send('Bathbot is now updating the recommend wyrmprint combinations from source, please wait...')
         try:
             char_dict = self.build_adventurer_database(await self.async_get_source_csv(self.path_to_csv_file))
