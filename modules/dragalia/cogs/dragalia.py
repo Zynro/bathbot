@@ -48,21 +48,34 @@ def strip_tuple(input_tuple):
     return input_tuple
 
 
-def dps_emoji_generator(dps: str = None):
+def number_emoji_generator(dps: str = None):
     number_emoji_dict = {'1': ":one:",
                          '2': ":two:",
-                         '3': ":three:", 
-                         '4': ":four:", 
-                         '5': ":five:", 
-                         '6': ":six:", 
-                         '7': ":seven:", 
-                         '8': ":eight:", 
-                         '9': ":nine:", 
+                         '3': ":three:",
+                         '4': ":four:",
+                         '5': ":five:",
+                         '6': ":six:",
+                         '7': ":seven:",
+                         '8': ":eight:",
+                         '9': ":nine:",
                          '0': ":zero:"}
     dps_string = ""
     for digit in dps:
         dps_string += number_emoji_dict[digit]
     return dps_string
+
+
+def add_number_suffix(number):
+    number = int(number)
+    suffixes = {1: 'st',
+                2: 'nd',
+                3: 'rd'}
+    if number in [11, 12, 13]:
+        return str(number) + 'th'
+    elif number in suffixes.keys():
+        return str(number) + suffixes[number]
+    else:
+        return str(number) + 'th'
 
 
 class Parse:
@@ -72,6 +85,8 @@ class Parse:
         self.condition = strip_tuple(str(parse_dict['condition']))
         self.condition = self.condition.replace(",", "")
         self.comment = strip_tuple(str(parse_dict['comment']))
+        self.rank_element = None
+        self.rank_overall = None
 
     def type_to_string(self):
         to_string_list = []
@@ -98,17 +113,27 @@ class Adventurer:
         else:
             self.dragon = character_dict['dragon']
         self.parse = {}
-        self.parse['180'] = Parse(character_dict['parse']['180'])
-        self.parse['120'] = Parse(character_dict['parse']['120'])
-        self.parse['60'] = Parse(character_dict['parse']['60'])
+        for parse_value in ['180', '120', '60']:
+            self.parse[parse_value] = Parse(character_dict['parse'][parse_value])
         self.image = f"https://b1ueb1ues.github.io/dl-sim/pic/character/{internal_name}.png"
         self.internal_name = internal_name.replace("_", " ")
         self.alt = character_dict['alt']
         return
 
+    def update_rank(self, rank_dict):
+        for parse_value in self.parse:
+            self.parse[parse_value].rank_element = str(rank_dict[parse_value][self.element].index(self.name) + 1)
+            self.parse[parse_value].rank_overall = str(rank_dict[parse_value]['all'].index(self.name) + 1)
+
     def populate_embed(self, embed, parse_value):
         embed.set_thumbnail(url=self.image)
-        embed.add_field(name="__DPS:__", value=dps_emoji_generator(self.parse[parse_value].dps), inline=False)
+        embed.add_field(name="__DPS:__",
+                        value=number_emoji_generator(self.parse[parse_value].dps),
+                        inline=True)
+        element_rank = add_number_suffix(self.parse[parse_value].rank_element)
+        overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
+        embed.add_field(name="__Rankings:__", 
+                        value=f"**{self.element.title()}:** {element_rank} \n**Overall:** {overall_rank}")
         embed.add_field(name="__Dragon:__", value=self.dragon, inline=True)
         embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
         embed.add_field(name="__Damage Breakdown:__", value=self.parse[parse_value].type_to_string(), inline=False)
@@ -123,11 +148,12 @@ class Adventurer:
 class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        char_db = {}
         self.path_to_csv_file = f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
         char_dict = self.build_adventurer_database(self.get_source_csv(self.path_to_csv_file))
         self.adventurer_db = self.create_classes(char_dict)
         self.dps_rankings = self.create_rankings()
+        for character, value in self.adventurer_db.items():
+            self.adventurer_db[character].update_rank(self.dps_rankings)
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
