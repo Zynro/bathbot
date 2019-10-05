@@ -237,10 +237,26 @@ class Dragalia(commands.Cog):
         parses = ['180', '120', '60']
         for parse in parses:
             rankings_db[parse] = {}
-            sorted_list = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys()], key=lambda x: x[1], reverse=True)
+            sorted_list = sorted(
+                                [(
+                                    self.adventurer_db[char].name,
+                                    self.adventurer_db[char].parse[parse].dps
+                                ) for char in self.adventurer_db.keys()
+                                ],
+                                key=lambda x: x[1],
+                                reverse=True
+                                )
             rankings_db[parse]['all'] = [entry[0] for entry in sorted_list]
             for element in dragalia_elements:
-                sorted_list = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys() if self.adventurer_db[char].element == element], key=lambda x: x[1], reverse=True)
+                sorted_list = sorted(
+                                     [(
+                                       self.adventurer_db[char].name,
+                                       self.adventurer_db[char].parse[parse].dps
+                                       )
+                                      for char in self.adventurer_db.keys()
+                                      if self.adventurer_db[char].element == element
+                                      ],
+                                     key=lambda x: x[1], reverse=True)
                 rankings_db[parse][element] = [entry[0] for entry in sorted_list]
         return rankings_db
 
