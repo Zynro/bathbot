@@ -286,12 +286,27 @@ class Dragalia(commands.Cog):
 
     @commands.group(aliases=['drag', 'd'])
     async def dragalia(self, ctx):
+        """
+        The Dragalia Lost command group.
+
+        Aliases:
+            [drag/d]
+        Subcommands:
+            [dps]
+                Retreive DPS Simulator data for a single character for parses of 60, 120, and 180 seconds.
+            [rank/ranking/rankings]
+                Retreive a list of top ten Adventurers based on the DPS Simulator for an element, or overall.
+        """
         if not ctx.invoked_subcommand:
             return
 
     @dragalia.command()
     async def dps(self, ctx, *, character: str = None):
         """
+        Retreive DPS Simulator data for a single character for parses of 60, 120, and 180 seconds.
+
+        Usage:
+            &[drag/d] dps <character>
         """
         if not character:
             return await ctx.send("A character must be entered to search the database.")
@@ -309,6 +324,14 @@ class Dragalia(commands.Cog):
 
     @dragalia.command(name="rankings", aliases=['rank', 'ranking'])
     async def rankings(self, ctx, parse=None, element=None):
+        """
+        Retreive a list of top ten Adventurers based on the DPS Simulator for an element, or overall.
+
+        Usage:
+            &[drag/d] [rank/ranking/rankings] <parse> <element>
+
+        Element can be any element, or 'all' for overall top 10 list.
+        """
         if not parse:
             return await ctx.send('Must include a parse, either 60, 120, or 180.')
         if element:
