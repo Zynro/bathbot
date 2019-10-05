@@ -330,7 +330,7 @@ class Dragalia(commands.Cog):
         if str(embed.author.name) == "Embed.Empty":
             check = embed.title
         else:
-            check = emebed.author.name
+            check = embed.author.name
             
         if "Adven" in check:
             adventurer = strip_all(embed.title).lower()
