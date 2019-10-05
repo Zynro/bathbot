@@ -12,9 +12,15 @@ DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
 dragalia_elements = ['fire', 'water', 'wind', 'light', 'shadow']
+dragalia_elements_images = {'fire': 'https://b1ueb1ues.github.io//dl-sim/pic/element/fire.png',
+                            'water': 'https://b1ueb1ues.github.io//dl-sim/pic/element/water.png',
+                            'wind': 'https://b1ueb1ues.github.io//dl-sim/pic/element/wind.png',
+                            'light': 'https://b1ueb1ues.github.io//dl-sim/pic/element/light.png',
+                            'shadow': 'https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png',
+                            'all': 'https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg'}
 
 
-async def generate_random_color():
+def generate_random_color():
     return random.randint(0, 0xFFFFFF)
 
 
@@ -102,15 +108,15 @@ class Adventurer:
 
     def populate_embed(self, embed, parse_value):
         embed.set_thumbnail(url=self.image)
-        embed.add_field(name = "__DPS:__", value = dps_emoji_generator(self.parse[parse_value].dps), inline = False)
-        embed.add_field(name = "__Dragon:__", value = self.dragon, inline = True)
-        embed.add_field(name = "__Wyrmprints:__", value = self.wyrmprints, inline = True)
-        embed.add_field(name = "__Damage Breakdown:__", value = self.parse[parse_value].type_to_string(), inline = False)
+        embed.add_field(name="__DPS:__", value=dps_emoji_generator(self.parse[parse_value].dps), inline=False)
+        embed.add_field(name="__Dragon:__", value=self.dragon, inline=True)
+        embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
+        embed.add_field(name="__Damage Breakdown:__", value=self.parse[parse_value].type_to_string(), inline=False)
         if self.parse[parse_value].condition:
-            embed.add_field(name = "__Condition:__", value = self.parse[parse_value].condition)
+            embed.add_field(name="__Condition:__", value=self.parse[parse_value].condition)
         if self.parse[parse_value].comment:
-            embed.add_field(name = "__Comment:__", value = self.parse[parse_value].comment)
-        embed.set_footer(text = 'Use the up/down arrows to increase or decrease parse time.')
+            embed.add_field(name="__Comment:__", value=self.parse[parse_value].comment)
+        embed.set_footer(text='Use the up/down arrows to increase or decrease parse time.')
         return embed
 
 
@@ -231,9 +237,11 @@ class Dragalia(commands.Cog):
         parses = ['180', '120', '60']
         for parse in parses:
             rankings_db[parse] = {}
-            rankings_db[parse]['all'] = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys()], key=lambda x: x[1], reverse=True)
+            sorted_list = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys()], key=lambda x: x[1], reverse=True)
+            rankings_db[parse]['all'] = [entry[0] for entry in sorted_list]
             for element in dragalia_elements:
-                rankings_db[parse][element] = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys() if self.adventurer_db[char].element == element], key=lambda x: x[1], reverse=True)
+                sorted_list = sorted([(self.adventurer_db[char].name, self.adventurer_db[char].parse[parse].dps) for char in self.adventurer_db.keys() if self.adventurer_db[char].element == element], key=lambda x: x[1], reverse=True)
+                rankings_db[parse][element] = [entry[0] for entry in sorted_list]
         return rankings_db
 
     async def character_validate(self, char_input):
@@ -261,9 +269,9 @@ class Dragalia(commands.Cog):
 
     async def return_character_embed(self, character, parse):
         embed = discord.Embed(title=f"__**{character.internal_name}**__",
-                              description = f"*Parse: {parse} Seconds*",
-                              colour=discord.Colour(await generate_random_color()))
-        return character.populate_embed(embed = embed, parse_value = parse)
+                              description=f"*Parse: {parse} Seconds*",
+                              colour=discord.Colour(generate_random_color()))
+        return character.populate_embed(embed=embed, parse_value=parse)
 
     async def return_multiple_results_embed(self, multiple_results):
         char_result_list = []
@@ -271,7 +279,7 @@ class Dragalia(commands.Cog):
             char_result_list.append(each.internal_name)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(title="I found multiple results for your search:", 
-                              colour=discord.Colour(await generate_random_color()),
+                              colour=discord.Colour(generate_random_color()),
                               description=char_result_list)
         embed.set_footer(text="Try your search again with a adventurer specified.")
         return embed
@@ -291,34 +299,46 @@ class Dragalia(commands.Cog):
         matched_list = await self.character_validate(character)
         if matched_list:
             if len(matched_list) > 1:
-                return await ctx.send(embed = await self.return_multiple_results_embed(matched_list))
+                return await ctx.send(embed=await self.return_multiple_results_embed(matched_list))
             else:
                 parse = "60"
-                message = await ctx.send(embed = await self.return_character_embed(matched_list[0], parse))
-                #await message.add_reaction('⬇')
+                message = await ctx.send(embed=await self.return_character_embed(matched_list[0], parse))
                 await message.add_reaction('⬆')
         else:
             return await ctx.send("Errored.")
 
-    @dragalia.command()
-    async def rankings(self, ctx, parse = None, element = None):
+    @dragalia.command(name="rankings", aliases=['rank', 'ranking'])
+    async def rankings(self, ctx, parse=None, element=None):
         if not parse:
             return await ctx.send('Must include a parse, either 60, 120, or 180.')
         if element:
             for each in dragalia_elements:
                 if element.lower().strip() in each:
                     element = each
+                    embed = discord.Embed(title=f"**{element.title()} Top 10 Rankings**",
+                                          description=f"*Parse: {parse} Seconds*",
+                                          colour=discord.Colour(generate_random_color()))
                     break
         else:
             element = 'all'
-        rank_list = []
-        for char in self.dps_rankings[parse][element]:
-            if len(rank_list) == 10:
+            embed = discord.Embed(title=f"**All Elements Top 10 Rankings**",
+                                  description=f"*Parse: {parse} Seconds*",
+                                  colour=discord.Colour(generate_random_color()))
+        name_string = ""
+        dps_string = ""
+        x = 1
+        for entry in self.dps_rankings[parse][element]:
+            if x == 11:
                 break
-            else:
-                rank_list.append(f"{char[0].title()}: {char[1]}")
-        return await ctx.send("\n".join(rank_list))
-
+            char = self.adventurer_db[entry]
+            name = f"{x}. {char.internal_name}"
+            name_string += f"{name}\n"
+            dps_string += f"{char.parse[parse].dps}\n"
+            x += 1
+        embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
+        embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
+        embed.set_thumbnail(url=dragalia_elements_images[element])
+        await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_reaction_add (self, reaction, user):
@@ -366,7 +386,7 @@ class Dragalia(commands.Cog):
     @commands.command()
     async def trigger_embed(self, ctx, arg):
         """embed = discord.Embed(title = "Testing Embed edits.",
-             colour = discord.Colour(await generate_random_color()),
+             colour = discord.Colour(generate_random_color()),
              description = "This is the first step.")
         message = await ctx.send(embed = embed)
         await ctx.send(message.embeds[0].title)"""
