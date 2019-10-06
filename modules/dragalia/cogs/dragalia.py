@@ -331,7 +331,7 @@ class Dragalia(commands.Cog):
             check = embed.title
         else:
             check = embed.author.name
-            
+
         if "Adven" in check:
             adventurer = strip_all(embed.title).lower()
             character = self.adventurer_db[adventurer]
@@ -358,6 +358,9 @@ class Dragalia(commands.Cog):
         try:
             char_dict = self.build_adventurer_database(await self.async_get_source_csv(self.path_to_csv_file))
             self.adventurer_db = self.create_classes(char_dict)
+            self.dps_rankings = self.create_rankings()
+            for character, value in self.adventurer_db.items():
+                self.adventurer_db[character].update_rank(self.dps_rankings)
         except Exception as e:
             return await ctx.send(f"Update failed: {e}")
         await ctx.send('Update complete!')
