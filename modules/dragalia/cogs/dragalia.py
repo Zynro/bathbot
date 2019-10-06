@@ -288,6 +288,7 @@ class Dragalia(commands.Cog):
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=dragalia_elements_images[element])
+        embed.set_footer(text='Use the up/down arrows to increase or decrease parse time.')
         return embed
 
     @dragalia.command(name="rankings", aliases=['rank', 'ranks', 'ranking'])
