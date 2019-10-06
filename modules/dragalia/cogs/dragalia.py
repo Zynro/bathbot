@@ -331,14 +331,16 @@ class Dragalia(commands.Cog):
             check = embed.title
         else:
             check = embed.author.name
-
         if "Adven" in check:
             adventurer = strip_all(embed.title).lower()
             character = self.adventurer_db[adventurer]
             await reaction.message.edit(embed=await self.return_character_embed(character, parse=parse))
         elif "Rank" in check:
             element = reaction.message.embeds[0].title.split(" ")[0]
-            element = strip_all(element)
+            if element not in dragalia_elements:
+                element = None
+            else:
+                element = strip_all(element)
             await reaction.message.edit(embed=await self.return_rankings_embed(element=element, parse=parse))
         await reaction.message.clear_reactions()
         if parse == "60":
