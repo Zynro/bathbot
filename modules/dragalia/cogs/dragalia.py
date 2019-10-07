@@ -363,10 +363,9 @@ class Dragalia(commands.Cog):
                 embed=await self.return_char_embed(character, parse=parse))
         elif "Rank" in check:
             element = reaction.message.embeds[0].title.split(" ")[0]
+            element = strip_all(element.lower().strip())
             if element not in dragalia_elements:
                 element = None
-            else:
-                element = strip_all(element)
             await reaction.message.edit(embed=await self.return_rankings_embed(
                 element=element, parse=parse))
         await reaction.message.clear_reactions()

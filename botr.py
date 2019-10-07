@@ -5,6 +5,7 @@ import bot_token
 import json
 import os
 import traceback
+import sys
 
 
 class Module:
@@ -48,7 +49,7 @@ extensions = initial_extensions + config.memes_extensions
 
 
 def get_prefix(bot, message):
-    prefixes = ['&']
+    prefixes = ['^']
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
@@ -155,7 +156,7 @@ async def on_ready():
 
 @bot.check
 async def guild_only_commands(ctx):
-    return ctx.guild is None
+    return ctx.guild is not None
 
 
 async def permission_check(ctx):
