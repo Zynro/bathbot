@@ -17,30 +17,19 @@ class Module:
 
 
 extension_dict = {}
-extension_dict['base'] = [
-                         'cogs.admin',
-                         'cogs.voicecmd',
-                         'cogs.basic',
-                         'cogs.modules'
-                         ]
+extension_dict["base"] = ["cogs.admin", "cogs.voicecmd", "cogs.basic", "cogs.modules"]
 
-extension_dict['onmyoji'] = [
-                            'modules.onmyoji.cogs.guildcmd',
-                            'modules.onmyoji.cogs.shikigami',
-                            'modules.onmyoji.cogs.shard'
-                            ]
+extension_dict["onmyoji"] = [
+    "modules.onmyoji.cogs.guildcmd",
+    "modules.onmyoji.cogs.shikigami",
+    "modules.onmyoji.cogs.shard",
+]
 
-extension_dict['twitter'] = [
-                            'modules.twitter.cogs.twitter'
-                            ]
+extension_dict["twitter"] = ["modules.twitter.cogs.twitter"]
 
-extension_dict['dragalia'] = [
-                             'modules.dragalia.cogs.dragalia'
-                             ]
+extension_dict["dragalia"] = ["modules.dragalia.cogs.dragalia"]
 
-extension_dict['mastodon'] = [
-                             'modules.mastodon.cogs.mastodon_cog'
-                             ]
+extension_dict["mastodon"] = ["modules.mastodon.cogs.mastodon_cog"]
 
 initial_extensions = []
 for group in extension_dict:
@@ -49,16 +38,15 @@ extensions = initial_extensions + config.memes_extensions
 
 
 def get_prefix(bot, message):
-    prefixes = ['&']
+    prefixes = ["&"]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
-bot = commands.Bot(command_prefix=get_prefix, description='I am Bathbot. I'
-                   ' meme.')
+bot = commands.Bot(command_prefix=get_prefix, description="I am Bathbot. I" " meme.")
 
-with open(f'tokens/module_access.json') as file:
+with open(f"tokens/module_access.json") as file:
     bot.module_access = json.loads(file.read())
-    bot.module_access['bathmemes'] = config.memes_access
+    bot.module_access["bathmemes"] = config.memes_access
 
 bot.cog_list = extensions + ["cogs.dev"]
 
@@ -74,20 +62,17 @@ else:
 
 bot.modules = {}
 for extension in extension_dict.keys():
-    if extension == 'base':
+    if extension == "base":
         continue
     bot.modules[extension] = Module(
-                                    extension,
-                                    f'modules/{extension}',
-                                    extension_dict[extension],
-                                    bot.module_access[extension]
-                                    )
-bot.modules['bathmemes'] = Module(
-                                  'bathmemes',
-                                  config.memes_module_path,
-                                  config.memes_extensions,
-                                  config.memes_access
-                                  )
+        extension,
+        f"modules/{extension}",
+        extension_dict[extension],
+        bot.module_access[extension],
+    )
+bot.modules["bathmemes"] = Module(
+    "bathmemes", config.memes_module_path, config.memes_extensions, config.memes_access
+)
 
 if writeout is True:
     module_access_dict = {}
@@ -95,25 +80,29 @@ if writeout is True:
         module_access_dict[module.name] = []
         for guild_id in module.access:
             module_access_dict[module.name].append(guild_id)
-    path_to_file = f'tokens/module_access.json'
-    with open(path_to_file, 'w+') as file:
+    path_to_file = f"tokens/module_access.json"
+    with open(path_to_file, "w+") as file:
         json.dump(module_access_dict, file, indent=4)
 
 
 @bot.event
 async def on_ready():
-    print('Logged in as')
+    print("Logged in as")
     print(bot.user.name)
     print(bot.user.id)
-    print('------')
+    print("------")
     # bot.remove_command('help')
-    await bot.change_presence(activity=discord.Game(name='Shower With Your '
-                              'Dad Simulator 2015: Do You '
-                              'Still Shower With Your Dad'))
-    if __name__ == '__main__':
+    await bot.change_presence(
+        activity=discord.Game(
+            name="Shower With Your "
+            "Dad Simulator 2015: Do You "
+            "Still Shower With Your Dad"
+        )
+    )
+    if __name__ == "__main__":
 
         # Creates all module base folders
-        module_base_folder_list = ['cogs', 'images', 'lists', 'models']
+        module_base_folder_list = ["cogs", "images", "lists", "models"]
         if not os.path.exists("modules"):
             os.mmkdir("modules")
         for module in bot.modules.keys():
@@ -124,7 +113,7 @@ async def on_ready():
                     os.mkdir(f"modules/{module}/{folder}")
 
         # Create all necessary guild folders
-        required_dir_list = ['images', 'lists', 'modules']
+        required_dir_list = ["images", "lists", "modules"]
         if not os.path.exists(f"guilds"):
             os.mkdir(f"guilds")
         for guild in bot.guilds:
@@ -142,16 +131,15 @@ async def on_ready():
         for extension in extensions:
             try:
                 bot.load_extension(extension)
-                print(extension + ' has been loaded!')
+                print(extension + " has been loaded!")
             except Exception:
-                print(f'Failed to load extension {extension}.',
-                      file=sys.stderr)
+                print(f"Failed to load extension {extension}.", file=sys.stderr)
                 traceback.print_exc()
-    print('------')
-    print(f'Bathbot is fully ready!')
+    print("------")
+    print(f"Bathbot is fully ready!")
     if not discord.opus.is_loaded():
-        discord.opus.load_opus('libopus.so')
-        print('Opus has been loaded!')
+        discord.opus.load_opus("libopus.so")
+        print("Opus has been loaded!")
 
 
 @bot.check
@@ -166,13 +154,14 @@ async def permission_check(ctx):
 async def cog_locator(arg):
     found_cog = None
     for cog in bot.cog_list:
-        cog_name = cog.split('.')[-1]
+        cog_name = cog.split(".")[-1]
         if arg in cog_name:
             found_cog = cog
     return found_cog
 
+
 # Hidden means it won't show up on the default help.
-@bot.command(name='load', hidden=True)
+@bot.command(name="load", hidden=True)
 @commands.check(permission_check)
 async def load_cog(ctx, *, arg: str):
     """Command which Loads a cog."""
@@ -185,13 +174,13 @@ async def load_cog(ctx, *, arg: str):
                 return await ctx.send(f'Cog "{arg}" does not exist.')
             bot.load_extension(cog)
     except Exception as e:
-        await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
+        await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
         traceback.print_exc()
     else:
-        await ctx.send('**Success: ** '+cog+' has been loaded!')
+        await ctx.send("**Success: ** " + cog + " has been loaded!")
 
 
-@bot.command(name='unload', hidden=True)
+@bot.command(name="unload", hidden=True)
 @commands.check(permission_check)
 async def unload_cog(ctx, *, arg: str):
     """Command which Unloads a cog."""
@@ -204,12 +193,12 @@ async def unload_cog(ctx, *, arg: str):
                 return await ctx.send(f'Cog "{arg}" does not exist.')
             bot.unload_extension(cog)
     except Exception as e:
-        await ctx.send(f'**ERROR:** {type(e).__name__} - {e}')
+        await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
     else:
-        await ctx.send('**Success:** '+cog+' has been unloaded!')
+        await ctx.send("**Success:** " + cog + " has been unloaded!")
 
 
-@bot.command(name='reload', hidden=True)
+@bot.command(name="reload", hidden=True)
 @commands.check(permission_check)
 async def reload_cog(ctx, *, arg: str):
     """Command which Reloads a Module.
@@ -224,18 +213,20 @@ async def reload_cog(ctx, *, arg: str):
             bot.unload_extension(cog)
             bot.load_extension(cog)
     except Exception as e:
-        await ctx.send(f'**Error:** {type(e).__name__} - {e}')
+        await ctx.send(f"**Error:** {type(e).__name__} - {e}")
         traceback.print_exc()
     else:
-        await ctx.send('**Success:** '+cog+' has been reloaded!')
+        await ctx.send("**Success:** " + cog + " has been reloaded!")
 
 
-@bot.command(name='kill', hidden=True)
+@bot.command(name="kill", hidden=True)
 @commands.check(permission_check)
 async def kill_bot(ctx):
-    '''Kills the bot. Only useable by Zynro.'''
-    await ctx.send("""Well, it's time to take a bath. See you soon!
-BathBot is now exiting.""")
+    """Kills the bot. Only useable by Zynro."""
+    await ctx.send(
+        """Well, it's time to take a bath. See you soon!
+BathBot is now exiting."""
+    )
     sys.exit()
 
 

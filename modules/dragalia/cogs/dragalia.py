@@ -11,19 +11,17 @@ DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
-dragalia_elements = ['flame', 'water', 'wind', 'light', 'shadow']
-dragalia_elements_images = {'flame': ('https://b1ueb1ues.github.io//dl-sim/'
-                                      'pic/element/flame.png'),
-                            'water': ('https://b1ueb1ues.github.io//dl-sim/'
-                                      'pic/element/water.png'),
-                            'wind': ('https://b1ueb1ues.github.io//dl-sim/'
-                                     'pic/element/wind.png'),
-                            'light': ('https://b1ueb1ues.github.io//dl-sim/'
-                                      'pic/element/light.png'),
-                            'shadow': ('https://b1ueb1ues.github.io//dl-sim/'
-                                       'pic/element/shadow.png'),
-                            'all': ('https://icon-library.net/images/'
-                                    'muscle-icon-png/muscle-icon-png-24.jpg')}
+dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
+dragalia_elements_images = {
+    "flame": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/flame.png"),
+    "water": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/water.png"),
+    "wind": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/wind.png"),
+    "light": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/light.png"),
+    "shadow": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/shadow.png"),
+    "all": (
+        "https://icon-library.net/images/" "muscle-icon-png/muscle-icon-png-24.jpg"
+    ),
+}
 
 
 def generate_rand_color():
@@ -49,10 +47,10 @@ def strip_all(input_str):
 class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.path_to_csv_file = (f'{self.bot.modules["dragalia"].path}/'
-                                 'lists/optimal_dps_data')
-        char_dict = self.build_adven_db(self.get_src_csv(
-                                        self.path_to_csv_file))
+        self.path_to_csv_file = (
+            f'{self.bot.modules["dragalia"].path}/' "lists/optimal_dps_data"
+        )
+        char_dict = self.build_adven_db(self.get_src_csv(self.path_to_csv_file))
         self.adventurer_db = self.create_classes(char_dict)
         self.dps_rankings = self.create_rankings()
         for character, value in self.adventurer_db.items():
@@ -63,16 +61,16 @@ class Dragalia(commands.Cog):
 
     def get_src_csv(self, path):
         response_dict = {}
-        response_dict['180'] = requests.get(DPS_URL_180).text
-        response_dict['120'] = requests.get(DPS_URL_120).text
-        response_dict['60'] = requests.get(DPS_URL_60).text
+        response_dict["180"] = requests.get(DPS_URL_180).text
+        response_dict["120"] = requests.get(DPS_URL_120).text
+        response_dict["60"] = requests.get(DPS_URL_60).text
         for parse in response_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding='utf-8') as file:
+            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
                 response_dict[parse] = response_dict[parse].split("\n")
                 for row in response_dict[parse]:
-                    row = row.split(',')
+                    row = row.split(",")
                     try:
                         row[1]
                     except IndexError:
@@ -84,18 +82,18 @@ class Dragalia(commands.Cog):
         response_dict = {}
         async with aiohttp.ClientSession() as session:
             async with session.get(DPS_URL_180) as response:
-                response_dict['180'] = await response.text()
+                response_dict["180"] = await response.text()
             async with session.get(DPS_URL_120) as response:
-                response_dict['120'] = await response.text()
+                response_dict["120"] = await response.text()
             async with session.get(DPS_URL_60) as response:
-                response_dict['60'] = await response.text()
+                response_dict["60"] = await response.text()
         for parse in response_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding='utf-8') as file:
+            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
                 response_dict[parse] = response_dict[parse].split("\n")
                 for row in response_dict[parse]:
-                    row = row.split(',')
+                    row = row.split(",")
                     try:
                         row[1]
                     except IndexError:
@@ -134,61 +132,69 @@ class Dragalia(commands.Cog):
                     wyrmprints = wyrmprints.replace("_", " ")
                     dragon = remove_brackets(amulets[1])
                     full_char_dict[name] = {
-                                              'name': name,
-                                              'internal_name': internal_name,
-                                              'rarity': row[2],
-                                              'element': row[3],
-                                              'weapon': row[4],
-                                              'str': row[5],
-                                              'wyrmprints': wyrmprints,
-                                              'dragon': dragon,
-                                              'alt': alt
-                                              }
-                    full_char_dict[name]['parse'] = {}
+                        "name": name,
+                        "internal_name": internal_name,
+                        "rarity": row[2],
+                        "element": row[3],
+                        "weapon": row[4],
+                        "str": row[5],
+                        "wyrmprints": wyrmprints,
+                        "dragon": dragon,
+                        "alt": alt,
+                    }
+                    full_char_dict[name]["parse"] = {}
                 damage = {}
                 damage_list = row[9:]
-                damage['dps'] = row[0]
-                damage['types'] = {}
+                damage["dps"] = row[0]
+                damage["types"] = {}
                 for damage_type in damage_list:
                     damage_type = damage_type.split(":")
                     damage_name = damage_type[0].replace("_", " ").title()
-                    damage['types'][damage_name] = damage_type[1]
-                full_char_dict[name]['parse'][parse_value] = {}
-                full_char_dict[name]['parse'][parse_value]['damage'] = damage
-                (full_char_dict[name]['parse'][parse_value]
-                 ['condition']) = row[7].replace("<", "").replace(">", ""),
-                full_char_dict[name]['parse'][parse_value]['comment'] = row[8]
+                    damage["types"][damage_name] = damage_type[1]
+                full_char_dict[name]["parse"][parse_value] = {}
+                full_char_dict[name]["parse"][parse_value]["damage"] = damage
+                (full_char_dict[name]["parse"][parse_value]["condition"]) = (
+                    row[7].replace("<", "").replace(">", ""),
+                )
+                full_char_dict[name]["parse"][parse_value]["comment"] = row[8]
         return full_char_dict
 
     def create_classes(self, input_db):
-        return ({character.lower(): Adventurer(input_db[character])
-                for character in input_db.keys()})
+        return {
+            character.lower(): Adventurer(input_db[character])
+            for character in input_db.keys()
+        }
 
     def create_rankings(self):
         rankings_db = {}
-        parses = ['180', '120', '60']
+        parses = ["180", "120", "60"]
         for parse in parses:
             rankings_db[parse] = {}
             sorted_list = sorted(
-                                [(
-                                    self.adventurer_db[char].name,
-                                    self.adventurer_db[char].parse[parse].dps
-                                ) for char in self.adventurer_db.keys()
-                                ],
-                                key=lambda x: x[1],
-                                reverse=True
-                                )
-            rankings_db[parse]['all'] = [entry[0] for entry in sorted_list]
+                [
+                    (
+                        self.adventurer_db[char].name,
+                        self.adventurer_db[char].parse[parse].dps,
+                    )
+                    for char in self.adventurer_db.keys()
+                ],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            rankings_db[parse]["all"] = [entry[0] for entry in sorted_list]
             for element in dragalia_elements:
                 sorted_list = sorted(
-                             [(
-                               self.adventurer_db[char].name,
-                               self.adventurer_db[char].parse[parse].dps
-                               )
-                              for char in self.adventurer_db.keys()
-                              if self.adventurer_db[char].element == element
-                              ],
-                             key=lambda x: x[1], reverse=True)
+                    [
+                        (
+                            self.adventurer_db[char].name,
+                            self.adventurer_db[char].parse[parse].dps,
+                        )
+                        for char in self.adventurer_db.keys()
+                        if self.adventurer_db[char].element == element
+                    ],
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
                 rankings_db[parse][element] = [i[0] for i in sorted_list]
         return rankings_db
 
@@ -216,9 +222,11 @@ class Dragalia(commands.Cog):
         return list(set(char_result_list))
 
     async def return_char_embed(self, character, parse):
-        embed = discord.Embed(title=f"__**{character.internal_name}**__",
-                              description=f"*Parse: {parse} Seconds*",
-                              colour=discord.Colour(generate_rand_color()))
+        embed = discord.Embed(
+            title=f"__**{character.internal_name}**__",
+            description=f"*Parse: {parse} Seconds*",
+            colour=discord.Colour(generate_rand_color()),
+        )
         return character.populate_embed(embed=embed, parse_value=parse)
 
     async def return_multiple_results(self, multiple_results):
@@ -229,13 +237,12 @@ class Dragalia(commands.Cog):
         embed = discord.Embed(
             title="I found multiple results for your search:",
             colour=discord.Colour(generate_rand_color()),
-            description=char_result_list
-            )
-        embed.set_footer(text="Try your search again"
-                         " with a adventurer specified.")
+            description=char_result_list,
+        )
+        embed.set_footer(text="Try your search again" " with a adventurer specified.")
         return embed
 
-    @commands.group(aliases=['drag', 'd'])
+    @commands.group(aliases=["drag", "d"])
     async def dragalia(self, ctx):
         """
         The Dragalia Lost command group.
@@ -263,19 +270,22 @@ class Dragalia(commands.Cog):
             &[drag/d] dps <character>
         """
         if not character:
-            return await ctx.send("A character must be entered"
-                                  " to search the database.")
+            return await ctx.send(
+                "A character must be entered" " to search the database."
+            )
         character = character.lower()
         matched_list = await self.character_validate(character)
         if matched_list:
             if len(matched_list) > 1:
-                return await ctx.send(embed=await self.return_multiple_results(
-                    matched_list))
+                return await ctx.send(
+                    embed=await self.return_multiple_results(matched_list)
+                )
             else:
                 parse = "60"
-                message = await ctx.send(embed=await self.return_char_embed(
-                    matched_list[0], parse))
-                await message.add_reaction('⬆')
+                message = await ctx.send(
+                    embed=await self.return_char_embed(matched_list[0], parse)
+                )
+                await message.add_reaction("⬆")
         else:
             return await ctx.send("Errored.")
 
@@ -284,18 +294,19 @@ class Dragalia(commands.Cog):
             for each in dragalia_elements:
                 if element.lower().strip() in each:
                     element = each
-                    embed = discord.Embed(title=(f"**{element.title()} Top 10"
-                                          " Rankings**"),
-                                          description=f"*Parse: {parse}"
-                                          " Seconds*",
-                                          colour=discord.Colour(
-                                          generate_rand_color()))
+                    embed = discord.Embed(
+                        title=(f"**{element.title()} Top 10" " Rankings**"),
+                        description=f"*Parse: {parse}" " Seconds*",
+                        colour=discord.Colour(generate_rand_color()),
+                    )
                     break
         else:
-            element = 'all'
-            embed = discord.Embed(title=f"**All Elements Top 10 Rankings**",
-                                  description=f"*Parse: {parse} Seconds*",
-                                  colour=discord.Colour(generate_rand_color()))
+            element = "all"
+            embed = discord.Embed(
+                title=f"**All Elements Top 10 Rankings**",
+                description=f"*Parse: {parse} Seconds*",
+                colour=discord.Colour(generate_rand_color()),
+            )
         name_string = ""
         dps_string = ""
         x = 1
@@ -310,11 +321,12 @@ class Dragalia(commands.Cog):
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=dragalia_elements_images[element])
-        embed.set_footer(text=('Use the up/down arrows to'
-                               ' increase or decrease parse time.'))
+        embed.set_footer(
+            text=("Use the up/down arrows to" " increase or decrease parse time.")
+        )
         return embed
 
-    @dragalia.command(name="rankings", aliases=['rank', 'ranks', 'ranking'])
+    @dragalia.command(name="rankings", aliases=["rank", "ranks", "ranking"])
     async def rankings(self, ctx, element=None):
         """
         Retreive a list of top ten Adventurers based on the DPS Simulator for
@@ -325,9 +337,9 @@ class Dragalia(commands.Cog):
 
         Element can be any element, or 'all' for overall top 10 list.
         """
-        embed = await self.return_rankings_embed(element=element, parse='60')
+        embed = await self.return_rankings_embed(element=element, parse="60")
         message = await ctx.send(embed=embed)
-        await message.add_reaction('⬆')
+        await message.add_reaction("⬆")
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
@@ -360,14 +372,16 @@ class Dragalia(commands.Cog):
             adventurer = strip_all(embed.title).lower()
             character = self.adventurer_db[adventurer]
             await reaction.message.edit(
-                embed=await self.return_char_embed(character, parse=parse))
+                embed=await self.return_char_embed(character, parse=parse)
+            )
         elif "Rank" in check:
             element = reaction.message.embeds[0].title.split(" ")[0]
             element = strip_all(element.lower().strip())
             if element not in dragalia_elements:
                 element = None
-            await reaction.message.edit(embed=await self.return_rankings_embed(
-                element=element, parse=parse))
+            await reaction.message.edit(
+                embed=await self.return_rankings_embed(element=element, parse=parse)
+            )
         await reaction.message.clear_reactions()
         if parse == "60":
             await reaction.message.add_reaction(up_arrow)
@@ -377,23 +391,26 @@ class Dragalia(commands.Cog):
         elif parse == "180":
             await reaction.message.add_reaction(down_arrow)
 
-    @dragalia.command(name="print-get", aliases=['printdownload',
-                                                 'print-update',
-                                                 'update'])
+    @dragalia.command(
+        name="print-get", aliases=["printdownload", "print-update", "update"]
+    )
     @commands.cooldown(rate=1, per=60.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx):
-        await ctx.send('Bathbot is now retreiving the DPS Simulator numbers'
-                       ' from source, please wait...')
+        await ctx.send(
+            "Bathbot is now retreiving the DPS Simulator numbers"
+            " from source, please wait..."
+        )
         try:
-            char_dict = self.build_adven_db(await self.async_get_src_csv(
-                self.path_to_csv_file))
+            char_dict = self.build_adven_db(
+                await self.async_get_src_csv(self.path_to_csv_file)
+            )
             self.adventurer_db = self.create_classes(char_dict)
             self.dps_rankings = self.create_rankings()
             for character, value in self.adventurer_db.items():
                 self.adventurer_db[character].update_rank(self.dps_rankings)
         except Exception as e:
             return await ctx.send(f"Update failed: {e}")
-        await ctx.send('Update complete!')
+        await ctx.send("Update complete!")
         return
 
 
