@@ -5,7 +5,7 @@ import tweepy
 import aiohttp
 
 
-def twitter_auth(type):
+def twitter_auth():
     path_to_file = f"tokens/twitter_credentials.json"
     try:
         with open(path_to_file, "r") as file:
