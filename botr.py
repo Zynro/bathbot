@@ -103,8 +103,6 @@ async def on_ready():
 
         # Creates all module base folders
         module_base_folder_list = ["cogs", "images", "lists", "models"]
-        if not os.path.exists("modules"):
-            os.mmkdir("modules")
         for module in bot.modules.keys():
             if not os.path.exists(f"modules/{module}"):
                 os.mkdir(f"modules/{module}")
@@ -135,11 +133,15 @@ async def on_ready():
             except Exception:
                 print(f"Failed to load extension {extension}.", file=sys.stderr)
                 traceback.print_exc()
+
     print("------")
     print(f"Bathbot is fully ready!")
     if not discord.opus.is_loaded():
         discord.opus.load_opus("libopus.so")
         print("Opus has been loaded!")
+
+
+bot.last_loaded_cog = None
 
 
 @bot.check
@@ -163,8 +165,16 @@ async def cog_locator(arg):
 # Hidden means it won't show up on the default help.
 @bot.command(name="load", hidden=True)
 @commands.check(permission_check)
-async def load_cog(ctx, *, arg: str):
+async def load_cog(ctx, *, arg: str = None):
     """Command which Loads a cog."""
+    if not arg and bot.last_loaded_cog is not None:
+        try:
+            bot.load_extension(bot.last_loaded_cog)
+            return
+        except Exception as e:
+            await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
+            traceback.print_exc()
+            return
     try:
         if "." in arg:
             bot.load_extension(arg)
@@ -173,6 +183,7 @@ async def load_cog(ctx, *, arg: str):
             if not cog:
                 return await ctx.send(f'Cog "{arg}" does not exist.')
             bot.load_extension(cog)
+            bot.last_loaded_cog = cog
     except Exception as e:
         await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
         traceback.print_exc()
@@ -200,11 +211,22 @@ async def unload_cog(ctx, *, arg: str):
 
 @bot.command(name="reload", hidden=True)
 @commands.check(permission_check)
-async def reload_cog(ctx, *, arg: str):
+async def reload_cog(ctx, *, arg: str = None):
     """Command which Reloads a Module.
     Remember to use dot path. e.g: cogs.owner"""
+    if not arg and bot.last_loaded_cog is not None:
+        try:
+            bot.unload_extension(bot.last_loaded_cog)
+            bot.load_extension(bot.last_loaded_cog)
+            print("woop")
+            return
+        except Exception as e:
+            await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
+            traceback.print_exc()
+            return
     try:
         if "." in arg:
+            bot.unload_extension(arg)
             bot.load_extension(arg)
         else:
             cog = await cog_locator(arg)
@@ -212,6 +234,7 @@ async def reload_cog(ctx, *, arg: str):
                 return await ctx.send(f'Cog "{arg}" does not exist.')
             bot.unload_extension(cog)
             bot.load_extension(cog)
+            bot.last_loaded_cog = cog
     except Exception as e:
         await ctx.send(f"**Error:** {type(e).__name__} - {e}")
         traceback.print_exc()
@@ -224,8 +247,7 @@ async def reload_cog(ctx, *, arg: str):
 async def kill_bot(ctx):
     """Kills the bot. Only useable by Zynro."""
     await ctx.send(
-        """Well, it's time to take a bath. See you soon!
-BathBot is now exiting."""
+        "Well, it's time to take a bath. See you soon! BathBot is now exiting."
     )
     sys.exit()
 
