@@ -270,9 +270,7 @@ class Dragalia(commands.Cog):
             &[drag/d] dps <character>
         """
         if not character:
-            return await ctx.send(
-                "A character must be entered" " to search the database."
-            )
+            return await ctx.send("A character must be entered to search the database.")
         character = character.lower()
         matched_list = await self.character_validate(character)
         if matched_list:
@@ -295,8 +293,8 @@ class Dragalia(commands.Cog):
                 if element.lower().strip() in each:
                     element = each
                     embed = discord.Embed(
-                        title=(f"**{element.title()} Top 10" " Rankings**"),
-                        description=f"*Parse: {parse}" " Seconds*",
+                        title=(f"**{element.title()} Top 10 Rankings**"),
+                        description=f"*Parse: {parse} Seconds*",
                         colour=discord.Colour(generate_rand_color()),
                     )
                     break
@@ -322,7 +320,7 @@ class Dragalia(commands.Cog):
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=dragalia_elements_images[element])
         embed.set_footer(
-            text=("Use the up/down arrows to" " increase or decrease parse time.")
+            text=("Use the up/down arrows to increase or decrease parse time.")
         )
         return embed
 
@@ -409,6 +407,7 @@ class Dragalia(commands.Cog):
             for character, value in self.adventurer_db.items():
                 self.adventurer_db[character].update_rank(self.dps_rankings)
         except Exception as e:
+            print(e)
             return await ctx.send(f"Update failed: {e}")
         await ctx.send("Update complete!")
         return
