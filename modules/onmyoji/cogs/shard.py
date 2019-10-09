@@ -3,7 +3,6 @@ import discord
 import json
 from discord.ext import commands
 import os.path
-import io
 import config
 import re
 import random
@@ -21,7 +20,9 @@ def generate_random_color():
 
 def bracket_check(arg):
     if "<" in arg or ">" in arg:
-        return "Please do not include brackets in your command uses. They are to demonstrate that terms are optional, or what terms can be used, for that specific command."
+        return "Please do not include brackets in your command uses. "
+        "They are to demonstrate that terms are optional, or what terms can be used,"
+        " for that specific command."
     else:
         return None
 
@@ -61,7 +62,8 @@ class Embeds:
                 embed = discord.Embed(
                     title=f"{nick}'s Shard Trading List",
                     colour=discord.Colour(generate_random_color()),
-                    description=f"__**Notes:**__ {self.shard_trading_db[ctx.guild.id][user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.",
+                    description=f"__**Notes:**__ "
+                    f"{self.shard_trading_db[ctx.guild.id][user_id_string]['notes']}\n\n{nick} is **{trading_status}** for trading.",
                 )
             else:
                 embed = discord.Embed(
@@ -92,7 +94,8 @@ class Embeds:
             embed = discord.Embed(
                 title="*Good News Everyone!*",
                 colour=discord.Colour(generate_random_color()),
-                description=f"You and {other_user} have the following shards that can be traded!",
+                description=f"You and {other_user} have the "
+                f"following shards that can be traded!",
             )
 
             embed.set_thumbnail(url=f"attachment://{thumbnail}")
@@ -136,7 +139,7 @@ class Shard(commands.Cog, Embeds):
 
     def shard_load_all_json(self):
         """
-        Loads the json shard database file. 
+        Loads the json shard database file.
         Generates a new empty one if it does not exist.
         """
         self.shard_trading_db = {}

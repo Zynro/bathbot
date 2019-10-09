@@ -8,11 +8,11 @@ def strip_tuple(input_tuple):
 
 class Parse:
     def __init__(self, parse_dict):
-        self.dps = strip_tuple(str(parse_dict['damage']['dps']))
-        self.damage_types = parse_dict['damage']['types']
-        self.condition = strip_tuple(str(parse_dict['condition']))
+        self.dps = strip_tuple(str(parse_dict["damage"]["dps"]))
+        self.damage_types = parse_dict["damage"]["types"]
+        self.condition = strip_tuple(str(parse_dict["condition"]))
         self.condition = self.condition.replace(",", "")
-        self.comment = strip_tuple(str(parse_dict['comment']))
+        self.comment = strip_tuple(str(parse_dict["comment"]))
         self.rank_element = None
         self.rank_overall = None
 
