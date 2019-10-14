@@ -16,3 +16,4 @@ tweepy==3.8.0
 fuzzywuzzy==0.17.0
 howlongtobeatpy==0.1.4
 beautifulsoup4==4.8.0
+aiosqlite==0.10.0
