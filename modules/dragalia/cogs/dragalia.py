@@ -4,6 +4,7 @@ import random
 import csv
 import requests
 import aiohttp
+import asyncio
 from fuzzywuzzy import fuzz
 from modules.dragalia.models.adventurer import Adventurer
 
@@ -22,6 +23,9 @@ dragalia_elements_images = {
         "https://icon-library.net/images/" "muscle-icon-png/muscle-icon-png-24.jpg"
     ),
 }
+
+up_arrow = "⬆"
+down_arrow = "⬇"
 
 
 def generate_rand_color():
@@ -242,6 +246,28 @@ class Dragalia(commands.Cog):
         embed.set_footer(text="Try your search again" " with a adventurer specified.")
         return embed
 
+    async def proccess_parse_change(self, parse, embed, reaction, user):
+        if reaction.emoji == up_arrow:
+            if "60" in embed.description:
+                parse = "120"
+                await reaction.remove(user)
+                await reaction.message.add_reaction(down_arrow)
+            elif "120" in embed.description:
+                parse = "180"
+                await reaction.remove(user)
+                await reaction.remove(self.bot.user)
+
+        elif reaction.emoji == down_arrow:
+            if "180" in embed.description:
+                parse = "120"
+                await reaction.remove(user)
+                await reaction.message.add_reaction(up_arrow)
+            if "120" in embed.description:
+                parse = "60"
+                await reaction.remove(user)
+                await reaction.remove(self.bot.user)
+        return parse
+
     @commands.group(aliases=["drag", "d"])
     async def dragalia(self, ctx):
         """
@@ -279,13 +305,41 @@ class Dragalia(commands.Cog):
                     embed=await self.return_multiple_results(matched_list)
                 )
             else:
-                parse = "60"
+                parse = "180"
                 message = await ctx.send(
                     embed=await self.return_char_embed(matched_list[0], parse)
                 )
-                await message.add_reaction("⬆")
+                await message.add_reaction(down_arrow)
+
+                def check_response(reaction, user):
+                    return (
+                        (reaction.emoji == up_arrow or reaction.emoji == down_arrow)
+                        and user != self.bot.user
+                        and message.id == reaction.message.id
+                    )
+
+                while True:
+                    try:
+                        reaction, user = await self.bot.wait_for(
+                            "reaction_add", timeout=120.0, check=check_response
+                        )
+                    except asyncio.TimeoutError:
+                        return
+                    else:
+                        embed = reaction.message.embeds[0]
+                        parse = await self.proccess_parse_change(
+                            parse, embed, reaction, user
+                        )
+                        name = strip_all(embed.title).lower()
+                        adventurer = self.adventurer_db[name]
+                        await reaction.message.edit(
+                            embed=await self.return_char_embed(adventurer, parse=parse)
+                        )
+
         else:
-            return await ctx.send("Errored.")
+            return await ctx.send(
+                "Either no adventurer was found, or an error occured."
+            )
 
     async def return_rankings_embed(self, element, parse):
         if element:
@@ -335,59 +389,35 @@ class Dragalia(commands.Cog):
 
         Element can be any element, or 'all' for overall top 10 list.
         """
-        embed = await self.return_rankings_embed(element=element, parse="60")
+        parse = "180"
+        embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
-        await message.add_reaction("⬆")
+        await message.add_reaction(down_arrow)
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user == self.bot.user or not reaction.message.embeds:
-            return
-        if reaction.message.author != self.bot.user:
-            return
-        if "Parse" not in reaction.message.embeds[0].description:
-            return
-        up_arrow = "⬆"
-        down_arrow = "⬇"
-        embed = reaction.message.embeds[0]
-        if reaction.emoji == up_arrow:
-            if "60" in embed.description:
-                parse = "120"
-            elif "120" in embed.description:
-                parse = "180"
-        elif reaction.emoji == down_arrow:
-            if "180" in embed.description:
-                parse = "120"
-            if "120" in embed.description:
-                parse = "60"
-        else:
-            return
-        if str(embed.author.name) == "Embed.Empty":
-            check = embed.title
-        else:
-            check = embed.author.name
-        if "Adven" in check:
-            adventurer = strip_all(embed.title).lower()
-            character = self.adventurer_db[adventurer]
-            await reaction.message.edit(
-                embed=await self.return_char_embed(character, parse=parse)
+        def check_response(reaction, user):
+            return (
+                (reaction.emoji == up_arrow or reaction.emoji == down_arrow)
+                and user != self.bot.user
+                and message.id == reaction.message.id
             )
-        elif "Rank" in check:
-            element = reaction.message.embeds[0].title.split(" ")[0]
-            element = strip_all(element.lower().strip())
-            if element not in dragalia_elements:
-                element = None
-            await reaction.message.edit(
-                embed=await self.return_rankings_embed(element=element, parse=parse)
-            )
-        await reaction.message.clear_reactions()
-        if parse == "60":
-            await reaction.message.add_reaction(up_arrow)
-        elif parse == "120":
-            await reaction.message.add_reaction(down_arrow)
-            await reaction.message.add_reaction(up_arrow)
-        elif parse == "180":
-            await reaction.message.add_reaction(down_arrow)
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for(
+                    "reaction_add", timeout=120.0, check=check_response
+                )
+            except asyncio.TimeoutError:
+                return
+            else:
+                embed = reaction.message.embeds[0]
+                parse = await self.proccess_parse_change(parse, embed, reaction, user)
+                element = reaction.message.embeds[0].title.split(" ")[0]
+                element = strip_all(element.lower().strip())
+                if element not in dragalia_elements:
+                    element = None
+                await reaction.message.edit(
+                    embed=await self.return_rankings_embed(element=element, parse=parse)
+                )
 
     @dragalia.command(
         name="print-get", aliases=["printdownload", "print-update", "update"]
