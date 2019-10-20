@@ -171,10 +171,34 @@ async def update_db(session, db):
         divs = divs.find_all(style="width:100%")
         defense = divs[6].find(class_="dd-description").get_text()
         adv_type = unit_types[divs[7].select("img[alt]")[0]["alt"]]
+
         skill_sections = soup.find_all(class_="skill-section")
-        skills = skill_sections[0].find_all(class_="skill-table skill-levels")
-        skill_1 = skills[0].find("th").select("a[title]")[0]["title"]
-        skill_2 = skills[1].find("th").select("a[title]")[0]["title"]
+
+        all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
+        skill_1 = all_skills[0].find("th").select("a[title]")[0]["title"]
+        skill_2 = all_skills[1].find("th").select("a[title]")[0]["title"]
+        skills = {
+            1: {"name": skill_1, "desc": "", "sp_cost": "", "i_frames": ""},
+            2: {"name": skill_2, "desc": "", "sp_cost": "", "i_frames": ""},
+        }
+        x = 1
+        for skill in skills.items():
+            print(f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
+            resp = await fetch(
+                session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
+            )
+            skill_soup = BeautifulSoup(resp, "html.parser")
+            all_levels = skill_soup.find(class_="skill-levels skill-details")
+            skill = all_levels.find(title="Lv3")
+            if not skill:
+                skill = all_levels.find(title="Lv2")
+            skills[x]["desc"] = skill.find_all("div")[1].get_text()
+            sp_cost = skill.find_all(class_="dd-description")
+            skills[x]["sp_cost"] = sp_cost[0].get_text()
+            divs = skill_soup.find_all(class_="dd-description")
+            skills[x]["i_frames"] = divs[-3].get_text()
+            x += 1
+
         max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
         value = skill_sections[1].find(title="Lv5").get_text()
         max_coab = f"{max_coab}: {value.split('(')[0]}"
@@ -184,14 +208,12 @@ async def update_db(session, db):
         x = 1
         for each in all_abilities:
             ability_title = each.find("th").select("a[title]")[0]["title"]
-            print(ability_title)
             ability_value = each.find_all(class_="tabbertab")
             if not "Lv2" not in ability_value:
                 ability_value = ability_value[0]
             else:
                 ability_value = ability_value[1]
             ability_value = ability_value.find("p").get_text().split("(")[0]
-            print(ability_value)
             abilities[x] = f"{ability_title}: {ability_value}"
             x += 1
 
@@ -205,8 +227,8 @@ async def update_db(session, db):
             {max_str}
             {defense}
             {adv_type}
-            {skill_1}
-            {skill_2}
+            {skills[1]}
+            {skills[2]}
             {max_coab}
             {abilities[1]}
             {abilities[2]}
