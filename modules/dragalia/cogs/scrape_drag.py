@@ -176,6 +176,24 @@ async def update_db(session, db):
         skill_1 = skills[0].find("th").select("a[title]")[0]["title"]
         skill_2 = skills[1].find("th").select("a[title]")[0]["title"]
         max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
+        value = skill_sections[1].find(title="Lv5").get_text()
+        max_coab = f"{max_coab}: {value.split('(')[0]}"
+
+        abilities = {1: None, 2: None, 3: None}
+        all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
+        x = 1
+        for each in all_abilities:
+            ability_title = each.find("th").select("a[title]")[0]["title"]
+            print(ability_title)
+            ability_value = each.find_all(class_="tabbertab")
+            if not "Lv2" not in ability_value:
+                ability_value = ability_value[0]
+            else:
+                ability_value = ability_value[1]
+            ability_value = ability_value.find("p").get_text().split("(")[0]
+            print(ability_value)
+            abilities[x] = f"{ability_title}: {ability_value}"
+            x += 1
 
         print(
             f"""
@@ -190,6 +208,9 @@ async def update_db(session, db):
             {skill_1}
             {skill_2}
             {max_coab}
+            {abilities[1]}
+            {abilities[2]}
+            {abilities[3]}
             """
         )
         break
