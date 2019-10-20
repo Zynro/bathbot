@@ -1,4 +1,5 @@
 import aiosqlite as sql
+import sqlite3
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
@@ -37,17 +38,61 @@ rarities = {
     "Icon Rarity Row 5.png": 5,
 }
 
-sql_adven_input = """
+sql_make_adv_table = """
+CREATE TABLE Adventurers(Name text PRIMARY KEY,
+            Image text,
+            Internal_Name text,
+            Title text,
+            Max_HP integer,
+            Max_STR integer,
+            Defense integer,
+            Type text,
+            Rarity integer,
+            Element text,
+            Weapon text,
+            Max_CoAb text,
+            Skill_1 text,
+            Skill_2 text,
+            Ability_1 text,
+            Ability_2 text,
+            Ability_3 text,
+            Availability text,
+            Release text,
+            Shortcuts text
+            )
+"""
+
+sql_make_skills_table = """
+CREATE TABLE Skills(Name text PRIMARY KEY,
+            Image text,
+            Internal_Name text,
+            Max_Level integer,
+            SP_Cost integer,
+            I_Frames text,
+            Owners, text
+            )
+"""
+
+sql_adven_insert = """
 INSERT INTO Adventurers
-(Name, Title, Max_HP, Max_STR, Type, Rarity, Element, Weapon, Max_CoAb, Skill_1,
-    Skill_2, Ability_1, Ability_2, Ability_3, Internal_Name, Shortcuts)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+(Name, Image, Internal_Name, Title, Max_HP, Max_STR, Type, Rarity, Element, Weapon, Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3, Availability, Release, Shortcuts)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 """
 
 sql_adven_update = """
 UPDATE Adventurers
-SET Title=?, Max_HP=?, Max_STR=?, Type=?, Rarity=?, Element=?, Weapon=?,
-Max_CoAb=?, Skill_1=?, Skill_2=?, Ability_1=?, Ability_2=?, Ability_3=?, Internal_Name=?
+SET Title=?, Image=?, Internal_Name=?, Max_HP=?, Max_STR=?, Type=?, Rarity=?, Element=?, Weapon=?,
+Max_CoAb=?, Skill_1=?, Skill_2=?, Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?, Shortcuts=?
+"""
+
+sql_skill_insert = """
+INSERT INTO Skills
+(Name, Image, Internal_Name, Max_Level, SP_Cost, I_Frames, Owners)
+"""
+
+sql_skill_update = """
+UPDATE Skills
+SET Image=?, Internal_Name=?, Max_Level=?, SP_Cost=?, I_Frames=?, Owners=?)
 """
 
 
@@ -86,7 +131,7 @@ async def create_names(session, db):
         result = await cursor.fetchone()
         if result is None:
             await db.execute(
-                sql_adven_input,
+                sql_adven_insert,
                 (
                     name,
                     "?",
@@ -122,7 +167,16 @@ async def update_db(session, db):
         weapon = weapons[p.select("img[alt]")[1]["alt"]]
         max_hp = soup.find(id="adv-hp").get_text()
         max_str = soup.find(id="adv-str").get_text()
-        defense = soup.find(class_="dd-description").get_text()  # use for loop to find
+        divs = soup.find(style="flex-grow:1;text-align:center")
+        divs = divs.find_all(style="width:100%")
+        defense = divs[6].find(class_="dd-description").get_text()
+        adv_type = unit_types[divs[7].select("img[alt]")[0]["alt"]]
+        skill_sections = soup.find_all(class_="skill-section")
+        skills = skill_sections[0].find_all(class_="skill-table skill-levels")
+        skill_1 = skills[0].find("th").select("a[title]")[0]["title"]
+        skill_2 = skills[1].find("th").select("a[title]")[0]["title"]
+        max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
+
         print(
             f"""
             {name}
@@ -132,6 +186,10 @@ async def update_db(session, db):
             {max_hp}
             {max_str}
             {defense}
+            {adv_type}
+            {skill_1}
+            {skill_2}
+            {max_coab}
             """
         )
         break
@@ -140,9 +198,15 @@ async def update_db(session, db):
 async def main():
     async with aiohttp.ClientSession() as session:
         async with sql.connect("master.db") as db:
+            try:
+                await db.execute("SELECT * from Adventurers")
+            except sqlite3.OperationalError:
+                await db.execute(sql_make_adv_table)
             await create_names(session, db)
             await update_db(session, db)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close()
