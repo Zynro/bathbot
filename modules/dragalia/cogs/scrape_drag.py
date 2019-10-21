@@ -3,6 +3,7 @@ import sqlite3
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
+import pprint
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
@@ -63,39 +64,43 @@ CREATE TABLE Adventurers(Name text PRIMARY KEY,
 """
 
 sql_make_skills_table = """
-CREATE TABLE Skills(Name text PRIMARY KEY,
+CREATE TABLE Skills(Internal_Name text PRIMARY KEY,
+            Name text,
             Image text,
-            Internal_Name text,
-            Max_Level integer,
+            Owner text,
+            Level integer,
+            Description text,
             SP_Cost integer,
-            I_Frames text,
-            Owner, text
+            I_Frames text
             )
 """
 
 sql_adven_insert = """
 INSERT INTO Adventurers
-(Name, Image, Internal_Name, Title, Max_HP, Max_STR, Type, Rarity, Element, Weapon,
-    Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3,
+(Name, Image, Internal_Name, Title, Max_HP, Max_STR, Defense, Type, Rarity, Element,
+    Weapon, Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3,
     Availability, Release, Shortcuts)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-"""
-
-sql_adven_update = """
-UPDATE Adventurers
-SET Title=?, Image=?, Internal_Name=?, Max_HP=?, Max_STR=?, Type=?, Rarity=?, Element=?,
-    Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
-    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 """
 
 sql_skill_insert = """
 INSERT INTO Skills
-(Name, Image, Internal_Name, Max_Level, SP_Cost, I_Frames, Owner)
+(Internal_Name, Name, Image, Owner, Level, Description, SP_Cost, I_Frames)
+VALUES (?,?,?,?,?,?,?,?)
+"""
+
+sql_adven_update = """
+UPDATE Adventurers
+SET Title=?, Max_HP=?, Max_STR=?, Defense=?, Type=?, Rarity=?, Element=?,
+    Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
+    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?
+WHERE Name=?
 """
 
 sql_skill_update = """
 UPDATE Skills
-SET Image=?, Internal_Name=?, Max_Level=?, SP_Cost=?, I_Frames=?, Owner=?)
+SET Image=?, Owner=?, Level=?, Description=?, SP_Cost=?, I_Frames=?
+WHERE Internal_Name=?
 """
 
 
@@ -131,19 +136,23 @@ async def create_dbs(session, db):
                 (
                     name,
                     image,
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
                     internal_name,
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
                     "?",
                 ),
             )
@@ -167,15 +176,14 @@ async def update_advs(session, db):
         divs = divs.find_all(style="width:100%")
         defense = divs[6].find(class_="dd-description").get_text()
         adv_type = unit_types[divs[7].select("img[alt]")[0]["alt"]]
+        rarity = rarities[divs[10].select("img[alt]")[0]["alt"]]
 
         skill_sections = soup.find_all(class_="skill-section")
 
         all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
         skill_1 = all_skills[0].find("th").select("a[title]")[0]["title"]
         skill_2 = all_skills[1].find("th").select("a[title]")[0]["title"]
-        skills = await update_skills(
-            session, db, skill_1, skill_2
-        )  # REMOVE VAR ASSIGNMENT LATER
+        await update_skills(session, db, skill_1, skill_2)
 
         max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
         value = skill_sections[1].find(title="Lv5").get_text()
@@ -187,77 +195,116 @@ async def update_advs(session, db):
         for each in all_abilities:
             ability_title = each.find("th").select("a[title]")[0]["title"]
             ability_value = each.find_all(class_="tabbertab")
-            if not "Lv2" not in ability_value:
-                ability_value = ability_value[0]
-            else:
-                ability_value = ability_value[1]
-            ability_value = ability_value.find("p").get_text().split("(")[0]
+            ability_value = ability_value[0].find("p").get_text().split("(")[0]
             abilities[x] = f"{ability_title}: {ability_value}"
             x += 1
 
         release = divs[16].find(class_="dd-description").get_text()
         avail = divs[17].find(class_="dd-description").get_text()
+        print(f"=====Updating: {name}=====")
 
-        print(
-            f"""
-            {name}
-            {title}
-            {element}
-            {weapon}
-            {max_hp}
-            {max_str}
-            {defense}
-            {adv_type}
-            {skills[1]['name']}
-            {skills[1]['desc']}
-            {skills[1]['sp_cost']}
-            {skills[1]['i_frames']}
-            {skills[1]['owner']}
-            {skills[2]['name']}
-            {skills[2]['desc']}
-            {skills[2]['sp_cost']}
-            {skills[2]['i_frames']}
-            {skills[2]['owner']}
-            {max_coab}
-            {abilities[1]}
-            {abilities[2]}
-            {abilities[3]}
-            {release}
-            {avail}
-            """
+        await db.execute(
+            sql_adven_update,
+            (
+                title,
+                max_hp,
+                max_str,
+                defense,
+                adv_type,
+                rarity,
+                element,
+                weapon,
+                max_coab,
+                skill_1,
+                skill_2,
+                abilities[1],
+                abilities[2],
+                abilities[3],
+                avail,
+                release,
+                name,
+            ),
         )
-        break
+        await db.commit()
+        print(f"++++Updated!++++")
 
 
 async def update_skills(session, db, skill_1, skill_2):
     skills = {
-        1: {"name": skill_1, "desc": "", "sp_cost": "", "i_frames": "", "owner": ""},
-        2: {"name": skill_2, "desc": "", "sp_cost": "", "i_frames": "", "owner": ""},
+        1: {"name": skill_1, "i_frames": "", "owner": "", "levels": {}},
+        2: {"name": skill_2, "i_frames": "", "owner": "", "levels": {}},
     }
     x = 1
     for skill in skills.items():
         resp = await fetch(session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
-        skill_soup = BeautifulSoup(resp, "html.parser")
-        all_levels = skill_soup.find(class_="skill-levels skill-details")
-        skill = all_levels.find(title="Lv3")
-        if not skill:
-            skill = all_levels.find(title="Lv2")
-        y = True
-        for br in skill.find_all("br"):
-            if y is True:
-                br.replace_with("\n")
-                y = False
-            else:
-                y = True
-                continue
-        skills[x]["desc"] = skill.find_all("div")[1].get_text().replace("\\'", "'")
-        sp_cost = skill.find_all(class_="dd-description")
-        skills[x]["sp_cost"] = sp_cost[0].get_text()
-        skill_divs = skill_soup.find_all(class_="dd-description")
-        skills[x]["i_frames"] = skill_divs[-3].get_text()
-        skills[x]["owner"] = skill_soup.find("li").select("a[title]")[0]["title"]
+        s_soup = BeautifulSoup(resp, "html.parser")
+        skills[x]["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0][
+            "src"
+        ]
+        skills[x]["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text()
+        skills[x]["owner"] = s_soup.find("li").select("a[title]")[0]["title"]
+        all_levels = s_soup.find(class_="skill-levels skill-details")
+        all_levels = all_levels.find_all(class_="tabbertab")
+        for i in range(1, len(all_levels) + 1):
+            skill_div = all_levels[i - 1]
+            skills[x]["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
+            y = True
+            for br in skill_div.find_all("br"):
+                if y is True:
+                    br.replace_with("\n")
+                    y = False
+                else:
+                    y = True
+                    continue
+            skills[x]["levels"][i]["desc"] = (
+                skill_div.find_all("div")[1].get_text().replace("\\'", "'")
+            )
+            sp_cost = skill_div.find_all(class_="dd-description")
+            skills[x]["levels"][i]["sp_cost"] = sp_cost[0].get_text()
+            skills[x]["levels"][i]["internal_name"] = f"{skills[x]['name']}_{i}"
         x += 1
-    return skills  # REMOVE VAR ASSIGNMENT LATER
+    x = 1
+    for skill in skills.keys():
+        skill = skills[skill]
+        i = 1
+        for skill_level in skill["levels"].values():
+            print(f"    Updating: {skill['name']}")
+            cursor = await db.execute(
+                "SELECT Name FROM Skills WHERE Internal_Name = ?",
+                (skill_level["internal_name"],),
+            )
+            result = await cursor.fetchone()
+            if result is None:
+                await db.execute(
+                    sql_skill_insert,
+                    (
+                        skills[x]["levels"][i]["internal_name"],
+                        skills[x]["name"],
+                        skills[x]["image"],
+                        skills[x]["owner"],
+                        i,
+                        skills[x]["levels"][i]["desc"],
+                        skills[x]["levels"][i]["sp_cost"],
+                        skills[x]["i_frames"],
+                    ),
+                )
+            else:
+                await db.execute(
+                    sql_skill_update,
+                    (
+                        skills[x]["image"],
+                        skills[x]["owner"],
+                        i,
+                        skills[x]["levels"][i]["desc"],
+                        skills[x]["levels"][i]["sp_cost"],
+                        skills[x]["i_frames"],
+                        skills[x]["levels"][i]["internal_name"],
+                    ),
+                )
+            await db.commit()
+            print("    Updated!")
+            i += 1
+        x += 1
 
 
 async def main():
