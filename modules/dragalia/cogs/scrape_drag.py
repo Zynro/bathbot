@@ -69,30 +69,33 @@ CREATE TABLE Skills(Name text PRIMARY KEY,
             Max_Level integer,
             SP_Cost integer,
             I_Frames text,
-            Owners, text
+            Owner, text
             )
 """
 
 sql_adven_insert = """
 INSERT INTO Adventurers
-(Name, Image, Internal_Name, Title, Max_HP, Max_STR, Type, Rarity, Element, Weapon, Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3, Availability, Release, Shortcuts)
+(Name, Image, Internal_Name, Title, Max_HP, Max_STR, Type, Rarity, Element, Weapon,
+    Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3,
+    Availability, Release, Shortcuts)
 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 """
 
 sql_adven_update = """
 UPDATE Adventurers
-SET Title=?, Image=?, Internal_Name=?, Max_HP=?, Max_STR=?, Type=?, Rarity=?, Element=?, Weapon=?,
-Max_CoAb=?, Skill_1=?, Skill_2=?, Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?, Shortcuts=?
+SET Title=?, Image=?, Internal_Name=?, Max_HP=?, Max_STR=?, Type=?, Rarity=?, Element=?,
+    Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
+    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?
 """
 
 sql_skill_insert = """
 INSERT INTO Skills
-(Name, Image, Internal_Name, Max_Level, SP_Cost, I_Frames, Owners)
+(Name, Image, Internal_Name, Max_Level, SP_Cost, I_Frames, Owner)
 """
 
 sql_skill_update = """
 UPDATE Skills
-SET Image=?, Internal_Name=?, Max_Level=?, SP_Cost=?, I_Frames=?, Owners=?)
+SET Image=?, Internal_Name=?, Max_Level=?, SP_Cost=?, I_Frames=?, Owner=?)
 """
 
 
@@ -108,22 +111,15 @@ async def fetch(session, URL):
         return await response.text()
 
 
-async def create_names(session, db):
+async def create_dbs(session, db):
     resp = await fetch(session, ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
         td_list = each.find_all("td")
 
         name = td_list[1].select("a[title]")[0]["title"]
+        image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
-
-        """rarity = td_list[2].find_all("div")[0].get_text()
-        element = td_list[3].find("div").get_text()
-        weapon = td_list[4].find("div").get_text()
-        a_type = unit_types[td_list[5].select("img[alt]")[0]["alt"]]
-        max_hp = td_list[6].get_text()
-        max_str = td_list[7].get_text()
-        print(f"Adding Character: {name}")"""
 
         cursor = await db.execute(
             "SELECT Name FROM Adventurers WHERE name = ?", (name,)
@@ -134,7 +130,7 @@ async def create_names(session, db):
                 sql_adven_insert,
                 (
                     name,
-                    "?",
+                    image,
                     "?",
                     "?",
                     "?",
@@ -154,7 +150,7 @@ async def create_names(session, db):
     await db.commit()
 
 
-async def update_db(session, db):
+async def update_advs(session, db):
     full_list = await db.execute("SELECT * FROM Adventurers")
     full_list = await full_list.fetchall()
     for row in full_list:
@@ -177,27 +173,9 @@ async def update_db(session, db):
         all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
         skill_1 = all_skills[0].find("th").select("a[title]")[0]["title"]
         skill_2 = all_skills[1].find("th").select("a[title]")[0]["title"]
-        skills = {
-            1: {"name": skill_1, "desc": "", "sp_cost": "", "i_frames": ""},
-            2: {"name": skill_2, "desc": "", "sp_cost": "", "i_frames": ""},
-        }
-        x = 1
-        for skill in skills.items():
-            print(f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
-            resp = await fetch(
-                session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
-            )
-            skill_soup = BeautifulSoup(resp, "html.parser")
-            all_levels = skill_soup.find(class_="skill-levels skill-details")
-            skill = all_levels.find(title="Lv3")
-            if not skill:
-                skill = all_levels.find(title="Lv2")
-            skills[x]["desc"] = skill.find_all("div")[1].get_text()
-            sp_cost = skill.find_all(class_="dd-description")
-            skills[x]["sp_cost"] = sp_cost[0].get_text()
-            divs = skill_soup.find_all(class_="dd-description")
-            skills[x]["i_frames"] = divs[-3].get_text()
-            x += 1
+        skills = await update_skills(
+            session, db, skill_1, skill_2
+        )  # REMOVE VAR ASSIGNMENT LATER
 
         max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
         value = skill_sections[1].find(title="Lv5").get_text()
@@ -217,6 +195,9 @@ async def update_db(session, db):
             abilities[x] = f"{ability_title}: {ability_value}"
             x += 1
 
+        release = divs[16].find(class_="dd-description").get_text()
+        avail = divs[17].find(class_="dd-description").get_text()
+
         print(
             f"""
             {name}
@@ -227,15 +208,56 @@ async def update_db(session, db):
             {max_str}
             {defense}
             {adv_type}
-            {skills[1]}
-            {skills[2]}
+            {skills[1]['name']}
+            {skills[1]['desc']}
+            {skills[1]['sp_cost']}
+            {skills[1]['i_frames']}
+            {skills[1]['owner']}
+            {skills[2]['name']}
+            {skills[2]['desc']}
+            {skills[2]['sp_cost']}
+            {skills[2]['i_frames']}
+            {skills[2]['owner']}
             {max_coab}
             {abilities[1]}
             {abilities[2]}
             {abilities[3]}
+            {release}
+            {avail}
             """
         )
         break
+
+
+async def update_skills(session, db, skill_1, skill_2):
+    skills = {
+        1: {"name": skill_1, "desc": "", "sp_cost": "", "i_frames": "", "owner": ""},
+        2: {"name": skill_2, "desc": "", "sp_cost": "", "i_frames": "", "owner": ""},
+    }
+    x = 1
+    for skill in skills.items():
+        resp = await fetch(session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
+        skill_soup = BeautifulSoup(resp, "html.parser")
+        all_levels = skill_soup.find(class_="skill-levels skill-details")
+        skill = all_levels.find(title="Lv3")
+        if not skill:
+            skill = all_levels.find(title="Lv2")
+        y = True
+        for br in skill.find_all("br"):
+            if y is True:
+                br.replace_with("\n")
+                y = False
+            else:
+                y = True
+                continue
+        skills[x]["desc"] = skill.find_all("div")[1].get_text().replace("\\'", "'")
+        sp_cost = skill.find_all(class_="dd-description")
+        skills[x]["sp_cost"] = sp_cost[0].get_text()
+        skill_divs = skill_soup.find_all(class_="dd-description")
+        skills[x]["i_frames"] = skill_divs[-3].get_text()
+        skills[x]["owner"] = skill_soup.find("li").select("a[title]")[0]["title"]
+        x += 1
+    return skills  # REMOVE VAR ASSIGNMENT LATER
 
 
 async def main():
@@ -245,8 +267,12 @@ async def main():
                 await db.execute("SELECT * from Adventurers")
             except sqlite3.OperationalError:
                 await db.execute(sql_make_adv_table)
-            await create_names(session, db)
-            await update_db(session, db)
+            try:
+                await db.execute("SELECT * from Skills")
+            except sqlite3.OperationalError:
+                await db.execute(sql_make_skills_table)
+            await create_dbs(session, db)
+            await update_advs(session, db)
 
 
 if __name__ == "__main__":
