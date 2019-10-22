@@ -1,4 +1,4 @@
-import aiosqlite as sql
+import aiosqlite as async_sql
 import sqlite3
 import asyncio
 import aiohttp
@@ -489,7 +489,7 @@ def parse_skill(resp, skill):
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        async with sql.connect(MASTER_DB) as db:
+        async with async_sql.connect(MASTER_DB) as db:
             try:
                 await db.execute("SELECT * from Adventurers")
             except sqlite3.OperationalError:
