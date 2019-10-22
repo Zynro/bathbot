@@ -114,9 +114,9 @@ def shorten_name(name):
     return f"{split[0][0].lower()}{split[1].lower()}"
 
 
-def fetch(session, URL):
+def fetch(URL):
     resp = requests.get(URL)
-    return resp.content
+    return resp.text
 
 
 async def async_fetch(session, URL):
@@ -209,6 +209,131 @@ def parse_adventurer(resp):
     return adven
 
 
+def update_advs(conn, force=False):
+    cursor = conn.cursor()
+    full_list = cursor.execute("SELECT * FROM Adventurers")
+    full_list = full_list.fetchall()
+    for row in full_list:
+        adven = {}
+        name = row[0]
+        update = False
+        for entry in row[:-1]:
+            if entry == "?" or not entry:
+                update = True
+            else:
+                pass
+        if not update and not force:
+            print(f"{name} already entered. Passing adventurer...")
+            continue
+        print(f"=====Updating: {name}=====")
+        resp = fetch(f"{MAIN_URL}{name}")
+        adven = parse_adventurer(resp)
+        cursor.execute(
+            sql_adven_update,
+            (
+                adven["title"],
+                adven["max_hp"],
+                adven["max_str"],
+                adven["defense"],
+                adven["adv_type"],
+                adven["rarity"],
+                adven["element"],
+                adven["weapon"],
+                adven["max_coab"],
+                adven["skill_1"],
+                adven["skill_2"],
+                adven["abilities"][1],
+                adven["abilities"][2],
+                adven["abilities"][3],
+                adven["avail"],
+                adven["obtained"],
+                adven["release"],
+                adven["name"],
+            ),
+        )
+        conn.commit()
+        print(f"++++Updated!++++")
+
+
+def update_skills(conn, db, force=False):
+    cursor = conn.cursor()
+    full_skill_list = cursor.execute("SELECT * FROM Skills")
+    full_skill_list = full_skill_list.fetchall()
+    full_adven_list = cursor.execute("SELECT * FROM Adventurers")
+    full_adven_list = full_adven_list.fetchall()
+    skill_update = {}
+    for row in full_skill_list:
+        name = row[1]
+        if not full_skill_list:
+            force = True
+            break
+        for entry in row[:-1]:
+            if not entry or entry == "?":
+                skill_update[name] = True
+                break
+            else:
+                skill_update[name] = False
+
+    for index in range(len(full_adven_list)):
+        skills = {
+            1: {"name": full_adven_list[index][12]},
+            2: {"name": full_adven_list[index][13]},
+        }
+        for x in skills.keys():
+            name = skills[x]["name"]
+            try:
+                update = skill_update[name]
+            except KeyError:
+                update = True
+            if not update and not force:
+                print(f"    {name} already entered. Passing skill...")
+                continue
+            resp = fetch(f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
+            skills[x].update(parse_skill(resp, skills[x]))
+            skill = skills[x]
+            for i in skill["levels"].keys():
+                print(
+                    (
+                        f"    Updating: {skill['owner']}'s "
+                        f"{skill['levels'][i]['internal_name']}"
+                    )
+                )
+                cursor = cursor.execute(
+                    "SELECT Name FROM Skills WHERE Internal_Name = ?",
+                    (skill["levels"][i]["internal_name"],),
+                )
+                result = cursor.fetchone()
+                if not result:
+                    cursor.execute(
+                        sql_skill_insert,
+                        (
+                            skills[x]["levels"][i]["internal_name"],
+                            skills[x]["name"],
+                            skills[x]["image"],
+                            skills[x]["owner"],
+                            i,
+                            skills[x]["levels"][i]["desc"],
+                            skills[x]["levels"][i]["sp_cost"],
+                            skills[x]["i_frames"],
+                        ),
+                    )
+                else:
+                    cursor.execute(
+                        sql_skill_update,
+                        (
+                            skills[x]["image"],
+                            skills[x]["owner"],
+                            i,
+                            skills[x]["levels"][i]["desc"],
+                            skills[x]["levels"][i]["sp_cost"],
+                            skills[x]["i_frames"],
+                            skills[x]["levels"][i]["internal_name"],
+                        ),
+                    )
+                cursor.commit()
+                print("    Updated!")
+
+
 async def aysnc_update_advs(session, db, force=False):
     full_list = await db.execute("SELECT * FROM Adventurers")
     full_list = await full_list.fetchall()
@@ -254,89 +379,53 @@ async def aysnc_update_advs(session, db, force=False):
         print(f"++++Updated!++++")
 
 
-def update_advs(conn, session, force=False):
-    cursor = conn.cursor()
-    full_list = cursor.execute("SELECT * FROM Adventurers")
-    full_list = full_list.fetchall()
-    for row in full_list:
-        adven = {}
-        name = row[0]
-        update = False
-        for entry in row[:-1]:
-            if entry == "?" or not entry:
-                update = True
-            else:
-                pass
-        if not update and not force:
-            print(f"{name} already entered. Passing adventurer...")
-            continue
-        print(f"=====Updating: {name}=====")
-        resp = fetch(session, f"{MAIN_URL}{name}")
-        adven = parse_adventurer(resp)
-        cursor.execute(
-            sql_adven_update,
-            (
-                adven["title"],
-                adven["max_hp"],
-                adven["max_str"],
-                adven["defense"],
-                adven["adv_type"],
-                adven["rarity"],
-                adven["element"],
-                adven["weapon"],
-                adven["max_coab"],
-                adven["skill_1"],
-                adven["skill_2"],
-                adven["abilities"][1],
-                adven["abilities"][2],
-                adven["abilities"][3],
-                adven["avail"],
-                adven["obtained"],
-                adven["release"],
-                adven["name"],
-            ),
-        )
-        conn.commit()
-        print(f"++++Updated!++++")
-
-
 async def async_update_skills(session, db, force=False):
-    full_list = await db.execute("SELECT * FROM Skills")
-    full_list = await full_list.fetchall()
-    if not full_list:
-        update = True
-    else:
-        for row in full_list:
-            update = True
-            for entry in row[:-1]:
-                if not entry or entry == "?":
-                    update = True
-                else:
-                    pass
-    full_list = await db.execute("SELECT * FROM Adventurers")
-    full_list = await full_list.fetchall()
-    for row in full_list:
-        skills = {1: {"name": row[12]}, 2: {"name": row[13]}}
-        for skill in skills.keys():
-            name = skills[skill]["name"]
+    full_skill_list = await db.execute("SELECT * FROM Skills")
+    full_skill_list = await full_skill_list.fetchall()
+    full_adven_list = await db.execute("SELECT * FROM Adventurers")
+    full_adven_list = await full_adven_list.fetchall()
+    skill_update = {}
+    for row in full_skill_list:
+        name = row[1]
+        if not full_skill_list:
+            force = True
+            break
+        for entry in row[:-1]:
+            if not entry or entry == "?":
+                skill_update[name] = True
+                break
+            else:
+                skill_update[name] = False
+
+    for index in range(len(full_adven_list)):
+        skills = {
+            1: {"name": full_adven_list[index][12]},
+            2: {"name": full_adven_list[index][13]},
+        }
+        for x in skills.keys():
+            name = skills[x]["name"]
+            try:
+                update = skill_update[name]
+            except KeyError:
+                update = True
             if not update and not force:
                 print(f"    {name} already entered. Passing skill...")
                 continue
             resp = await async_fetch(
-                session, f"{MAIN_URL}{skills[skill]['name'].replace(' ', '_')}"
+                session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
             )
-            skills[skill].update(parse_skills(resp, skills[skill]))
-        x = 1
-        for skill in skills.keys():
-            skill = skills[skill]
-            i = 1
-            for skill_level in skill["levels"].values():
+            skills[x].update(parse_skill(resp, skills[x]))
+            skill = skills[x]
+            for i in skill["levels"].keys():
                 print(
-                    f"    Updating: {skill['owner']}'s {skill_level['internal_name']}"
+                    (
+                        f"    Updating: {skill['owner']}'s "
+                        f"{skill['levels'][i]['internal_name']}"
+                    )
                 )
                 cursor = await db.execute(
                     "SELECT Name FROM Skills WHERE Internal_Name = ?",
-                    (skill_level["internal_name"],),
+                    (skill["levels"][i]["internal_name"],),
                 )
                 result = await cursor.fetchone()
                 if not result:
@@ -368,11 +457,9 @@ async def async_update_skills(session, db, force=False):
                     )
                 await db.commit()
                 print("    Updated!")
-                i += 1
-            x += 1
 
 
-def parse_skills(resp, skill):
+def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
     skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text()
