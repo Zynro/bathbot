@@ -4,6 +4,7 @@ import asyncio
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
+import pprint
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
@@ -498,9 +499,16 @@ async def main():
                 await db.execute("SELECT * from Skills")
             except sqlite3.OperationalError:
                 await db.execute(sql_make_skills_table)
-            await create_dbs(session, db)
-            await aysnc_update_advs(session, db)
-            await async_update_skills(session, db)
+            # await create_dbs(session, db)
+            # await aysnc_update_advs(session, db)
+            # await async_update_skills(session, db)
+
+            pp = pprint.PrettyPrinter(indent=2)
+            db.row_factory = async_sql.Row
+            result = await db.execute("SELECT * FROM Adventurers")
+            f = await result.fetchall()
+            for each in f:
+                print(each["image"])
 
 
 if __name__ == "__main__":

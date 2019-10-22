@@ -32,14 +32,29 @@ def add_number_suffix(number):
 
 
 class Adventurer:
-    def __init__(self, character_dict):
-        self.name = character_dict["name"]
-        internal_name = character_dict["internal_name"]
-        self.rarity = character_dict["rarity"]
-        self.element = character_dict["element"]
-        self.weapon = character_dict["weapon"]
-        self.str = character_dict["str"]
-        self.wyrmprints = character_dict["wyrmprints"]
+    def __init__(self, adven_db):
+        self.name = adven_db["name"]
+        self.image = adven_db["image"]
+        self.internal_name = adven_db["internal_name"]
+        self.title = adven_db["title"]
+        self.max_hp = adven_db["max_hp"]
+        self.max_str = adven_db["max_str"]
+        self.defense = adven_db["defense"]
+        self.unit_type = adven_db["type"]
+        self.rarity = adven_db["rarity"]
+        self.element = adven_db["element"]
+        self.weapon = adven_db["weapon"]
+        self.max_coab = adven_db["max_coab"]
+        self.skill_1 = adven_db["skill_1"]
+        self.skill_2 = adven_db["skill_2"]
+        self.ability_1 = adven_db["ability_1"]
+        self.ability_2 = adven_db["ability_2"]
+        self.ability_3 = adven_db["ability_3"]
+        self.availability = adven_db["availability"]
+        self.obtained = adven_db["obtained"]
+        self.release = adven_db["release"]
+
+        self.wyrmprints = adven_db["wyrmprints"]
         if "dps" in character_dict["dragon"]:
             split = character_dict["dragon"].split(";")
             dps_range = split[1].lower().replace("dpsrange:", "DPS Range: ")
