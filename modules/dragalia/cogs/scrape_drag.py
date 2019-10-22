@@ -3,7 +3,6 @@ import sqlite3
 import asyncio
 import aiohttp
 from bs4 import BeautifulSoup
-import pprint
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
@@ -58,6 +57,7 @@ CREATE TABLE Adventurers(Name text PRIMARY KEY,
             Ability_2 text,
             Ability_3 text,
             Availability text,
+            Obtained text,
             Release text,
             Shortcuts text
             )
@@ -79,8 +79,8 @@ sql_adven_insert = """
 INSERT INTO Adventurers
 (Name, Image, Internal_Name, Title, Max_HP, Max_STR, Defense, Type, Rarity, Element,
     Weapon, Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3,
-    Availability, Release, Shortcuts)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    Availability, Obtained, Release, Shortcuts)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 """
 
 sql_skill_insert = """
@@ -93,7 +93,7 @@ sql_adven_update = """
 UPDATE Adventurers
 SET Title=?, Max_HP=?, Max_STR=?, Defense=?, Type=?, Rarity=?, Element=?,
     Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
-    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Release=?
+    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Obtained=?, Release=?
 WHERE Name=?
 """
 
@@ -154,16 +154,27 @@ async def create_dbs(session, db):
                     "?",
                     "?",
                     "?",
+                    "?",
                 ),
             )
     await db.commit()
 
 
-async def update_advs(session, db):
+async def update_advs(session, db, force=False):
     full_list = await db.execute("SELECT * FROM Adventurers")
     full_list = await full_list.fetchall()
     for row in full_list:
         name = row[0]
+        update = False
+        for entry in row[:-1]:
+            if entry == "?" or not entry:
+                update = True
+            else:
+                pass
+        if not update and not force:
+            print(f"{name} already entered. Passing adventurer...")
+            continue
+        print(f"=====Updating: {name}=====")
         resp = await fetch(session, f"{MAIN_URL}{name}")
         soup = BeautifulSoup(resp, "html.parser")
         p = soup.find(class_="panel-heading")
@@ -183,7 +194,7 @@ async def update_advs(session, db):
         all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
         skill_1 = all_skills[0].find("th").select("a[title]")[0]["title"]
         skill_2 = all_skills[1].find("th").select("a[title]")[0]["title"]
-        await update_skills(session, db, skill_1, skill_2)
+        await update_skills(session, db, skill_1, skill_2, force)
 
         max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
         value = skill_sections[1].find(title="Lv5").get_text()
@@ -199,9 +210,9 @@ async def update_advs(session, db):
             abilities[x] = f"{ability_title}: {ability_value}"
             x += 1
 
-        release = divs[16].find(class_="dd-description").get_text()
-        avail = divs[17].find(class_="dd-description").get_text()
-        print(f"=====Updating: {name}=====")
+        obtained = divs[-3].find(class_="dd-description").get_text()
+        release = divs[-2].find(class_="dd-description").get_text()
+        avail = divs[-1].find(class_="dd-description").get_text()
 
         await db.execute(
             sql_adven_update,
@@ -221,6 +232,7 @@ async def update_advs(session, db):
                 abilities[2],
                 abilities[3],
                 avail,
+                obtained,
                 release,
                 name,
             ),
@@ -229,13 +241,30 @@ async def update_advs(session, db):
         print(f"++++Updated!++++")
 
 
-async def update_skills(session, db, skill_1, skill_2):
+async def update_skills(session, db, skill_1, skill_2, force=False):
+    full_list = await db.execute("SELECT * FROM Skills")
+    full_list = await full_list.fetchall()
+    if not full_list:
+        update = True
+    else:
+        for row in full_list:
+            name = row[0]
+            for row in full_list:
+                update = True
+                for entry in row[:-1]:
+                    if not entry or entry == "?":
+                        update = True
+                    else:
+                        pass
     skills = {
         1: {"name": skill_1, "i_frames": "", "owner": "", "levels": {}},
         2: {"name": skill_2, "i_frames": "", "owner": "", "levels": {}},
     }
     x = 1
     for skill in skills.items():
+        if not update and not force:
+            print(f"    {name} already entered. Passing skill...")
+            continue
         resp = await fetch(session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
         s_soup = BeautifulSoup(resp, "html.parser")
         skills[x]["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0][
@@ -268,13 +297,13 @@ async def update_skills(session, db, skill_1, skill_2):
         skill = skills[skill]
         i = 1
         for skill_level in skill["levels"].values():
-            print(f"    Updating: {skill['name']}")
+            print(f"    Updating: {skill_level['internal_name']}")
             cursor = await db.execute(
                 "SELECT Name FROM Skills WHERE Internal_Name = ?",
                 (skill_level["internal_name"],),
             )
             result = await cursor.fetchone()
-            if result is None:
+            if not result:
                 await db.execute(
                     sql_skill_insert,
                     (
