@@ -210,6 +210,34 @@ def parse_adventurer(resp):
     return adven
 
 
+def parse_skill(resp, skill):
+    s_soup = BeautifulSoup(resp, "html.parser")
+    skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
+    skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text()
+    skill["owner"] = s_soup.find("li").select("a[title]")[0]["title"]
+    all_levels = s_soup.find(class_="skill-levels skill-details")
+    all_levels = all_levels.find_all(class_="tabbertab")
+    skill["levels"] = {}
+    for i in range(1, len(all_levels) + 1):
+        skill_div = all_levels[i - 1]
+        skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
+        y = True
+        for br in skill_div.find_all("br"):
+            if y is True:
+                br.replace_with("\n")
+                y = False
+            else:
+                y = True
+                continue
+        skill["levels"][i]["desc"] = (
+            skill_div.find_all("div")[1].get_text().replace("\\'", "'")
+        )
+        sp_cost = skill_div.find_all(class_="dd-description")
+        skill["levels"][i]["sp_cost"] = sp_cost[0].get_text()
+        skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
+    return skill
+
+
 def update_advs(conn, force=False):
     cursor = conn.cursor()
     full_list = cursor.execute("SELECT * FROM Adventurers")
@@ -458,34 +486,6 @@ async def async_update_skills(session, db, force=False):
                     )
                 await db.commit()
                 print("    Updated!")
-
-
-def parse_skill(resp, skill):
-    s_soup = BeautifulSoup(resp, "html.parser")
-    skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
-    skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text()
-    skill["owner"] = s_soup.find("li").select("a[title]")[0]["title"]
-    all_levels = s_soup.find(class_="skill-levels skill-details")
-    all_levels = all_levels.find_all(class_="tabbertab")
-    skill["levels"] = {}
-    for i in range(1, len(all_levels) + 1):
-        skill_div = all_levels[i - 1]
-        skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
-        y = True
-        for br in skill_div.find_all("br"):
-            if y is True:
-                br.replace_with("\n")
-                y = False
-            else:
-                y = True
-                continue
-        skill["levels"][i]["desc"] = (
-            skill_div.find_all("div")[1].get_text().replace("\\'", "'")
-        )
-        sp_cost = skill_div.find_all(class_="dd-description")
-        skill["levels"][i]["sp_cost"] = sp_cost[0].get_text()
-        skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
-    return skill
 
 
 async def main():

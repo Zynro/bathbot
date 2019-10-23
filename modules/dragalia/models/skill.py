@@ -1,18 +1,17 @@
 class Skill:
-    def __init__(self, skill_db):
-        self.internal_name = skill_db["internal_name"]
-        self.name = skill_db["name"]
-        self.image = skill_db["image"]
-        self.owner = skill_db["owner"]
-        self.i_frames = skill_db["i_frames"]
+    def __init__(self, skill_list):
+        skill = skill_list[0]
+        self.internal_name = skill["internal_name"]
+        self.name = skill["name"]
+        self.image = skill["image"]
+        self.owner = skill["owner"]
+        self.i_frames = skill["i_frames"]
         self.levels = {}
-        for level in skill_db["levels"]:
+        for row in skill_list:
+            level = skill["level"]
             self.levels[level] = {}
-            self.levels[level]["desc"] = level["description"]
-            self.levels[level]["sp_cost"] = level["sp_cost"]
+            self.levels[level]["desc"] = skill["description"]
+            self.levels[level]["sp_cost"] = skill["sp_cost"]
 
-    def get_title(self):
+    def __call__(self):
         return self.name
-
-    def get_stats(self):
-        stats = f""
