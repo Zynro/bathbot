@@ -125,7 +125,7 @@ async def async_fetch(session, URL):
         return await response.text()
 
 
-async def create_dbs(session, db):
+async def fill_names(session, db):
     resp = await async_fetch(session, ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
@@ -488,30 +488,21 @@ async def async_update_skills(session, db, force=False):
                 print("    Updated!")
 
 
-async def main():
-    async with aiohttp.ClientSession() as session:
-        async with async_sql.connect(MASTER_DB) as db:
-            try:
-                await db.execute("SELECT * from Adventurers")
-            except sqlite3.OperationalError:
-                await db.execute(sql_make_adv_table)
-            try:
-                await db.execute("SELECT * from Skills")
-            except sqlite3.OperationalError:
-                await db.execute(sql_make_skills_table)
-            # await create_dbs(session, db)
-            # await aysnc_update_advs(session, db)
-            # await async_update_skills(session, db)
+class Update:
+    def __init__(self, db_file):
+        self.db_file = db_file
 
-            pp = pprint.PrettyPrinter(indent=2)
-            db.row_factory = async_sql.Row
-            result = await db.execute("SELECT * FROM Adventurers")
-            f = await result.fetchall()
-            for each in f:
-                print(each["image"])
-
-
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    loop.close()
+    async def update(self):
+        async with aiohttp.ClientSession() as session:
+            async with async_sql.connect(self.db_file) as db:
+                try:
+                    await db.execute("SELECT * from Adventurers")
+                except sqlite3.OperationalError:
+                    await db.execute(sql_make_adv_table)
+                try:
+                    await db.execute("SELECT * from Skills")
+                except sqlite3.OperationalError:
+                    await db.execute(sql_make_skills_table)
+                await fill_names(session, db)
+                await aysnc_update_advs(session, db)
+                await async_update_skills(session, db)

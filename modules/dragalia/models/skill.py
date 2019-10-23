@@ -1,11 +1,9 @@
 class Skill:
     def __init__(self, skill_list):
-        skill = skill_list[0]
-        self.internal_name = skill["internal_name"]
-        self.name = skill["name"]
-        self.image = skill["image"]
-        self.owner = skill["owner"]
-        self.i_frames = skill["i_frames"]
+        for k, v in skill_list[0]:
+            if k == "levels":
+                continue
+            setattr(self, k, skill_list[0][v])
         self.levels = {}
         for row in skill_list:
             level = skill["level"]

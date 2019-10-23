@@ -4,8 +4,14 @@ import random
 import csv
 import requests
 import aiohttp
+import aiosqlite
+import sqlite3
 from fuzzywuzzy import fuzz
 from modules.dragalia.models.adventurer import Adventurer
+from modules.dragalia.models.skill import Skill
+from modules.dragalia.models.scrape_update import Update
+
+MASTER_DB = "master.db"
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -13,14 +19,12 @@ DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
 dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
 dragalia_elements_images = {
-    "flame": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/flame.png"),
-    "water": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/water.png"),
-    "wind": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/wind.png"),
-    "light": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/light.png"),
-    "shadow": ("https://b1ueb1ues.github.io//dl-sim/" "pic/element/shadow.png"),
-    "all": (
-        "https://icon-library.net/images/" "muscle-icon-png/muscle-icon-png-24.jpg"
-    ),
+    "flame": "https://b1ueb1ues.github.io//dl-sim/pic/element/flame.png",
+    "water": "https://b1ueb1ues.github.io//dl-sim/pic/element/water.png",
+    "wind": "https://b1ueb1ues.github.io//dl-sim/pic/element/wind.png",
+    "light": "https://b1ueb1ues.github.io//dl-sim/pic/element/light.png",
+    "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
+    "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
 }
 
 
@@ -30,14 +34,6 @@ def generate_rand_color():
 
 async def lev_dist_similar(a, b):
     return fuzz.partial_ratio(a.lower(), b.lower())
-
-
-def remove_brackets(input_str):
-    return input_str.replace("[", "").replace("]", "")
-
-
-async def async_remove_brackets(input_str):
-    return input_str.replace("[", "").replace("]", "")
 
 
 def strip_all(input_str):
@@ -59,111 +55,54 @@ class Dragalia(commands.Cog):
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
-    def get_src_csv(self, path):
-        response_dict = {}
-        response_dict["180"] = requests.get(DPS_URL_180).text
-        response_dict["120"] = requests.get(DPS_URL_120).text
-        response_dict["60"] = requests.get(DPS_URL_60).text
-        for parse in response_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                response_dict[parse] = response_dict[parse].split("\n")
-                for row in response_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        row[1]
-                    except IndexError:
-                        continue
-                    writer.writerow(row)
-        return response_dict
+    def create_names(self):
+        with sqlite3.connect(MASTER_DB) as conn:
+            c = conn.cursor()
+            try:
+                c.execute("SELECT * from Adventurers")
+            except sqlite3.OperationalError:
+                Adventurer.scrape(c)
+            try:
+                c.execute("SELECT * from Skills")
+            except sqlite3.OperationalError:
+                Skill.scrape(c)
+            return
+            c.row_factory = sqlite3.Row
+            query = c.execute("SELECT Internal_Name FROM Adventurers")
+            results = query.fetchall()
+        for each in results:
+            adven_classes = {}
+            for each in results:
+                adven_classes[each["internal_name"]] = {}
+        return adven_classes
 
-    async def async_get_src_csv(self, path):
-        response_dict = {}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(DPS_URL_180) as response:
-                response_dict["180"] = await response.text()
-            async with session.get(DPS_URL_120) as response:
-                response_dict["120"] = await response.text()
-            async with session.get(DPS_URL_60) as response:
-                response_dict["60"] = await response.text()
-        for parse in response_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                response_dict[parse] = response_dict[parse].split("\n")
-                for row in response_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        row[1]
-                    except IndexError:
-                        continue
-                    writer.writerow(row)
-        return response_dict
+    async def async_create_names(self):
+        async with aiosqlite.connect(MASTER_DB) as db:
+            db.row_factory = aiosqlite.Row
+            query = await db.execute("SELECT Internal_Name FROM Adventurers")
+            results = query.fetchall()
+        adven_classes = {}
+        for each in results:
+            adven_classes[each["internal_name"]] = None
+        return adven_classes
 
-    def build_adven_db(self, response_dict):
-        full_char_dict = {}
-        damage = {}
-        for parse_value in response_dict.keys():
-            del response_dict[parse_value][0]
-            parse = response_dict[parse_value]
-            for row in parse:
-                row = row.split(",")
-                # print(row)
-                try:
-                    row[1]
-                except IndexError:
-                    continue
-                if "_c_" in row[1]:
-                    continue
-                if "Fleur" in row[1]:
-                    del row[9]
-                internal_name = row[1]
-                if "_" in row[1]:
-                    name = row[1].replace("_", "").lower().strip()
-                    alt = True
-                else:
-                    name = row[1].lower().strip()
-                    alt = False
-                if parse_value == "180":
-                    amulets = row[6].split("][")
-                    wyrmprints = amulets[0].split("+")
-                    wyrmprints = remove_brackets(" + ".join(wyrmprints))
-                    wyrmprints = wyrmprints.replace("_", " ")
-                    dragon = remove_brackets(amulets[1])
-                    full_char_dict[name] = {
-                        "name": name,
-                        "internal_name": internal_name,
-                        "rarity": row[2],
-                        "element": row[3],
-                        "weapon": row[4],
-                        "str": row[5],
-                        "wyrmprints": wyrmprints,
-                        "dragon": dragon,
-                        "alt": alt,
-                    }
-                    full_char_dict[name]["parse"] = {}
-                damage = {}
-                damage_list = row[9:]
-                damage["dps"] = row[0]
-                damage["types"] = {}
-                for damage_type in damage_list:
-                    damage_type = damage_type.split(":")
-                    damage_name = damage_type[0].replace("_", " ").title()
-                    damage["types"][damage_name] = damage_type[1]
-                full_char_dict[name]["parse"][parse_value] = {}
-                full_char_dict[name]["parse"][parse_value]["damage"] = damage
-                (full_char_dict[name]["parse"][parse_value]["condition"]) = (
-                    row[7].replace("<", "").replace(">", ""),
-                )
-                full_char_dict[name]["parse"][parse_value]["comment"] = row[8]
-        return full_char_dict
+    def create_classes(self, adven_classes):
+        with sqlite3.connect(MASTER_DB) as conn:
+            c = conn.cursor()
+            c.row_factory = sqlite3.Row
+            query = c.execute("SELECT * FROM Adventurers")
+            for i_name in adven_classes.keys():
+                adven_classes[i_name] = Adventurer(query.fetchone())
+        return adven_classes
 
-    def create_classes(self, input_db):
-        return {
-            character.lower(): Adventurer(input_db[character])
-            for character in input_db.keys()
-        }
+    # stop using when db starts getting large
+    async def async_create_classes(self, adven_classes):
+        async with aiosqlite.connect(MASTER_DB) as db:
+            db.row_factory = aiosqlite.Row
+            query = await db.execute("SELECT * FROM Adventurers")
+            for i_name in adven_classes.keys():
+                adven_classes[i_name] = Adventurer(query.fetchone())
+        return adven_classes
 
     def create_rankings(self):
         rankings_db = {}
