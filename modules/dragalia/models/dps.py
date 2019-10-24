@@ -42,109 +42,6 @@ def add_number_suffix(number):
         return str(number) + "th"
 
 
-def get_src_csv(path):
-    response_dict = {}
-    response_dict["180"] = requests.get(DPS_URL_180).text
-    response_dict["120"] = requests.get(DPS_URL_120).text
-    response_dict["60"] = requests.get(DPS_URL_60).text
-    for parse in response_dict.keys():
-        path_to_file = f"{path}_{parse}.csv"
-        with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            response_dict[parse] = response_dict[parse].split("\n")
-            for row in response_dict[parse]:
-                row = row.split(",")
-                try:
-                    row[1]
-                except IndexError:
-                    continue
-                writer.writerow(row)
-    return response_dict
-
-
-async def async_get_src_csv(cls, path):
-    response_dict = {}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(DPS_URL_180) as response:
-            response_dict["180"] = await response.text()
-        async with session.get(DPS_URL_120) as response:
-            response_dict["120"] = await response.text()
-        async with session.get(DPS_URL_60) as response:
-            response_dict["60"] = await response.text()
-    for parse in response_dict.keys():
-        path_to_file = f"{path}_{parse}.csv"
-        with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            response_dict[parse] = response_dict[parse].split("\n")
-            for row in response_dict[parse]:
-                row = row.split(",")
-                try:
-                    row[1]
-                except IndexError:
-                    continue
-                writer.writerow(row)
-    return response_dict
-
-
-def build_adven_db(response_dict):
-    full_char_dict = {}
-    damage = {}
-    for parse_value in response_dict.keys():
-        del response_dict[parse_value][0]
-        parse = response_dict[parse_value]
-        for row in parse:
-            row = row.split(",")
-            # print(row)
-            try:
-                row[1]
-            except IndexError:
-                continue
-            if "_c_" in row[1]:
-                continue
-            if "Fleur" in row[1]:
-                del row[9]
-            internal_name = row[1]
-            if "_" in row[1]:
-                name = row[1].replace("_", "").lower().strip()
-                alt = True
-            else:
-                name = row[1].lower().strip()
-                alt = False
-            if parse_value == "180":
-                amulets = row[6].split("][")
-                wyrmprints = amulets[0].split("+")
-                wyrmprints = remove_brackets(" + ".join(wyrmprints))
-                wyrmprints = wyrmprints.replace("_", " ")
-                dragon = remove_brackets(amulets[1])
-                full_char_dict[name] = {
-                    "name": name,
-                    "internal_name": internal_name,
-                    "rarity": row[2],
-                    "element": row[3],
-                    "weapon": row[4],
-                    "str": row[5],
-                    "wyrmprints": wyrmprints,
-                    "dragon": dragon,
-                    "alt": alt,
-                }
-                full_char_dict[name]["parse"] = {}
-            damage = {}
-            damage_list = row[9:]
-            damage["dps"] = row[0]
-            damage["types"] = {}
-            for damage_type in damage_list:
-                damage_type = damage_type.split(":")
-                damage_name = damage_type[0].replace("_", " ").title()
-                damage["types"][damage_name] = damage_type[1]
-            full_char_dict[name]["parse"][parse_value] = {}
-            full_char_dict[name]["parse"][parse_value]["damage"] = damage
-            (full_char_dict[name]["parse"][parse_value]["condition"]) = (
-                row[7].replace("<", "").replace(">", ""),
-            )
-            full_char_dict[name]["parse"][parse_value]["comment"] = row[8]
-    return full_char_dict
-
-
 class DPS:
     def __init__(self, adventurer, dps_dict):
         self.owner = adventurer
@@ -204,3 +101,106 @@ class DPS:
         )
         embed.set_author(name="Adventurer:")
         return embed
+
+    @classmethod
+    def get_src_csv(cls, path):
+        response_dict = {}
+        response_dict["180"] = requests.get(DPS_URL_180).text
+        response_dict["120"] = requests.get(DPS_URL_120).text
+        response_dict["60"] = requests.get(DPS_URL_60).text
+        for parse in response_dict.keys():
+            path_to_file = f"{path}_{parse}.csv"
+            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                response_dict[parse] = response_dict[parse].split("\n")
+                for row in response_dict[parse]:
+                    row = row.split(",")
+                    try:
+                        row[1]
+                    except IndexError:
+                        continue
+                    writer.writerow(row)
+        return response_dict
+
+    @classmethod
+    async def async_get_src_csv(cls, path):
+        response_dict = {}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(DPS_URL_180) as response:
+                response_dict["180"] = await response.text()
+            async with session.get(DPS_URL_120) as response:
+                response_dict["120"] = await response.text()
+            async with session.get(DPS_URL_60) as response:
+                response_dict["60"] = await response.text()
+        for parse in response_dict.keys():
+            path_to_file = f"{path}_{parse}.csv"
+            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
+                writer = csv.writer(file)
+                response_dict[parse] = response_dict[parse].split("\n")
+                for row in response_dict[parse]:
+                    row = row.split(",")
+                    try:
+                        row[1] = row[1].replace("_", "").lower().strip()
+                    except IndexError:
+                        continue
+                    writer.writerow(row)
+        return response_dict
+
+    @classmethod
+    def build_adven_db(response_dict):
+        all_char_dps = {}
+        damage = {}
+        for parse_value in response_dict.keys():
+            del response_dict[parse_value][0]
+            parse = response_dict[parse_value]
+            for row in parse:
+                row = row.split(",")
+                # print(row)
+                try:
+                    row[1]
+                except IndexError:
+                    continue
+                if "_c_" in row[1]:
+                    continue
+                if "Fleur" in row[1]:
+                    del row[9]
+                internal_name = row[1]
+                if "_" in row[1]:
+                    name = row[1].replace("_", "").lower().strip()
+                    alt = True
+                else:
+                    name = row[1].lower().strip()
+                    alt = False
+                if parse_value == "180":
+                    amulets = row[6].split("][")
+                    wyrmprints = amulets[0].split("+")
+                    wyrmprints = remove_brackets(" + ".join(wyrmprints))
+                    wyrmprints = wyrmprints.replace("_", " ")
+                    dragon = remove_brackets(amulets[1])
+                    all_char_dps[name] = {
+                        "name": name,
+                        "internal_name": internal_name,
+                        "rarity": row[2],
+                        "element": row[3],
+                        "weapon": row[4],
+                        "str": row[5],
+                        "wyrmprints": wyrmprints,
+                        "dragon": dragon,
+                        "alt": alt,
+                    }
+                    all_char_dps[name]["parse"] = {}
+                damage = {}
+                damage_list = row[9:]
+                damage["dps"] = row[0]
+                damage["types"] = {}
+                for damage_type in damage_list:
+                    damage_type = damage_type.split(":")
+                    damage_name = damage_type[0].replace("_", " ").title()
+                    damage["types"][damage_name] = damage_type[1]
+                all_char_dps[name]["parse"][parse_value] = {}
+                all_char_dps[name]["parse"][parse_value]["damage"] = damage
+                (all_char_dps[name]["parse"][parse_value]["condition"]) = (
+                    row[7].replace("<", "").replace(">", ""),
+                )
+                all_char_dps[name]["parse"][parse_value]["comment"] = row[8]
+        return all_char_dps
