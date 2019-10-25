@@ -92,7 +92,12 @@ class Dragalia(commands.Cog):
             c.row_factory = sqlite3.Row
             query = c.execute("SELECT * FROM Adventurers")
             for i_name in adven_classes.keys():
-                adven_classes[i_name] = Adventurer(query.fetchone())
+                adven = query.fetchone()
+                skills = {adven["skill_1"]: {}, adven["skill_2"]: {}}
+                for skill in skills.keys():
+                    sk_query = c.execute("SELECT * FROM Skills WHERE name=?", (skill))
+                    skills[skill] = sk_query.fetchall()
+                adven_classes[i_name] = Adventurer(adven, skills)
         return adven_classes
 
     # stop using when db starts getting large
@@ -101,7 +106,14 @@ class Dragalia(commands.Cog):
             db.row_factory = aiosqlite.Row
             query = await db.execute("SELECT * FROM Adventurers")
             for i_name in adven_classes.keys():
-                adven_classes[i_name] = Adventurer(query.fetchone())
+                adven = query.fetchone()
+                skills = {adven["skill_1"]: {}, adven["skill_2"]: {}}
+                for skill in skills.keys():
+                    sk_query = await db.execute(
+                        "SELECT * FROM Skills WHERE name=?", (skill)
+                    )
+                    skills[skill] = sk_query.fetchall()
+                adven_classes[i_name] = Adventurer(adven, skills)
         return adven_classes
 
     def create_rankings(self):
