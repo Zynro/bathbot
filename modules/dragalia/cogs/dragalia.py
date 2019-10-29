@@ -43,8 +43,10 @@ def strip_all(input_str):
 class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.adven_db = self.create_names()
+
         self.path_to_csv_file = (
-            f'{self.bot.modules["dragalia"].path}/' "lists/optimal_dps_data"
+            f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
         )
         char_dict = self.build_adven_db(self.get_src_csv(self.path_to_csv_file))
         self.adventurer_db = self.create_classes(char_dict)
@@ -59,11 +61,11 @@ class Dragalia(commands.Cog):
         with sqlite3.connect(MASTER_DB) as conn:
             c = conn.cursor()
             try:
-                c.execute("SELECT * from Adventurers")
+                c.execute("SELECT * from Adventurers LIMIT 1")
             except sqlite3.OperationalError:
                 Adventurer.scrape(c)
             try:
-                c.execute("SELECT * from Skills")
+                c.execute("SELECT * from Skills LIMIT 1")
             except sqlite3.OperationalError:
                 Skill.scrape(c)
             return
@@ -83,9 +85,11 @@ class Dragalia(commands.Cog):
             results = query.fetchall()
         adven_classes = {}
         for each in results:
-            adven_classes[each["internal_name"]] = None
+            adven_classes[each["internal_name"]] = {}
         return adven_classes
 
+    """
+    # Not used, plan is to cache instead.
     def create_classes(self, adven_classes):
         with sqlite3.connect(MASTER_DB) as conn:
             c = conn.cursor()
@@ -99,7 +103,10 @@ class Dragalia(commands.Cog):
                     skills[skill] = sk_query.fetchall()
                 adven_classes[i_name] = Adventurer(adven, skills)
         return adven_classes
+    """
 
+    """
+    # Not used, plan is to cache instead.
     # stop using when db starts getting large
     async def async_create_classes(self, adven_classes):
         async with aiosqlite.connect(MASTER_DB) as db:
@@ -115,6 +122,26 @@ class Dragalia(commands.Cog):
                     skills[skill] = sk_query.fetchall()
                 adven_classes[i_name] = Adventurer(adven, skills)
         return adven_classes
+    """
+
+    async def query_adv(self, query):
+        try:
+            adventurer = self.adven_classes(query)
+        except KeyError:
+            async with aiosqlite.connect(MASTER_DB) as db:
+                db.row_factory = aiosqlite.Row
+                adven_row = await db.execute(
+                    "SELECT * FROM Adventurers WHERE Internal_Name=?", query
+                )
+                internal_name = adven_row["internal_name"]
+                self.adven_classes[internal_name] = {}
+                for k in adven_row.keys():
+                    if k == "Internal_Name":
+                        continue
+                    self.adven_classes[internal_name] = Adventurer(adven_row)
+                adventurer = self.adven_classes[internal_name]
+        finally:
+            return adventurer
 
     def create_rankings(self):
         rankings_db = {}

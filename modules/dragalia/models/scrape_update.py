@@ -43,9 +43,9 @@ rarities = {
 }
 
 sql_make_adv_table = """
-CREATE TABLE Adventurers(Name text PRIMARY KEY,
+CREATE TABLE Adventurers(Name text,
             Image text,
-            Internal_Name text,
+            Internal_Name text PRIMARY KEY,
             Title text,
             Max_HP integer,
             Max_STR integer,
