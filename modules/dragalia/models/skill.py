@@ -1,15 +1,13 @@
 class Skill:
     def __init__(self, skill_list):
-        for k, v in skill_list[0]:
-            if k == "levels":
+        for k in skill_list[0].keys():
+            if k == "Level":
                 continue
-            setattr(self, k, skill_list[0][v])
+            setattr(self, k, skill_list[0][k])
         self.levels = {}
         for row in skill_list:
-            level = skill["level"]
-            self.levels[level] = {}
-            self.levels[level]["desc"] = skill["description"]
-            self.levels[level]["sp_cost"] = skill["sp_cost"]
+            level = row["Level"]
+            self.levels[level] = {"desc": row["description"], "sp_cost": row["sp_cost"]}
 
     def __call__(self):
         return self.name

@@ -107,7 +107,6 @@ class Dragalia(commands.Cog):
 
     """
     # Not used, plan is to cache instead.
-    # stop using when db starts getting large
     async def async_create_classes(self, adven_classes):
         async with aiosqlite.connect(MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
@@ -126,20 +125,22 @@ class Dragalia(commands.Cog):
 
     async def query_adv(self, query):
         try:
-            adventurer = self.adven_classes(query)
+            adventurer = self.adven_classes[query]
         except KeyError:
             async with aiosqlite.connect(MASTER_DB) as db:
                 db.row_factory = aiosqlite.Row
                 adven_row = await db.execute(
-                    "SELECT * FROM Adventurers WHERE Internal_Name=?", query
+                    "SELECT * FROM Adventurers WHERE Internal_Name=?", (query)
                 )
                 internal_name = adven_row["internal_name"]
-                self.adven_classes[internal_name] = {}
-                for k in adven_row.keys():
-                    if k == "Internal_Name":
-                        continue
-                    self.adven_classes[internal_name] = Adventurer(adven_row)
-                adventurer = self.adven_classes[internal_name]
+                skills = await db.execute(
+                    "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"])
+                )
+                # Add DPS_dcit pass to adventurer class. load entire csv, 1kb too much?
+                dps_dict = None
+                adventurer = self.adven_classes[internal_name] = Adventurer(
+                    adven_row, skills
+                )
         finally:
             return adventurer
 
