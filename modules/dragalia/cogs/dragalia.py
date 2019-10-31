@@ -1,17 +1,13 @@
 import discord
 from discord.ext import commands
 import random
-import csv
-import requests
-import aiohttp
 import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
 from modules.dragalia.models.adventurer import Adventurer
-from modules.dragalia.models.skill import Skill
-from modules.dragalia.models.scrape_update import Update
-
-MASTER_DB = "master.db"
+from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
+from modules.dragalia.models.dps import DPS
+import pprint
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -43,43 +39,48 @@ def strip_all(input_str):
 class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.adven_db = self.create_names()
+        self.module = self.bot.modules["dragalia"]
 
-        self.path_to_csv_file = (
-            f'{self.bot.modules["dragalia"].path}/lists/optimal_dps_data'
-        )
-        char_dict = self.build_adven_db(self.get_src_csv(self.path_to_csv_file))
-        self.adventurer_db = self.create_classes(char_dict)
-        self.dps_rankings = self.create_rankings()
-        for character, value in self.adventurer_db.items():
-            self.adventurer_db[character].update_rank(self.dps_rankings)
+        self.MASTER_DB = f"{self.module.path}/lists/master.db"
+        update = ScrapeUpdate(self.MASTER_DB)
+        update.full_update()
+        self.adven_db = self.create_names()
+        self.dps_db_path = f"{self.module.path}/lists/optimal_dps_data"
+        self.dps_db = DPS.build_dps_db(DPS.get_src_csv(self.dps_db_path))
+
+        # self.dps_rankings = self.create_rankings()
+        # for character, value in self.adven_db.items():
+        # self.adven_db[character].update_rank(self.dps_rankings)
+
+        pp = pprint.PrettyPrinter(indent=1)
+        pp.pprint(self.adven_db)
+        # pp.pprint(self.adven_db["marth"].__dict__)
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
     def create_names(self):
-        with sqlite3.connect(MASTER_DB) as conn:
-            c = conn.cursor()
-            try:
-                c.execute("SELECT * from Adventurers LIMIT 1")
-            except sqlite3.OperationalError:
-                Adventurer.scrape(c)
-            try:
-                c.execute("SELECT * from Skills LIMIT 1")
-            except sqlite3.OperationalError:
-                Skill.scrape(c)
-            return
-            c.row_factory = sqlite3.Row
-            query = c.execute("SELECT Internal_Name FROM Adventurers")
-            results = query.fetchall()
+        conn = sqlite3.connect(self.MASTER_DB)
+        c = conn.cursor()
+        try:
+            c.execute("SELECT * from Adventurers LIMIT 1")
+        except sqlite3.OperationalError:
+            self.update.scrape(conn)
+        try:
+            c.execute("SELECT * from Skills LIMIT 1")
+        except sqlite3.OperationalError:
+            self.update.scrape(conn)
+        c.row_factory = sqlite3.Row
+        query = c.execute("SELECT Internal_Name FROM Adventurers")
+        results = query.fetchall()
+        conn.close()
+        adven_classes = {}
         for each in results:
-            adven_classes = {}
-            for each in results:
-                adven_classes[each["internal_name"]] = {}
+            adven_classes[each["internal_name"]] = {}
         return adven_classes
 
     async def async_create_names(self):
-        async with aiosqlite.connect(MASTER_DB) as db:
+        async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query = await db.execute("SELECT Internal_Name FROM Adventurers")
             results = query.fetchall()
@@ -91,7 +92,7 @@ class Dragalia(commands.Cog):
     """
     # Not used, plan is to cache instead.
     def create_classes(self, adven_classes):
-        with sqlite3.connect(MASTER_DB) as conn:
+        with sqlite3.connect(self.MASTER_DB) as conn:
             c = conn.cursor()
             c.row_factory = sqlite3.Row
             query = c.execute("SELECT * FROM Adventurers")
@@ -108,7 +109,7 @@ class Dragalia(commands.Cog):
     """
     # Not used, plan is to cache instead.
     async def async_create_classes(self, adven_classes):
-        async with aiosqlite.connect(MASTER_DB) as db:
+        async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query = await db.execute("SELECT * FROM Adventurers")
             for i_name in adven_classes.keys():
@@ -125,24 +126,29 @@ class Dragalia(commands.Cog):
 
     async def query_adv(self, query):
         try:
-            adventurer = self.adven_classes[query]
+            adventurer = self.adven_db[query]["element"]
         except KeyError:
-            async with aiosqlite.connect(MASTER_DB) as db:
-                db.row_factory = aiosqlite.Row
-                adven_row = await db.execute(
-                    "SELECT * FROM Adventurers WHERE Internal_Name=?", (query)
-                )
-                internal_name = adven_row["internal_name"]
-                skills = await db.execute(
-                    "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"])
-                )
-                # Add DPS_dcit pass to adventurer class. load entire csv, 1kb too much?
-                dps_dict = None
-                adventurer = self.adven_classes[internal_name] = Adventurer(
-                    adven_row, skills
-                )
-        finally:
-            return adventurer
+            adventurer = await self.generate_adven_class(query)
+        return adventurer
+
+    async def generate_adven_class(self, name):
+        async with aiosqlite.connect(self.MASTER_DB) as db:
+            db.row_factory = aiosqlite.Row
+            c = await db.execute(
+                "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
+            )
+            adven_row = await c.fetchone()
+            internal_name = adven_row["internal_name"]
+            c = await db.execute(
+                "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
+            )
+            skills = await c.fetchall()
+            # Add DPS_dcit pass to adventurer class. load entire csv, 1kb too much?
+            dps_dict = self.dps_db[internal_name]
+            adventurer = self.adven_db[internal_name] = Adventurer(
+                adven_row, skills, dps_dict
+            )
+        return adventurer
 
     def create_rankings(self):
         rankings_db = {}
@@ -151,25 +157,19 @@ class Dragalia(commands.Cog):
             rankings_db[parse] = {}
             sorted_list = sorted(
                 [
-                    (
-                        self.adventurer_db[char].name,
-                        self.adventurer_db[char].parse[parse].dps,
-                    )
-                    for char in self.adventurer_db.keys()
+                    (self.adven_db[char].name, self.adven_db[char].parse[parse].dps)
+                    for char in self.adven_db.keys()
                 ],
                 key=lambda x: x[1],
                 reverse=True,
             )
-            rankings_db[parse]["all"] = [entry[0] for entry in sorted_list]
+            rankings_db[parse]["all"] = [i[0] for i in sorted_list]
             for element in dragalia_elements:
                 sorted_list = sorted(
                     [
-                        (
-                            self.adventurer_db[char].name,
-                            self.adventurer_db[char].parse[parse].dps,
-                        )
-                        for char in self.adventurer_db.keys()
-                        if self.adventurer_db[char].element == element
+                        (self.adven_db[char].name, self.adven_db[char].parse[parse].dps)
+                        for char in self.adven_db.keys()
+                        if self.adven_db[char].element == element
                     ],
                     key=lambda x: x[1],
                     reverse=True,
@@ -182,19 +182,19 @@ class Dragalia(commands.Cog):
         char_result_list = []
         high_score = 0
         try:
-            character = self.adventurer_db[char_input]
+            character = self.adven_db[char_input]
             return [character]
         except KeyError:
             pass
-        for char in self.adventurer_db.keys():
-            char = self.adventurer_db[char]
+        for char in self.adven_db.keys():
+            char = self.adven_db[char]
             if char_input == char.name.lower():
                 return [char]
             temp_score = await lev_dist_similar(char_input, char.name.lower())
             if temp_score > high_score:
                 high_score = temp_score
-        for char in self.adventurer_db.keys():
-            char = self.adventurer_db[char]
+        for char in self.adven_db.keys():
+            char = self.adven_db[char]
             score = await lev_dist_similar(char_input, char.name.lower())
             if high_score - 5 <= score <= high_score + 5:
                 char_result_list.append(char)
@@ -238,6 +238,13 @@ class Dragalia(commands.Cog):
         """
         if not ctx.invoked_subcommand:
             return
+
+    @dragalia.command()
+    async def query(self, ctx, *, character: str = None):
+        character = "zardin"
+        await self.query_adv(character)
+        pp = pprint.PrettyPrinter(indent=1)
+        pp.pprint(self.adven_db["zardin"].__dict__)
 
     @dragalia.command()
     async def dps(self, ctx, *, character: str = None):
@@ -290,7 +297,7 @@ class Dragalia(commands.Cog):
         for entry in self.dps_rankings[parse][element]:
             if x == 11:
                 break
-            char = self.adventurer_db[entry]
+            char = self.adven_db[entry]
             name = f"{x}. {char.internal_name}"
             name_string += f"{name}\n"
             dps_string += f"{char.parse[parse].dps}\n"
@@ -347,7 +354,7 @@ class Dragalia(commands.Cog):
             check = embed.author.name
         if "Adven" in check:
             adventurer = strip_all(embed.title).lower()
-            character = self.adventurer_db[adventurer]
+            character = self.adven_db[adventurer]
             await reaction.message.edit(
                 embed=await self.return_char_embed(character, parse=parse)
             )
@@ -381,10 +388,10 @@ class Dragalia(commands.Cog):
             char_dict = self.build_adven_db(
                 await self.async_get_src_csv(self.path_to_csv_file)
             )
-            self.adventurer_db = self.create_classes(char_dict)
+            self.adven_db = self.create_classes(char_dict)
             self.dps_rankings = self.create_rankings()
-            for character, value in self.adventurer_db.items():
-                self.adventurer_db[character].update_rank(self.dps_rankings)
+            for character, value in self.adven_db.items():
+                self.adven_db[character].update_rank(self.dps_rankings)
         except Exception as e:
             print(e)
             return await ctx.send(f"Update failed: {e}")

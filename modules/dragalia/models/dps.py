@@ -44,7 +44,7 @@ def add_number_suffix(number):
 
 class DPS:
     def __init__(self, adventurer, dps_dict):
-        self.owner = adventurer
+        self.owner = adventurer.internal_name
         self.wyrmprints = dps_dict["wyrmprints"]
         if "dps" in dps_dict["dragon"]:
             split = dps_dict["dragon"].split(";")
@@ -58,7 +58,6 @@ class DPS:
             self.parse[parse_value] = Parse(dps_dict["parse"][parse_value])
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
-        return
 
     def update_rank(self, rank_dict):
         for parse_value in self.parse:
@@ -102,52 +101,52 @@ class DPS:
         embed.set_author(name="Adventurer:")
         return embed
 
-    @classmethod
-    def get_src_csv(cls, path):
-        response_dict = {}
-        response_dict["180"] = requests.get(DPS_URL_180).text
-        response_dict["120"] = requests.get(DPS_URL_120).text
-        response_dict["60"] = requests.get(DPS_URL_60).text
-        for parse in response_dict.keys():
+    @staticmethod
+    def get_src_csv(path):
+        dps_dict = {}
+        dps_dict["180"] = requests.get(DPS_URL_180).text
+        dps_dict["120"] = requests.get(DPS_URL_120).text
+        dps_dict["60"] = requests.get(DPS_URL_60).text
+        for parse in dps_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
             with open(path_to_file, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
-                response_dict[parse] = response_dict[parse].split("\n")
-                for row in response_dict[parse]:
+                dps_dict[parse] = dps_dict[parse].split("\n")
+                for row in dps_dict[parse]:
                     row = row.split(",")
                     try:
                         row[1]
                     except IndexError:
                         continue
                     writer.writerow(row)
-        return response_dict
+        return dps_dict
 
-    @classmethod
-    async def async_get_src_csv(cls, path):
-        response_dict = {}
+    @staticmethod
+    async def async_get_src_csv(path):
+        dps_dict = {}
         async with aiohttp.ClientSession() as session:
             async with session.get(DPS_URL_180) as response:
-                response_dict["180"] = await response.text()
+                dps_dict["180"] = await response.text()
             async with session.get(DPS_URL_120) as response:
-                response_dict["120"] = await response.text()
+                dps_dict["120"] = await response.text()
             async with session.get(DPS_URL_60) as response:
-                response_dict["60"] = await response.text()
-        for parse in response_dict.keys():
+                dps_dict["60"] = await response.text()
+        for parse in dps_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
             with open(path_to_file, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
-                response_dict[parse] = response_dict[parse].split("\n")
-                for row in response_dict[parse]:
+                dps_dict[parse] = dps_dict[parse].split("\n")
+                for row in dps_dict[parse]:
                     row = row.split(",")
                     try:
                         row[1] = row[1].replace("_", "").lower().strip()
                     except IndexError:
                         continue
                     writer.writerow(row)
-        return response_dict
+        return dps_dict
 
-    @classmethod
-    def build_adven_db(response_dict):
+    @staticmethod
+    def build_dps_db(response_dict):
         all_char_dps = {}
         damage = {}
         for parse_value in response_dict.keys():

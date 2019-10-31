@@ -1,10 +1,8 @@
 import aiosqlite as async_sql
 import sqlite3
-import asyncio
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
-import pprint
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
@@ -125,8 +123,8 @@ async def async_fetch(session, URL):
         return await response.text()
 
 
-async def fill_names(session, db):
-    resp = await async_fetch(session, ADVEN_LIST_URL)
+def fill_names(conn):
+    resp = fetch(ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
         td_list = each.find_all("td")
@@ -135,12 +133,11 @@ async def fill_names(session, db):
         image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
 
-        cursor = await db.execute(
-            "SELECT Name FROM Adventurers WHERE name = ?", (name,)
-        )
-        result = await cursor.fetchone()
+        c = conn.cursor()
+        c.execute("SELECT Name FROM Adventurers WHERE name = ?", (name,))
+        result = c.fetchone()
         if result is None:
-            await db.execute(
+            c.execute(
                 sql_adven_insert,
                 (
                     name,
@@ -166,7 +163,7 @@ async def fill_names(session, db):
                     "?",
                 ),
             )
-    await db.commit()
+    conn.commit()
 
 
 def parse_adventurer(resp):
@@ -196,13 +193,14 @@ def parse_adventurer(resp):
 
     adven["abilities"] = {1: None, 2: None, 3: None}
     all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
-    x = 1
-    for each in all_abilities:
+    for i, each in enumerate(all_abilities):
         ability_title = each.find("th").select("a[title]")[0]["title"]
         ability_value = each.find_all(class_="tabbertab")
-        ability_value = ability_value[0].find("p").get_text().split("(")[0]
-        adven["abilities"][x] = f"{ability_title}: {ability_value}"
-        x += 1
+        try:
+            ability_value = ability_value[1].find("p").get_text().split("(")[0]
+        except IndexError:
+            ability_value = ability_value[0].find("p").get_text().split("(")[0]
+        adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
 
     adven["obtained"] = divs[-3].find(class_="dd-description").get_text()
     adven["release"] = divs[-2].find(class_="dd-description").get_text()
@@ -277,14 +275,14 @@ def update_advs(conn, force=False):
                 adven["avail"],
                 adven["obtained"],
                 adven["release"],
-                adven["name"],
+                name,
             ),
         )
         conn.commit()
         print(f"++++Updated!++++")
 
 
-def update_skills(conn, db, force=False):
+def update_skills(conn, force=False):
     cursor = conn.cursor()
     full_skill_list = cursor.execute("SELECT * FROM Skills")
     full_skill_list = full_skill_list.fetchall()
@@ -359,8 +357,52 @@ def update_skills(conn, db, force=False):
                             skills[x]["levels"][i]["internal_name"],
                         ),
                     )
-                cursor.commit()
+                conn.commit()
                 print("    Updated!")
+
+
+async def async_fill_names(session, db):
+    resp = await async_fetch(session, ADVEN_LIST_URL)
+    soup = BeautifulSoup(resp, "html.parser")
+    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
+        td_list = each.find_all("td")
+
+        name = td_list[1].select("a[title]")[0]["title"]
+        image = td_list[0].select("img[src]")[0]["src"]
+        internal_name = shorten_name(name)
+
+        cursor = await db.execute(
+            "SELECT Name FROM Adventurers WHERE name = ?", (name,)
+        )
+        result = await cursor.fetchone()
+        if result is None:
+            await db.execute(
+                sql_adven_insert,
+                (
+                    name,
+                    image,
+                    internal_name,
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                ),
+            )
+    await db.commit()
 
 
 async def aysnc_update_advs(session, db, force=False):
@@ -492,7 +534,22 @@ class Update:
     def __init__(self, db_file):
         self.db_file = db_file
 
-    async def update(self):
+    def full_update(self, force=False):
+        with sqlite3.connect(self.db_file) as conn:
+            c = conn.cursor()
+            try:
+                c.execute("SELECT * from Adventurers")
+            except sqlite3.OperationalError:
+                c.execute(sql_make_adv_table)
+            try:
+                c.execute("SELECT * from Skills")
+            except sqlite3.OperationalError:
+                c.execute(sql_make_skills_table)
+            fill_names(conn)
+            update_advs(conn, force)
+            update_skills(conn, force)
+
+    async def async_full_update(self, force=False):
         async with aiohttp.ClientSession() as session:
             async with async_sql.connect(self.db_file) as db:
                 try:
@@ -503,6 +560,13 @@ class Update:
                     await db.execute("SELECT * from Skills")
                 except sqlite3.OperationalError:
                     await db.execute(sql_make_skills_table)
-                await fill_names(session, db)
-                await aysnc_update_advs(session, db)
-                await async_update_skills(session, db)
+                await async_fill_names(session, db)
+                await aysnc_update_advs(session, db, force)
+                await async_update_skills(session, db, force)
+
+    def update(self, conn, data):
+        if data == "adven":
+            fill_names(conn)
+            update_advs(conn)
+        elif data == "skills":
+            update_skills(conn)
