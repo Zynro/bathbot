@@ -1,11 +1,32 @@
 import requests
 import aiohttp
 import csv
+from discord import Embed, Colour
+import random
 from modules.dragalia.models.parse import Parse
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
+
+dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
+dragalia_elements_images = {
+    "flame": "https://b1ueb1ues.github.io//dl-sim/pic/element/flame.png",
+    "water": "https://b1ueb1ues.github.io//dl-sim/pic/element/water.png",
+    "wind": "https://b1ueb1ues.github.io//dl-sim/pic/element/wind.png",
+    "light": "https://b1ueb1ues.github.io//dl-sim/pic/element/light.png",
+    "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
+    "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
+}
+
+elements_colors = {
+    "flame": 0xE73031,
+    "water": 0x1890DE,
+    "wind": 0x00D771,
+    "light": 0xFFBB10,
+    "shadow": 0xA738DE,
+    "all": random.randint(0, 0xFFFFFF),
+}
 
 
 def remove_brackets(input_str):
@@ -34,18 +55,20 @@ def number_emoji_generator(dps: str = None):
 def add_number_suffix(number):
     number = int(number)
     suffixes = {1: "st", 2: "nd", 3: "rd"}
-    if number in [11, 12, 13]:
+    if int(str(number)[-2]) in [11, 12, 13]:
         return str(number) + "th"
-    elif number in suffixes.keys():
+    elif int(str(number)[-1]) in suffixes.keys():
         return str(number) + suffixes[number]
     else:
         return str(number) + "th"
 
 
 class DPS:
-    def __init__(self, adventurer, dps_dict):
+    def __init__(self, adventurer, dps_dict, rank_db):
+        self.adventurer = adventurer
         self.owner = adventurer.internal_name
         self.wyrmprints = dps_dict["wyrmprints"]
+        self.element = adventurer.element.lower()
         if "dps" in dps_dict["dragon"]:
             split = dps_dict["dragon"].split(";")
             dps_range = split[1].lower().replace("dpsrange:", "DPS Range: ")
@@ -59,16 +82,20 @@ class DPS:
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
 
-    def update_rank(self, rank_dict):
-        for parse_value in self.parse:
+        for parse_value in self.parse.keys():
             self.parse[parse_value].rank_element = str(
-                rank_dict[parse_value][self.element].index(self.name) + 1
+                rank_db[parse_value][self.element].index(self.owner) + 1
             )
             self.parse[parse_value].rank_overall = str(
-                rank_dict[parse_value]["all"].index(self.name) + 1
+                rank_db[parse_value]["all"].index(self.owner) + 1
             )
 
-    def populate_embed(self, embed, parse_value):
+    def embed(self, parse_value="180"):
+        embed = Embed(
+            title=(f"__**{self.adventurer.name}**__",),
+            description=(f"*Parse: {parse_value} Seconds*",),
+            colour=Colour(elements_colors[self.adventurer.element.lower()]),
+        )
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",
@@ -163,12 +190,12 @@ class DPS:
                     continue
                 if "Fleur" in row[1]:
                     del row[9]
-                internal_name = row[1]
+                name = row[1]
                 if "_" in row[1]:
-                    name = row[1].replace("_", "").lower().strip()
+                    internal_name = row[1].replace("_", "").lower().strip()
                     alt = True
                 else:
-                    name = row[1].lower().strip()
+                    internal_name = row[1].lower().strip()
                     alt = False
                 if parse_value == "180":
                     amulets = row[6].split("][")
@@ -176,7 +203,7 @@ class DPS:
                     wyrmprints = remove_brackets(" + ".join(wyrmprints))
                     wyrmprints = wyrmprints.replace("_", " ")
                     dragon = remove_brackets(amulets[1])
-                    all_char_dps[name] = {
+                    all_char_dps[internal_name] = {
                         "name": name,
                         "internal_name": internal_name,
                         "rarity": row[2],
@@ -187,7 +214,7 @@ class DPS:
                         "dragon": dragon,
                         "alt": alt,
                     }
-                    all_char_dps[name]["parse"] = {}
+                    all_char_dps[internal_name]["parse"] = {}
                 damage = {}
                 damage_list = row[9:]
                 damage["dps"] = row[0]
@@ -196,10 +223,45 @@ class DPS:
                     damage_type = damage_type.split(":")
                     damage_name = damage_type[0].replace("_", " ").title()
                     damage["types"][damage_name] = damage_type[1]
-                all_char_dps[name]["parse"][parse_value] = {}
-                all_char_dps[name]["parse"][parse_value]["damage"] = damage
-                (all_char_dps[name]["parse"][parse_value]["condition"]) = (
+                all_char_dps[internal_name]["parse"][parse_value] = {}
+                all_char_dps[internal_name]["parse"][parse_value]["damage"] = damage
+                (all_char_dps[internal_name]["parse"][parse_value]["condition"]) = (
                     row[7].replace("<", "").replace(">", ""),
                 )
-                all_char_dps[name]["parse"][parse_value]["comment"] = row[8]
+                all_char_dps[internal_name]["parse"][parse_value]["comment"] = row[8]
         return all_char_dps
+
+    @staticmethod
+    def build_rank_db(dps_db):
+        rankings_db = {}
+        parses = ["180", "120", "60"]
+
+        for parse in parses:
+            rankings_db[parse] = {}
+            sorted_list = sorted(
+                [
+                    (
+                        dps_db[adven]["internal_name"],
+                        dps_db[adven]["parse"][parse]["damage"]["dps"],
+                    )
+                    for adven in dps_db.keys()
+                ],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            rankings_db[parse]["all"] = [i[0] for i in sorted_list]
+            for element in dragalia_elements:
+                sorted_list = sorted(
+                    [
+                        (
+                            dps_db[adven]["internal_name"],
+                            dps_db[adven]["parse"][parse]["damage"]["dps"],
+                        )
+                        for adven in dps_db.keys()
+                        if dps_db[adven]["element"] == element
+                    ],
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
+                rankings_db[parse][element] = [i[0] for i in sorted_list]
+        return rankings_db

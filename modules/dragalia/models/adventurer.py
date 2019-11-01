@@ -3,7 +3,7 @@ from modules.dragalia.models.skill import Skill
 
 
 class Adventurer:
-    def __init__(self, adven_dict, skills, dps_dict):
+    def __init__(self, adven_dict, skills, dps_db, rank_db):
         for k in adven_dict.keys():
             k = k.lower()
             setattr(self, k, adven_dict[k])
@@ -11,4 +11,4 @@ class Adventurer:
         skill_2 = [x for x in skills if x["name"] == self.skill_2]
         self.skill_1 = Skill(skill_1)
         self.skill_2 = Skill(skill_2)
-        self.dps = DPS(self, dps_dict)
+        self.dps = DPS(self, dps_db, rank_db)

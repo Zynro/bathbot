@@ -14,13 +14,22 @@ DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
 DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
 
 dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
-dragalia_elements_images = {
+elements_images = {
     "flame": "https://b1ueb1ues.github.io//dl-sim/pic/element/flame.png",
     "water": "https://b1ueb1ues.github.io//dl-sim/pic/element/water.png",
     "wind": "https://b1ueb1ues.github.io//dl-sim/pic/element/wind.png",
     "light": "https://b1ueb1ues.github.io//dl-sim/pic/element/light.png",
     "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
     "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
+}
+
+elements_colors = {
+    "flame": 0xE73031,
+    "water": 0x1890DE,
+    "wind": 0x00D771,
+    "light": 0xFFBB10,
+    "shadow": 0xA738DE,
+    "all": random.randint(0, 0xFFFFFF),
 }
 
 
@@ -42,18 +51,20 @@ class Dragalia(commands.Cog):
         self.module = self.bot.modules["dragalia"]
 
         self.MASTER_DB = f"{self.module.path}/lists/master.db"
-        update = ScrapeUpdate(self.MASTER_DB)
-        update.full_update()
+        self.update = ScrapeUpdate(self.MASTER_DB)
+        self.update.full_update()
         self.adven_db = self.create_names()
         self.dps_db_path = f"{self.module.path}/lists/optimal_dps_data"
-        self.dps_db = DPS.build_dps_db(DPS.get_src_csv(self.dps_db_path))
+        self.dps_csv = DPS.get_src_csv(self.dps_db_path)
+        self.dps_db = DPS.build_dps_db(self.dps_csv)
+        self.rank_db = DPS.build_rank_db(self.dps_db)
 
         # self.dps_rankings = self.create_rankings()
         # for character, value in self.adven_db.items():
         # self.adven_db[character].update_rank(self.dps_rankings)
 
-        pp = pprint.PrettyPrinter(indent=1)
-        pp.pprint(self.adven_db)
+        # pp = pprint.PrettyPrinter(indent=1)
+        # pp.pprint(self.rank_db)
         # pp.pprint(self.adven_db["marth"].__dict__)
 
     async def cog_check(self, ctx):
@@ -143,39 +154,11 @@ class Dragalia(commands.Cog):
                 "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
             )
             skills = await c.fetchall()
-            # Add DPS_dcit pass to adventurer class. load entire csv, 1kb too much?
             dps_dict = self.dps_db[internal_name]
             adventurer = self.adven_db[internal_name] = Adventurer(
-                adven_row, skills, dps_dict
+                adven_row, skills, dps_dict, self.rank_db
             )
         return adventurer
-
-    def create_rankings(self):
-        rankings_db = {}
-        parses = ["180", "120", "60"]
-        for parse in parses:
-            rankings_db[parse] = {}
-            sorted_list = sorted(
-                [
-                    (self.adven_db[char].name, self.adven_db[char].parse[parse].dps)
-                    for char in self.adven_db.keys()
-                ],
-                key=lambda x: x[1],
-                reverse=True,
-            )
-            rankings_db[parse]["all"] = [i[0] for i in sorted_list]
-            for element in dragalia_elements:
-                sorted_list = sorted(
-                    [
-                        (self.adven_db[char].name, self.adven_db[char].parse[parse].dps)
-                        for char in self.adven_db.keys()
-                        if self.adven_db[char].element == element
-                    ],
-                    key=lambda x: x[1],
-                    reverse=True,
-                )
-                rankings_db[parse][element] = [i[0] for i in sorted_list]
-        return rankings_db
 
     async def character_validate(self, char_input):
         char_input = char_input.lower()
@@ -242,9 +225,10 @@ class Dragalia(commands.Cog):
     @dragalia.command()
     async def query(self, ctx, *, character: str = None):
         character = "zardin"
-        await self.query_adv(character)
-        pp = pprint.PrettyPrinter(indent=1)
-        pp.pprint(self.adven_db["zardin"].__dict__)
+        adven = await self.query_adv(character)
+        # pp = pprint.PrettyPrinter(indent=1)
+        # pp.pprint(self.adven_db["zardin"].__dict__)
+        return await ctx.send(embed=adven.dps.embed())
 
     @dragalia.command()
     async def dps(self, ctx, *, character: str = None):
@@ -304,7 +288,7 @@ class Dragalia(commands.Cog):
             x += 1
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
-        embed.set_thumbnail(url=dragalia_elements_images[element])
+        embed.set_thumbnail(url=elements_images[element])
         embed.set_footer(
             text=("Use the up/down arrows to increase or decrease parse time.")
         )

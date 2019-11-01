@@ -250,7 +250,7 @@ def update_advs(conn, force=False):
             else:
                 pass
         if not update and not force:
-            print(f"{name} already entered. Passing adventurer...")
+            # print(f"{name} already entered. Passing adventurer...")
             continue
         print(f"=====Updating: {name}=====")
         resp = fetch(f"{MAIN_URL}{name}")
@@ -313,7 +313,7 @@ def update_skills(conn, force=False):
             except KeyError:
                 update = True
             if not update and not force:
-                print(f"    {name} already entered. Passing skill...")
+                # print(f"    {name} already entered. Passing skill...")
                 continue
             resp = fetch(f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}")
             skills[x].update(parse_skill(resp, skills[x]))
@@ -344,6 +344,7 @@ def update_skills(conn, force=False):
                             skills[x]["i_frames"],
                         ),
                     )
+                    print("     New Skill Added!")
                 else:
                     cursor.execute(
                         sql_skill_update,
@@ -357,8 +358,8 @@ def update_skills(conn, force=False):
                             skills[x]["levels"][i]["internal_name"],
                         ),
                     )
+                    print("    Skill updated!")
                 conn.commit()
-                print("    Updated!")
 
 
 async def async_fill_names(session, db):
