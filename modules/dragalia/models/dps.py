@@ -55,12 +55,12 @@ def number_emoji_generator(dps: str = None):
 def add_number_suffix(number):
     number = int(number)
     suffixes = {1: "st", 2: "nd", 3: "rd"}
-    if int(str(number)[-2]) in [11, 12, 13]:
-        return str(number) + "th"
-    elif int(str(number)[-1]) in suffixes.keys():
+    if len(str(number)) > 1:
+        if int(str(number)[-2]) in [11, 12, 13]:
+            return str(number) + "th"
+    if int(str(number)[-1]) in suffixes.keys():
         return str(number) + suffixes[number]
-    else:
-        return str(number) + "th"
+    return str(number) + "th"
 
 
 class DPS:
@@ -92,8 +92,8 @@ class DPS:
 
     def embed(self, parse_value="180"):
         embed = Embed(
-            title=(f"__**{self.adventurer.name}**__",),
-            description=(f"*Parse: {parse_value} Seconds*",),
+            title=f"__**{self.adventurer.name}**__",
+            description=f"*Parse: {parse_value} Seconds*",
             colour=Colour(elements_colors[self.adventurer.element.lower()]),
         )
         embed.set_thumbnail(url=self.image)
@@ -113,7 +113,7 @@ class DPS:
         embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
         embed.add_field(
             name="__Damage Breakdown:__",
-            value=self.parse[parse_value].type_to_string(),
+            value=self.parse[parse_value].to_dps_string(),
             inline=False,
         )
         if self.parse[parse_value].condition:

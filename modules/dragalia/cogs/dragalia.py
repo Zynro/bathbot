@@ -137,8 +137,9 @@ class Dragalia(commands.Cog):
 
     async def query_adv(self, query):
         try:
-            adventurer = self.adven_db[query]["element"]
-        except KeyError:
+            adventurer = self.adven_db[query].element
+            return self.adven_db[query]
+        except (KeyError, AttributeError):
             adventurer = await self.generate_adven_class(query)
         return adventurer
 
