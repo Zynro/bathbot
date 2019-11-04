@@ -2,31 +2,8 @@ import requests
 import aiohttp
 import csv
 from discord import Embed, Colour
-import random
 from modules.dragalia.models.parse import Parse
-
-DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
-DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
-DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
-
-dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
-dragalia_elements_images = {
-    "flame": "https://b1ueb1ues.github.io//dl-sim/pic/element/flame.png",
-    "water": "https://b1ueb1ues.github.io//dl-sim/pic/element/water.png",
-    "wind": "https://b1ueb1ues.github.io//dl-sim/pic/element/wind.png",
-    "light": "https://b1ueb1ues.github.io//dl-sim/pic/element/light.png",
-    "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
-    "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
-}
-
-elements_colors = {
-    "flame": 0xE73031,
-    "water": 0x1890DE,
-    "wind": 0x00D771,
-    "light": 0xFFBB10,
-    "shadow": 0xA738DE,
-    "all": random.randint(0, 0xFFFFFF),
-}
+import modules.dragalia.models.constants as CONSTANTS
 
 
 def remove_brackets(input_str):
@@ -94,7 +71,7 @@ class DPS:
         embed = Embed(
             title=f"__**{self.adventurer.name}**__",
             description=f"*Parse: {parse_value} Seconds*",
-            colour=Colour(elements_colors[self.adventurer.element.lower()]),
+            colour=Colour(CONSTANTS.elements_colors[self.adventurer.element.lower()]),
         )
         embed.set_thumbnail(url=self.image)
         embed.add_field(
@@ -131,9 +108,9 @@ class DPS:
     @staticmethod
     def get_src_csv(path):
         dps_dict = {}
-        dps_dict["180"] = requests.get(DPS_URL_180).text
-        dps_dict["120"] = requests.get(DPS_URL_120).text
-        dps_dict["60"] = requests.get(DPS_URL_60).text
+        dps_dict["180"] = requests.get(CONSTANTS.DPS_URL_180).text
+        dps_dict["120"] = requests.get(CONSTANTS.DPS_URL_120).text
+        dps_dict["60"] = requests.get(CONSTANTS.DPS_URL_60).text
         for parse in dps_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
             with open(path_to_file, "w", newline="", encoding="utf-8") as file:
@@ -152,11 +129,11 @@ class DPS:
     async def async_get_src_csv(path):
         dps_dict = {}
         async with aiohttp.ClientSession() as session:
-            async with session.get(DPS_URL_180) as response:
+            async with session.get(CONSTANTS.DPS_URL_180) as response:
                 dps_dict["180"] = await response.text()
-            async with session.get(DPS_URL_120) as response:
+            async with session.get(CONSTANTS.DPS_URL_120) as response:
                 dps_dict["120"] = await response.text()
-            async with session.get(DPS_URL_60) as response:
+            async with session.get(CONSTANTS.DPS_URL_60) as response:
                 dps_dict["60"] = await response.text()
         for parse in dps_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
@@ -250,7 +227,7 @@ class DPS:
                 reverse=True,
             )
             rankings_db[parse]["all"] = [i[0] for i in sorted_list]
-            for element in dragalia_elements:
+            for element in CONSTANTS.dragalia_elements:
                 sorted_list = sorted(
                     [
                         (

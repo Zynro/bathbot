@@ -7,7 +7,7 @@ from fuzzywuzzy import fuzz
 from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
-import pprint
+import modules.dragalia.models.constants as CONSTANTS
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -229,7 +229,8 @@ class Dragalia(commands.Cog):
         adven = await self.query_adv(character)
         # pp = pprint.PrettyPrinter(indent=1)
         # pp.pprint(self.adven_db["zardin"].__dict__)
-        return await ctx.send(embed=adven.dps.embed())
+        message = await ctx.send(embed=adven.dps.embed())
+        return await message.add_reaction(CONSTANTS.d_emoji["flame"])
 
     @dragalia.command()
     async def dps(self, ctx, *, character: str = None):
