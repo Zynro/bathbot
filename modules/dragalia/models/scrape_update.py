@@ -211,7 +211,7 @@ def parse_adventurer(resp):
 def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
-    skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text()
+    skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text().strip()
     skill["owner"] = s_soup.find("li").select("a[title]")[0]["title"]
     all_levels = s_soup.find(class_="skill-levels skill-details")
     all_levels = all_levels.find_all(class_="tabbertab")
@@ -219,14 +219,8 @@ def parse_skill(resp, skill):
     for i in range(1, len(all_levels) + 1):
         skill_div = all_levels[i - 1]
         skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
-        y = True
         for br in skill_div.find_all("br"):
-            if y is True:
-                br.replace_with("\n")
-                y = False
-            else:
-                y = True
-                continue
+            br.replace_with("\n")
         skill["levels"][i]["desc"] = (
             skill_div.find_all("div")[1].get_text().replace("\\'", "'")
         )

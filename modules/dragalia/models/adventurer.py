@@ -9,6 +9,8 @@ class Adventurer:
         for k in adven_dict.keys():
             k = k.lower()
             setattr(self, k, adven_dict[k])
+        self.max_coab = self.max_coab.replace(" Benefits your whole team. ", "")
+
         skill_1 = [x for x in skills if x["name"] == self.skill_1]
         skill_2 = [x for x in skills if x["name"] == self.skill_2]
         self.skill_1 = Skill(skill_1)
@@ -19,9 +21,37 @@ class Adventurer:
         embed = Embed(
             title=f"__**{self.name}**__",
             description=f"*{self.title}*",
-            colour=Colour(CONSTANTS.elements_colors[self.adventurer.element.lower()]),
+            colour=Colour(CONSTANTS.elements_colors[self.element.lower()]),
         )
         embed.set_thumbnail(url=self.image)
-        embed.add_field()
-        embed.set_author(name="Adventurer:")
+        rarity = CONSTANTS.d_emoji[str(self.rarity) + "*"] * int(self.rarity)
+        embed.add_field(
+            name=f"{rarity}\n__Max Stats:__",
+            value=f"""**HP:** {self.max_hp}
+**STR:** {self.max_str}
+**DEF:** {self.defense}""",
+            inline=True,
+        )
+        coab = self.max_coab.split(":")
+        embed.add_field(
+            name=f"""{CONSTANTS.d_emoji[self.element.lower()]}{CONSTANTS.d_emoji[self.weapon.lower()]}
+__Max Co-Ab:__""",
+            value=f"**{coab[0]}:**\n{coab[1]}",
+            inline=True,
+        )
+        embed.add_field(
+            name=f"__Skill:__ {self.skill_1.adven_embed()[0]}",
+            value=self.skill_1.adven_embed()[1],
+            inline=False,
+        )
+        embed.add_field(
+            name=f"__Skill:__ {self.skill_2.adven_embed()[0]}",
+            value=self.skill_2.adven_embed()[1],
+            inline=False,
+        )
+        for x in range(1, 4):
+            ability = getattr(self, f"ability_{x}").split(":")
+            embed.add_field(
+                name=f"__Ability:__ {ability[0]}", value=ability[1], inline=False
+            )
         return embed

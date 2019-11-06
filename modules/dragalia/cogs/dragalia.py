@@ -224,13 +224,17 @@ class Dragalia(commands.Cog):
             return
 
     @dragalia.command()
-    async def query(self, ctx, *, character: str = None):
-        character = "zardin"
-        adven = await self.query_adv(character)
-        # pp = pprint.PrettyPrinter(indent=1)
-        # pp.pprint(self.adven_db["zardin"].__dict__)
-        message = await ctx.send(embed=adven.dps.embed())
-        return await message.add_reaction(CONSTANTS.d_emoji["flame"])
+    async def query(self, ctx, data=None, *, character: str = None):
+        if not data:
+            return await ctx.send("Need query type.")
+        if data == "1":
+            adven = await self.query_adv(character)
+            # pp = pprint.PrettyPrinter(indent=1)
+            # pp.pprint(self.adven_db["zardin"].__dict__)
+            return await ctx.send(embed=adven.dps.embed())
+        elif data == "2":
+            adven = await self.query_adv(character)
+            return await ctx.send(embed=adven.embed())
 
     @dragalia.command()
     async def dps(self, ctx, *, character: str = None):
