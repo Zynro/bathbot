@@ -8,6 +8,7 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
 import modules.dragalia.models.constants as CONSTANTS
+import asyncio
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -21,15 +22,6 @@ elements_images = {
     "light": "https://b1ueb1ues.github.io//dl-sim/pic/element/light.png",
     "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
     "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
-}
-
-elements_colors = {
-    "flame": 0xE73031,
-    "water": 0x1890DE,
-    "wind": 0x00D771,
-    "light": 0xFFBB10,
-    "shadow": 0xA738DE,
-    "all": random.randint(0, 0xFFFFFF),
 }
 
 
@@ -82,12 +74,14 @@ class Dragalia(commands.Cog):
         except sqlite3.OperationalError:
             self.update.scrape(conn)
         c.row_factory = sqlite3.Row
-        query = c.execute("SELECT Internal_Name FROM Adventurers")
+        query = c.execute("SELECT * FROM Adventurers")
         results = query.fetchall()
         conn.close()
         adven_classes = {}
         for each in results:
-            adven_classes[each["internal_name"]] = {}
+            adven_classes[each["internal_name"]] = Adventurer(
+                {"name": each["name"], "internal_name": each["internal_name"]}
+            )
         return adven_classes
 
     async def async_create_names(self):
@@ -100,42 +94,11 @@ class Dragalia(commands.Cog):
             adven_classes[each["internal_name"]] = {}
         return adven_classes
 
-    """
-    # Not used, plan is to cache instead.
-    def create_classes(self, adven_classes):
-        with sqlite3.connect(self.MASTER_DB) as conn:
-            c = conn.cursor()
-            c.row_factory = sqlite3.Row
-            query = c.execute("SELECT * FROM Adventurers")
-            for i_name in adven_classes.keys():
-                adven = query.fetchone()
-                skills = {adven["skill_1"]: {}, adven["skill_2"]: {}}
-                for skill in skills.keys():
-                    sk_query = c.execute("SELECT * FROM Skills WHERE name=?", (skill))
-                    skills[skill] = sk_query.fetchall()
-                adven_classes[i_name] = Adventurer(adven, skills)
-        return adven_classes
-    """
-
-    """
-    # Not used, plan is to cache instead.
-    async def async_create_classes(self, adven_classes):
-        async with aiosqlite.connect(self.MASTER_DB) as db:
-            db.row_factory = aiosqlite.Row
-            query = await db.execute("SELECT * FROM Adventurers")
-            for i_name in adven_classes.keys():
-                adven = query.fetchone()
-                skills = {adven["skill_1"]: {}, adven["skill_2"]: {}}
-                for skill in skills.keys():
-                    sk_query = await db.execute(
-                        "SELECT * FROM Skills WHERE name=?", (skill)
-                    )
-                    skills[skill] = sk_query.fetchall()
-                adven_classes[i_name] = Adventurer(adven, skills)
-        return adven_classes
-    """
-
     async def query_adv(self, query):
+        try:
+            query = query.internal_name
+        except AttributeError:
+            pass
         try:
             adventurer = self.adven_db[query].element
             return self.adven_db[query]
@@ -161,36 +124,34 @@ class Dragalia(commands.Cog):
             )
         return adventurer
 
-    async def character_validate(self, char_input):
-        char_input = char_input.lower()
-        char_result_list = []
-        high_score = 0
-        try:
-            character = self.adven_db[char_input]
-            return [character]
-        except KeyError:
-            pass
-        for char in self.adven_db.keys():
-            char = self.adven_db[char]
-            if char_input == char.name.lower():
-                return [char]
-            temp_score = await lev_dist_similar(char_input, char.name.lower())
-            if temp_score > high_score:
-                high_score = temp_score
-        for char in self.adven_db.keys():
-            char = self.adven_db[char]
-            score = await lev_dist_similar(char_input, char.name.lower())
-            if high_score - 5 <= score <= high_score + 5:
-                char_result_list.append(char)
-        return list(set(char_result_list))
-
-    async def return_char_embed(self, character, parse):
-        embed = discord.Embed(
-            title=f"__**{character.internal_name}**__",
-            description=f"*Parse: {parse} Seconds*",
-            colour=discord.Colour(generate_rand_color()),
-        )
-        return character.populate_embed(embed=embed, parse_value=parse)
+    async def adven_validate(self, adven_input):
+        adven_input = adven_input.lower()
+        adven_results = []
+        high_score_name = 0
+        high_score_i_name = 0
+        for adven in self.adven_db.keys():
+            adven = self.adven_db[adven]
+            temp_score_name = await lev_dist_similar(adven_input, adven.name.lower())
+            temp_score_i_name = await lev_dist_similar(
+                adven_input, adven.internal_name.lower()
+            )
+            if temp_score_name == 100 or temp_score_i_name == 100:
+                return [adven.internal_name]
+            if temp_score_name > high_score_name:
+                high_score_name = temp_score_name
+            if temp_score_i_name > high_score_i_name:
+                high_score_i_name = temp_score_i_name
+        for adven in self.adven_db.keys():
+            adven = self.adven_db[adven]
+            name_score = await lev_dist_similar(adven_input, adven.name.lower())
+            i_name_score = await lev_dist_similar(
+                adven_input, adven.internal_name.lower()
+            )
+            if high_score_name - 5 <= name_score <= high_score_name + 5:
+                adven_results.append(adven.internal_name)
+            if high_score_i_name - 5 <= i_name_score <= high_score_i_name + 5:
+                adven_results.append(adven.internal_name)
+        return list(set(adven_results))
 
     async def return_multiple_results(self, multiple_results):
         char_result_list = []
@@ -204,6 +165,28 @@ class Dragalia(commands.Cog):
         )
         embed.set_footer(text="Try your search again" " with a adventurer specified.")
         return embed
+
+    async def proccess_parse_change(self, parse, embed, reaction, user):
+        if reaction.emoji == CONSTANTS.emoji["up_arrow"]:
+            if "60" in embed.description:
+                parse = "120"
+                await reaction.remove(user)
+                await reaction.message.add_reaction(CONSTANTS.emoji["down_arrow"])
+            elif "120" in embed.description:
+                parse = "180"
+                await reaction.remove(user)
+                await reaction.remove(self.bot.user)
+
+        elif reaction.emoji == CONSTANTS.emoji["down_arrow"]:
+            if "180" in embed.description:
+                parse = "120"
+                await reaction.remove(user)
+                await reaction.message.add_reaction(CONSTANTS.emoji["up_arrow"])
+            if "120" in embed.description:
+                parse = "60"
+                await reaction.remove(user)
+                await reaction.remove(self.bot.user)
+        return parse
 
     @commands.group(aliases=["drag", "d"])
     async def dragalia(self, ctx):
@@ -247,21 +230,47 @@ class Dragalia(commands.Cog):
         """
         if not character:
             return await ctx.send("A character must be entered to search the database.")
-        character = character.lower()
-        matched_list = await self.character_validate(character)
+        character = character.lower().strip()
+        matched_list = await self.adven_validate(character)
         if matched_list:
             if len(matched_list) > 1:
                 return await ctx.send(
                     embed=await self.return_multiple_results(matched_list)
                 )
             else:
-                parse = "60"
-                message = await ctx.send(
-                    embed=await self.return_char_embed(matched_list[0], parse)
-                )
-                await message.add_reaction("⬆")
+                parse = "180"
+                adven = await self.query_adv(matched_list[0])
+                message = await ctx.send(embed=adven.dps.embed(parse))
+                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+
+                def check_response(reaction, user):
+                    return (
+                        (
+                            reaction.emoji == CONSTANTS.emoji["up_arrow"]
+                            or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                        )
+                        and user != self.bot.user
+                        and message.id == reaction.message.id
+                    )
+
+                while True:
+                    try:
+                        reaction, user = await self.bot.wait_for(
+                            "reaction_add", timeout=120.0, check=check_response
+                        )
+                    except asyncio.TimeoutError:
+                        return
+                    else:
+                        embed = reaction.message.embeds[0]
+                        parse = await self.proccess_parse_change(
+                            parse, embed, reaction, user
+                        )
+                        await reaction.message.edit(embed=adven.dps.embed(parse))
+
         else:
-            return await ctx.send("Errored.")
+            return await ctx.send(
+                "Either no adventurer was found, or an error occured."
+            )
 
     async def return_rankings_embed(self, element, parse):
         if element:
@@ -287,7 +296,7 @@ class Dragalia(commands.Cog):
         for entry in self.dps_rankings[parse][element]:
             if x == 11:
                 break
-            char = self.adven_db[entry]
+            char = self.adventurer_db[entry]
             name = f"{x}. {char.internal_name}"
             name_string += f"{name}\n"
             dps_string += f"{char.parse[parse].dps}\n"
@@ -311,59 +320,38 @@ class Dragalia(commands.Cog):
 
         Element can be any element, or 'all' for overall top 10 list.
         """
-        embed = await self.return_rankings_embed(element=element, parse="60")
+        parse = "180"
+        embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
-        await message.add_reaction("⬆")
+        await message.add_reaction(CONSTANTS.emoji.down_arrow)
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        if user == self.bot.user or not reaction.message.embeds:
-            return
-        if reaction.message.author != self.bot.user:
-            return
-        if "Parse" not in reaction.message.embeds[0].description:
-            return
-        up_arrow = "⬆"
-        down_arrow = "⬇"
-        embed = reaction.message.embeds[0]
-        if reaction.emoji == up_arrow:
-            if "60" in embed.description:
-                parse = "120"
-            elif "120" in embed.description:
-                parse = "180"
-        elif reaction.emoji == down_arrow:
-            if "180" in embed.description:
-                parse = "120"
-            if "120" in embed.description:
-                parse = "60"
-        else:
-            return
-        if str(embed.author.name) == "Embed.Empty":
-            check = embed.title
-        else:
-            check = embed.author.name
-        if "Adven" in check:
-            adventurer = strip_all(embed.title).lower()
-            character = self.adven_db[adventurer]
-            await reaction.message.edit(
-                embed=await self.return_char_embed(character, parse=parse)
+        def check_response(reaction, user):
+            return (
+                (
+                    reaction.emoji == CONSTANTS.emoji.up_arrow
+                    or reaction.emoji == CONSTANTS.emoji.down_arrow
+                )
+                and user != self.bot.user
+                and message.id == reaction.message.id
             )
-        elif "Rank" in check:
-            element = reaction.message.embeds[0].title.split(" ")[0]
-            element = strip_all(element.lower().strip())
-            if element not in dragalia_elements:
-                element = None
-            await reaction.message.edit(
-                embed=await self.return_rankings_embed(element=element, parse=parse)
-            )
-        await reaction.message.clear_reactions()
-        if parse == "60":
-            await reaction.message.add_reaction(up_arrow)
-        elif parse == "120":
-            await reaction.message.add_reaction(down_arrow)
-            await reaction.message.add_reaction(up_arrow)
-        elif parse == "180":
-            await reaction.message.add_reaction(down_arrow)
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for(
+                    "reaction_add", timeout=120.0, check=check_response
+                )
+            except asyncio.TimeoutError:
+                return
+            else:
+                embed = reaction.message.embeds[0]
+                parse = await self.proccess_parse_change(parse, embed, reaction, user)
+                element = reaction.message.embeds[0].title.split(" ")[0]
+                element = strip_all(element.lower().strip())
+                if element not in dragalia_elements:
+                    element = None
+                await reaction.message.edit(
+                    embed=await self.return_rankings_embed(element=element, parse=parse)
+                )
 
     @dragalia.command(
         name="print-get", aliases=["printdownload", "print-update", "update"]
@@ -378,10 +366,10 @@ class Dragalia(commands.Cog):
             char_dict = self.build_adven_db(
                 await self.async_get_src_csv(self.path_to_csv_file)
             )
-            self.adven_db = self.create_classes(char_dict)
+            self.adventurer_db = self.create_classes(char_dict)
             self.dps_rankings = self.create_rankings()
-            for character, value in self.adven_db.items():
-                self.adven_db[character].update_rank(self.dps_rankings)
+            for character, value in self.adventurer_db.items():
+                self.adventurer_db[character].update_rank(self.dps_rankings)
         except Exception as e:
             print(e)
             return await ctx.send(f"Update failed: {e}")

@@ -5,17 +5,21 @@ import modules.dragalia.models.constants as CONSTANTS
 
 
 class Adventurer:
-    def __init__(self, adven_dict, skills, dps_db, rank_db):
+    def __init__(self, adven_dict, skills=None, dps_db=None, rank_db=None):
         for k in adven_dict.keys():
             k = k.lower()
             setattr(self, k, adven_dict[k])
-        self.max_coab = self.max_coab.replace(" Benefits your whole team. ", "")
-
-        skill_1 = [x for x in skills if x["name"] == self.skill_1]
-        skill_2 = [x for x in skills if x["name"] == self.skill_2]
-        self.skill_1 = Skill(skill_1)
-        self.skill_2 = Skill(skill_2)
-        self.dps = DPS(self, dps_db, rank_db)
+        try:
+            self.max_coab = self.max_coab.replace(" Benefits your whole team. ", "")
+        except AttributeError:
+            pass
+        if skills:
+            skill_1 = [x for x in skills if x["name"] == self.skill_1]
+            skill_2 = [x for x in skills if x["name"] == self.skill_2]
+            self.skill_1 = Skill(skill_1)
+            self.skill_2 = Skill(skill_2)
+        if dps_db:
+            self.dps = DPS(self, dps_db, rank_db)
 
     def embed(self):
         embed = Embed(

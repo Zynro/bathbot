@@ -1,7 +1,3 @@
-import modules.dragalia.models.constants as CONSTANTS
-from discord import Embed, Colour
-
-
 class Skill:
     def __init__(self, skill_list):
         for k in skill_list[0].keys():
