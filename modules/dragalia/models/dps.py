@@ -31,12 +31,12 @@ def number_emoji_generator(dps: str = None):
 
 def add_number_suffix(number):
     number = int(number)
-    suffixes = {1: "st", 2: "nd", 3: "rd"}
+    suffixes = {1: "st", 2: "nd", 3: "rd", "1": "st", "2": "nd", "3": "rd"}
     if len(str(number)) > 1:
         if int(str(number)[-2]) in [11, 12, 13]:
             return str(number) + "th"
     if int(str(number)[-1]) in suffixes.keys():
-        return str(number) + suffixes[number]
+        return str(number) + suffixes[str(number)[-1]]
     return str(number) + "th"
 
 
