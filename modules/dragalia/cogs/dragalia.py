@@ -51,14 +51,6 @@ class Dragalia(commands.Cog):
         self.rank_db = DPS.build_rank_db(self.dps_db)
         self.adven_db = self.create_names()
 
-        # self.dps_rankings = self.create_rankings()
-        # for character, value in self.adven_db.items():
-        # self.adven_db[character].update_rank(self.dps_rankings)
-
-        # pp = pprint.PrettyPrinter(indent=1)
-        # pp.pprint(self.rank_db)
-        # pp.pprint(self.adven_db["marth"].__dict__)
-
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
@@ -231,7 +223,7 @@ class Dragalia(commands.Cog):
             else:
                 adven = await self.query_adv(matched_list[0])
                 message = await ctx.send(embed=adven.embed())
-                await message.add_reaction(CONSTANTS.emoji["star"])
+                # await message.add_reaction(CONSTANTS.emoji["star"])
 
                 """def check_response(reaction, user):
                     return (
