@@ -66,12 +66,16 @@ class Twitter(commands.Cog):
         except KeyError:
             return None
 
-    def get_tweet(self, tweet_id):
+    def get_tweet_id(self, url):
         try:
-            if "http" in tweet_id:
-                tweet_id = extract_id(tweet_id)
+            if "http" in url:
+                url = extract_id(url)
         except TypeError:
             pass
+        return url
+
+    def get_tweet(self, url):
+        tweet_id = self.get_tweet_id(url)
         return self.tweepy_api.get_status(tweet_id, tweet_mode="extended")
 
     def get_tweet_author(self, string):
@@ -111,6 +115,11 @@ class Twitter(commands.Cog):
             return
         tweet = self.get_tweet(true_url)
         while True:
+            if "mobile" in true_url:
+                json = self.get_tweet(true_url)._json
+                tweet_id = self.get_tweet_id(true_url)
+                return_url = f"https://twitter.com/{json['user']['screen_name']}/status/{tweet_id}"
+                await message.channel.send(return_url)
             tweet_id = tweet._json["id"]
             media_urls = self.get_media_urls(tweet_id)
             if media_urls:
