@@ -1,100 +1,61 @@
-from modules.dragalia.models.parse import Parse
-
-
-def number_emoji_generator(dps: str = None):
-    number_emoji_dict = {
-        "1": ":one:",
-        "2": ":two:",
-        "3": ":three:",
-        "4": ":four:",
-        "5": ":five:",
-        "6": ":six:",
-        "7": ":seven:",
-        "8": ":eight:",
-        "9": ":nine:",
-        "0": ":zero:",
-    }
-    dps_string = ""
-    for digit in dps:
-        dps_string += number_emoji_dict[digit]
-    return dps_string
-
-
-def add_number_suffix(number):
-    number = int(number)
-    suffixes = {1: "st", 2: "nd", 3: "rd"}
-    if number in [11, 12, 13]:
-        return str(number) + "th"
-    elif number in suffixes.keys():
-        return str(number) + suffixes[number]
-    else:
-        return str(number) + "th"
+from modules.dragalia.models.dps import DPS
+from modules.dragalia.models.skill import Skill
+from discord import Embed, Colour
+import modules.dragalia.models.constants as CONSTANTS
 
 
 class Adventurer:
-    def __init__(self, character_dict):
-        self.name = character_dict["name"]
-        internal_name = character_dict["internal_name"]
-        self.rarity = character_dict["rarity"]
-        self.element = character_dict["element"]
-        self.weapon = character_dict["weapon"]
-        self.str = character_dict["str"]
-        self.wyrmprints = character_dict["wyrmprints"]
-        if "dps" in character_dict["dragon"]:
-            split = character_dict["dragon"].split(";")
-            dps_range = split[1].lower().replace("dpsrange:", "DPS Range: ")
-            dps_range = dps_range.replace("~", " ~ ")
-            self.dragon = f"{split[0]}\n*{dps_range}*"
-        else:
-            self.dragon = character_dict["dragon"]
-        self.parse = {}
-        for parse_value in ["180", "120", "60"]:
-            self.parse[parse_value] = Parse(character_dict["parse"][parse_value])
-        self.image = (
-            f"https://b1ueb1ues.github.io/dl-sim/pic/character/{internal_name}.png"
+    def __init__(self, adven_dict, skills=None, dps_db=None, rank_db=None):
+        for k in adven_dict.keys():
+            k = k.lower()
+            setattr(self, k, adven_dict[k])
+        try:
+            self.max_coab = self.max_coab.replace(" Benefits your whole team. ", "")
+        except AttributeError:
+            pass
+        if skills:
+            skill_1 = [x for x in skills if x["name"] == self.skill_1]
+            skill_2 = [x for x in skills if x["name"] == self.skill_2]
+            self.skill_1 = Skill(skill_1)
+            self.skill_2 = Skill(skill_2)
+        if dps_db and self.weapon != "Staff":
+            self.dps = DPS(self, dps_db[self.internal_name], rank_db)
+
+    def embed(self):
+        embed = Embed(
+            title=f"__**{self.name}**__",
+            description=f"*{self.title}*",
+            colour=Colour(CONSTANTS.elements_colors[self.element.lower()]),
         )
-        self.internal_name = internal_name.replace("_", " ")
-        self.alt = character_dict["alt"]
-        return
-
-    def update_rank(self, rank_dict):
-        for parse_value in self.parse:
-            self.parse[parse_value].rank_element = str(
-                rank_dict[parse_value][self.element].index(self.name) + 1
-            )
-            self.parse[parse_value].rank_overall = str(
-                rank_dict[parse_value]["all"].index(self.name) + 1
-            )
-
-    def populate_embed(self, embed, parse_value):
         embed.set_thumbnail(url=self.image)
+        rarity = CONSTANTS.d_emoji[str(self.rarity) + "*"] * int(self.rarity)
         embed.add_field(
-            name="__DPS:__",
-            value=number_emoji_generator(self.parse[parse_value].dps),
+            name=f"{rarity}\n__Max Stats:__",
+            value=f"""**HP:** {self.max_hp}
+**STR:** {self.max_str}
+**DEF:** {self.defense}""",
             inline=True,
         )
-        element_rank = add_number_suffix(self.parse[parse_value].rank_element)
-        overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
+        coab = self.max_coab.split(":")
         embed.add_field(
-            name="__Rankings:__",
-            value=f"**{self.element.title()}:** {element_rank} "
-            f"\n**Overall:** {overall_rank}",
+            name=f"""{CONSTANTS.d_emoji[self.element.lower()]}{CONSTANTS.d_emoji[self.weapon.lower()]}
+__Max Co-Ab:__""",
+            value=f"**{coab[0]}:**\n{coab[1]}",
+            inline=True,
         )
-        embed.add_field(name="__Dragon:__", value=self.dragon, inline=True)
-        embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
         embed.add_field(
-            name="__Damage Breakdown:__",
-            value=self.parse[parse_value].type_to_string(),
+            name=f"__Skill:__ {self.skill_1.adven_embed()[0]}",
+            value=self.skill_1.adven_embed()[1],
             inline=False,
         )
-        if self.parse[parse_value].condition:
-            embed.add_field(
-                name="__Condition:__", value=self.parse[parse_value].condition
-            )
-        if self.parse[parse_value].comment:
-            embed.add_field(name="__Comment:__", value=self.parse[parse_value].comment)
-        embed.set_footer(
-            text="Use the up/down arrows to increase or decrease parse time."
+        embed.add_field(
+            name=f"__Skill:__ {self.skill_2.adven_embed()[0]}",
+            value=self.skill_2.adven_embed()[1],
+            inline=False,
         )
-        embed.set_author(name="Adventurer:")
+        for x in range(1, 4):
+            ability = getattr(self, f"ability_{x}").split(":")
+            embed.add_field(
+                name=f"__Ability:__ {ability[0]}", value=ability[1], inline=False
+            )
         return embed

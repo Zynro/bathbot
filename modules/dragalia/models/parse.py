@@ -16,7 +16,7 @@ class Parse:
         self.rank_element = None
         self.rank_overall = None
 
-    def type_to_string(self):
+    def to_dps_string(self):
         to_string_list = []
         for dmg_type in self.damage_types.keys():
             appending = f"{dmg_type}: {self.damage_types[dmg_type]}"

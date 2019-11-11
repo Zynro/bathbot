@@ -1,4 +1,4 @@
-discord.py[voice]==1.0.1
+discord.py[voice]==1.2.4
 opuslib==3.0.1
 requests==2.21.0
 youtube_dl==2017.12.2
@@ -16,3 +16,4 @@ tweepy==3.8.0
 fuzzywuzzy==0.17.0
 howlongtobeatpy==0.1.4
 beautifulsoup4==4.8.0
+aiosqlite==0.10.0
