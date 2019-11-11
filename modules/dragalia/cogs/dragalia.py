@@ -30,7 +30,7 @@ def generate_rand_color():
 
 
 async def lev_dist_similar(a, b):
-    return fuzz.partial_ratio(a.lower(), b.lower())
+    return fuzz.ratio(a.lower().strip(), b.lower().strip())
 
 
 def strip_all(input_str):
@@ -45,11 +45,11 @@ class Dragalia(commands.Cog):
         self.MASTER_DB = f"{self.module.path}/lists/master.db"
         self.update = ScrapeUpdate(self.MASTER_DB)
         self.update.full_update()
-        self.adven_db = self.create_names()
         self.dps_db_path = f"{self.module.path}/lists/optimal_dps_data"
         self.dps_csv = DPS.get_src_csv(self.dps_db_path)
         self.dps_db = DPS.build_dps_db(self.dps_csv)
         self.rank_db = DPS.build_rank_db(self.dps_db)
+        self.adven_db = self.create_names()
 
         # self.dps_rankings = self.create_rankings()
         # for character, value in self.adven_db.items():
@@ -87,11 +87,13 @@ class Dragalia(commands.Cog):
     async def async_create_names(self):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            query = await db.execute("SELECT Internal_Name FROM Adventurers")
+            query = await db.execute("SELECT * FROM Adventurers")
             results = query.fetchall()
         adven_classes = {}
         for each in results:
-            adven_classes[each["internal_name"]] = {}
+            adven_classes[each["internal_name"]] = Adventurer(
+                {"name": each["name"], "internal_name": each["internal_name"]}
+            )
         return adven_classes
 
     async def query_adv(self, query):
@@ -118,13 +120,18 @@ class Dragalia(commands.Cog):
                 "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
             )
             skills = await c.fetchall()
-            dps_dict = self.dps_db[internal_name]
             adventurer = self.adven_db[internal_name] = Adventurer(
-                adven_row, skills, dps_dict, self.rank_db
+                adven_row, skills, self.dps_db, self.rank_db
             )
         return adventurer
 
     async def adven_validate(self, adven_input):
+        if '"' in adven_input:
+            try:
+                return self.adven_db(adven_input.lower().strip())
+            except KeyError:
+                return None
+        adven_input.replace('"', "")
         adven_input = adven_input.lower()
         adven_results = []
         high_score_name = 0
@@ -135,8 +142,6 @@ class Dragalia(commands.Cog):
             temp_score_i_name = await lev_dist_similar(
                 adven_input, adven.internal_name.lower()
             )
-            if temp_score_name == 100 or temp_score_i_name == 100:
-                return [adven.internal_name]
             if temp_score_name > high_score_name:
                 high_score_name = temp_score_name
             if temp_score_i_name > high_score_i_name:
@@ -147,16 +152,22 @@ class Dragalia(commands.Cog):
             i_name_score = await lev_dist_similar(
                 adven_input, adven.internal_name.lower()
             )
-            if high_score_name - 5 <= name_score <= high_score_name + 5:
-                adven_results.append(adven.internal_name)
-            if high_score_i_name - 5 <= i_name_score <= high_score_i_name + 5:
-                adven_results.append(adven.internal_name)
+            if high_score_name == 100 or high_score_i_name == 100:
+                if i_name_score == 100:
+                    return [adven]
+                if name_score == 100 or i_name_score == 100:
+                    adven_results.append(adven)
+            else:
+                if high_score_name - 5 <= name_score <= high_score_name + 5:
+                    adven_results.append(adven)
+                if high_score_i_name - 5 <= i_name_score <= high_score_i_name + 5:
+                    adven_results.append(adven)
         return list(set(adven_results))
 
     async def return_multiple_results(self, multiple_results):
         char_result_list = []
         for each in multiple_results:
-            char_result_list.append(each.internal_name)
+            char_result_list.append(f"{each.name} / {each.internal_name}")
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(
             title="I found multiple results for your search:",
@@ -188,7 +199,7 @@ class Dragalia(commands.Cog):
                 await reaction.remove(self.bot.user)
         return parse
 
-    @commands.group(aliases=["drag", "d"])
+    @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
         """
         The Dragalia Lost command group.
@@ -206,21 +217,51 @@ class Dragalia(commands.Cog):
         if not ctx.invoked_subcommand:
             return
 
-    @dragalia.command()
-    async def query(self, ctx, data=None, *, character: str = None):
-        if not data:
-            return await ctx.send("Need query type.")
-        if data == "1":
-            adven = await self.query_adv(character)
-            # pp = pprint.PrettyPrinter(indent=1)
-            # pp.pprint(self.adven_db["zardin"].__dict__)
-            return await ctx.send(embed=adven.dps.embed())
-        elif data == "2":
-            adven = await self.query_adv(character)
-            return await ctx.send(embed=adven.embed())
+    @dragalia.command(name="adv", aliases=["a", "adven"])
+    async def adventurer_lookup(self, ctx, *, adven: str = None):
+        if not adven:
+            return await ctx.send("An query must be entered to search the database.")
+        adven = adven.lower().strip()
+        matched_list = await self.adven_validate(adven)
+        if matched_list:
+            if len(matched_list) > 1:
+                return await ctx.send(
+                    embed=await self.return_multiple_results(matched_list)
+                )
+            else:
+                adven = await self.query_adv(matched_list[0])
+                message = await ctx.send(embed=adven.embed())
+                await message.add_reaction(CONSTANTS.emoji["star"])
+
+                """def check_response(reaction, user):
+                    return (
+                        (reaction.emoji == CONSTANTS.emoji["star"])
+                        and user != self.bot.user
+                        and message.id == reaction.message.id
+                    )
+
+                while True:
+                    try:
+                        reaction, user = await self.bot.wait_for(
+                            "reaction_add", timeout=120.0, check=check_response
+                        )
+                    except asyncio.TimeoutError:
+                        return
+                    else:
+                        embed = reaction.message.embeds[0]
+                        parse = await self.proccess_parse_change(
+                            parse, embed, reaction, user
+                        )
+                        await reaction.message.edit(embed=adven.dps.embed(parse))"""
+
+        else:
+            return await ctx.send(
+                f'Either the adventurer "{adven}"'
+                " was not found, or an error occured."
+            )
 
     @dragalia.command()
-    async def dps(self, ctx, *, character: str = None):
+    async def dps(self, ctx, *, adven: str = None):
         """
         Retreive DPS Simulator data for a single character for parses of 60,
         120, and 180 seconds.
@@ -228,10 +269,12 @@ class Dragalia(commands.Cog):
         Usage:
             &[drag/d] dps <character>
         """
-        if not character:
-            return await ctx.send("A character must be entered to search the database.")
-        character = character.lower().strip()
-        matched_list = await self.adven_validate(character)
+        if not adven:
+            return await ctx.send(
+                "An adventurer must be entered to search the database."
+            )
+        adven = adven.lower().strip()
+        matched_list = await self.adven_validate(adven)
         if matched_list:
             if len(matched_list) > 1:
                 return await ctx.send(
@@ -240,6 +283,12 @@ class Dragalia(commands.Cog):
             else:
                 parse = "180"
                 adven = await self.query_adv(matched_list[0])
+                if adven.weapon == "Staff":
+                    return await ctx.send(
+                        "Healers do not have DPS records.\n"
+                        "Assume a good wyrmprint combinaiton is **Cleo's Ruse**"
+                        " and **Jewels of the Sun**."
+                    )
                 message = await ctx.send(embed=adven.dps.embed(parse))
                 await message.add_reaction(CONSTANTS.emoji["down_arrow"])
 
@@ -269,7 +318,8 @@ class Dragalia(commands.Cog):
 
         else:
             return await ctx.send(
-                "Either no adventurer was found, or an error occured."
+                f'Either the adventurer "{adven}"'
+                " was not found, or an error occured."
             )
 
     async def return_rankings_embed(self, element, parse):
