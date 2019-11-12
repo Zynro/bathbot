@@ -119,10 +119,13 @@ class DPS:
                 for row in dps_dict[parse]:
                     row = row.split(",")
                     try:
-                        row[1]
+                        if "_c_" in row[1]:
+                            continue
+                        else:
+                            row[1] = row[1].replace("_", "").lower().strip()
+                            writer.writerow(row)
                     except IndexError:
                         continue
-                    writer.writerow(row)
         return dps_dict
 
     @staticmethod
@@ -143,10 +146,12 @@ class DPS:
                 for row in dps_dict[parse]:
                     row = row.split(",")
                     try:
-                        row[1] = row[1].replace("_", "").lower().strip()
+                        if "_c_" in row[1]:
+                            continue
+                        else:
+                            writer.writerow(row)
                     except IndexError:
                         continue
-                    writer.writerow(row)
         return dps_dict
 
     @staticmethod
@@ -165,11 +170,12 @@ class DPS:
                     continue
                 if "_c_" in row[1]:
                     continue
-                if "Fleur" in row[1]:
+                if "fleur" in row[1]:
                     del row[9]
-                name = row[1]
                 if "_" in row[1]:
                     internal_name = row[1].replace("_", "").lower().strip()
+                    if "geuden" in internal_name:
+                        internal_name = "gprince"
                     alt = True
                 else:
                     internal_name = row[1].lower().strip()
@@ -181,7 +187,6 @@ class DPS:
                     wyrmprints = wyrmprints.replace("_", " ")
                     dragon = remove_brackets(amulets[1])
                     all_char_dps[internal_name] = {
-                        "name": name,
                         "internal_name": internal_name,
                         "rarity": row[2],
                         "element": row[3],

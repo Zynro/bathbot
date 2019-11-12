@@ -9,6 +9,7 @@ from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
 import modules.dragalia.models.constants as CONSTANTS
 import asyncio
+import traceback
 
 DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
 DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
@@ -119,8 +120,9 @@ class Dragalia(commands.Cog):
 
     async def adven_validate(self, adven_input):
         if '"' in adven_input:
+            adven_input.replace('"', "")
             try:
-                return self.adven_db(adven_input.lower().strip())
+                return self.adven_db[adven_input.lower().strip()]
             except KeyError:
                 return None
         adven_input.replace('"', "")
@@ -310,8 +312,7 @@ class Dragalia(commands.Cog):
 
         else:
             return await ctx.send(
-                f'Either the adventurer "{adven}"'
-                " was not found, or an error occured."
+                f"Either the adventurer {adven} was not found, or an error occured."
             )
 
     async def return_rankings_embed(self, element, parse):
@@ -335,13 +336,13 @@ class Dragalia(commands.Cog):
         name_string = ""
         dps_string = ""
         x = 1
-        for entry in self.dps_rankings[parse][element]:
+        for entry in self.rank_db[parse][element]:
             if x == 11:
                 break
-            char = self.adventurer_db[entry]
-            name = f"{x}. {char.internal_name}"
+            adven = self.adven_db[entry]
+            name = f"{x}. {adven.internal_name}"
             name_string += f"{name}\n"
-            dps_string += f"{char.parse[parse].dps}\n"
+            dps_string += f"{adven.dps.parse[parse].dps}\n"
             x += 1
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
@@ -405,15 +406,12 @@ class Dragalia(commands.Cog):
             " from source, please wait..."
         )
         try:
-            char_dict = self.build_adven_db(
-                await self.async_get_src_csv(self.path_to_csv_file)
+            self.dps_db = DPS.build_dps_db(
+                await DPS.async_get_src_csv(self.dps_db_path)
             )
-            self.adventurer_db = self.create_classes(char_dict)
-            self.dps_rankings = self.create_rankings()
-            for character, value in self.adventurer_db.items():
-                self.adventurer_db[character].update_rank(self.dps_rankings)
+            self.rank_db = DPS.build_rank_db(self.dps_db)
         except Exception as e:
-            print(e)
+            traceback.print_exc()
             return await ctx.send(f"Update failed: {e}")
         await ctx.send("Update complete!")
         return
