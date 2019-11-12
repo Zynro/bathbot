@@ -19,7 +19,11 @@ class Adventurer:
             self.skill_1 = Skill(skill_1)
             self.skill_2 = Skill(skill_2)
         if dps_db and self.weapon != "Staff":
-            self.dps = DPS(self, dps_db[self.internal_name], rank_db)
+            try:
+                adven_dps = dps_db[self.internal_name]
+            except KeyError:
+                adven_dps = None
+            self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):
         embed = Embed(
