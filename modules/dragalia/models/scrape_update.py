@@ -104,9 +104,12 @@ UPDATE Skills
 SET Image=?, Owner=?, Level=?, Description=?, SP_Cost=?, I_Frames=?
 WHERE Internal_Name=?
 """
+exceptions = {"ku hai": "kuhai"}
 
 
 def shorten_name(name):
+    if name.lower().strip() in exceptions.keys():
+        return exceptions[name.lower().strip()]
     split = name.split(" ")
     if len(split) == 1:
         return name.lower()
@@ -212,7 +215,9 @@ def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
     skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text().strip()
-    skill["owner"] = s_soup.find("li").select("a[title]")[0]["title"]
+    skill["owner"] = (
+        s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
+    )
     all_levels = s_soup.find(class_="skill-levels skill-details")
     all_levels = all_levels.find_all(class_="tabbertab")
     skill["levels"] = {}

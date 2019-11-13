@@ -1,6 +1,7 @@
 import requests
 import aiohttp
 import csv
+import random
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONSTANTS
@@ -42,6 +43,8 @@ def add_number_suffix(number):
 
 class DPS:
     def __init__(self, adventurer, dps_dict, rank_db):
+        if not dps_dict:
+            return
         self.adventurer = adventurer
         self.owner = adventurer.internal_name
         self.wyrmprints = dps_dict["wyrmprints"]
@@ -68,11 +71,27 @@ class DPS:
             )
 
     def embed(self, parse_value="180"):
-        embed = Embed(
-            title=f"__**{self.adventurer.name}**__",
-            description=f"*Parse: {parse_value} Seconds*",
-            colour=Colour(CONSTANTS.elements_colors[self.adventurer.element.lower()]),
-        )
+        try:
+            embed = Embed(
+                title=f"__**{self.adventurer.name}**__",
+                description=f"*Parse: {parse_value} Seconds*",
+                colour=Colour(
+                    CONSTANTS.elements_colors[self.adventurer.element.lower()]
+                ),
+            )
+        except (AttributeError, IndexError):
+            embed = Embed(
+                title=f"__**Error:**__",
+                description=f"This adventurer currently does not have a"
+                " simulated DPS profile.\n"
+                "Check back later for updates!\n\n"
+                "You can also see their adventurer info embed by using the"
+                " `&d [a/adv/adven] <adventurer>` command, where <adventurer>"
+                " is an adventurer.\n\n"
+                "i.e. `&d adv Marth`",
+                colour=Colour(random.randint(0, 0xFFFFFF)),
+            )
+            return embed
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",

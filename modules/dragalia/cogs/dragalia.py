@@ -288,6 +288,8 @@ class Dragalia(commands.Cog):
                         " and **Jewels of the Sun**."
                     )
                 message = await ctx.send(embed=adven.dps.embed(parse))
+                if "error" in message.embeds[0].title.lower():
+                    return
                 await message.add_reaction(CONSTANTS.emoji["down_arrow"])
 
                 def check_response(reaction, user):
