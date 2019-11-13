@@ -371,13 +371,13 @@ class Dragalia(commands.Cog):
         parse = "180"
         embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
-        await message.add_reaction(CONSTANTS.emoji.down_arrow)
+        await message.add_reaction(CONSTANTS.emoji["down_arrow"])
 
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONSTANTS.emoji.up_arrow
-                    or reaction.emoji == CONSTANTS.emoji.down_arrow
+                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
+                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
