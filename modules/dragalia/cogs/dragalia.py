@@ -81,7 +81,7 @@ class Dragalia(commands.Cog):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query = await db.execute("SELECT * FROM Adventurers")
-            results = query.fetchall()
+            results = await query.fetchall()
         adven_classes = {}
         for each in results:
             adven_classes[each["internal_name"]] = Adventurer(
@@ -102,6 +102,10 @@ class Dragalia(commands.Cog):
         return adventurer
 
     async def generate_adven_class(self, name):
+        try:
+            name = name.internal_name
+        except AttributeError:
+            pass
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             c = await db.execute(
@@ -323,7 +327,7 @@ class Dragalia(commands.Cog):
                     embed = discord.Embed(
                         title=(f"**{element.title()} Top 10 Rankings**"),
                         description=f"*Parse: {parse} Seconds*",
-                        colour=discord.Colour(generate_rand_color()),
+                        colour=discord.Colour(CONSTANTS.elements_colors[element]),
                     )
                     break
         else:
@@ -340,7 +344,8 @@ class Dragalia(commands.Cog):
             if x == 11:
                 break
             adven = self.adven_db[entry]
-            name = f"{x}. {adven.internal_name}"
+            name = f"{x}. {adven.name}"
+            adven = await self.generate_adven_class(adven)
             name_string += f"{name}\n"
             dps_string += f"{adven.dps.parse[parse].dps}\n"
             x += 1
@@ -400,20 +405,26 @@ class Dragalia(commands.Cog):
         name="print-get", aliases=["printdownload", "print-update", "update"]
     )
     @commands.cooldown(rate=1, per=60.00, type=commands.BucketType.default)
-    async def update_draglia_data(self, ctx):
-        await ctx.send(
-            "Bathbot is now retreiving the DPS Simulator numbers"
-            " from source, please wait..."
-        )
+    async def update_draglia_data(self, ctx, force=False):
+        await ctx.send("Now updating Adventurer entries...")
+        if force:
+            try:
+                await self.update.async_full_update(force=True)
+                self.adven_db = await self.async_create_names()
+                await ctx.send("Update successful!")
+            except Exception as e:
+                traceback.print_exc()
+                return await ctx.send(f"Update failed: {e}")
+        await ctx.send("Now updating DPS entries...")
         try:
             self.dps_db = DPS.build_dps_db(
                 await DPS.async_get_src_csv(self.dps_db_path)
             )
             self.rank_db = DPS.build_rank_db(self.dps_db)
+            await ctx.send("DPS update complete!")
         except Exception as e:
             traceback.print_exc()
             return await ctx.send(f"Update failed: {e}")
-        await ctx.send("Update complete!")
         return
 
 
