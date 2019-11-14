@@ -175,27 +175,45 @@ class Dragalia(commands.Cog):
         embed.set_footer(text="Try your search again" " with a adventurer specified.")
         return embed
 
-    async def proccess_parse_change(self, parse, embed, reaction, user):
+    async def proccess_parse_change(
+        self, embed=None, reaction=None, user=None, parse=None
+    ):
+        message = reaction.message
         if reaction.emoji == CONSTANTS.emoji["up_arrow"]:
+            await reaction.remove(user)
             if "60" in embed.description:
                 parse = "120"
-                await reaction.remove(user)
-                await reaction.message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                return parse
             elif "120" in embed.description:
                 parse = "180"
-                await reaction.remove(user)
                 await reaction.remove(self.bot.user)
+                return parse
 
         elif reaction.emoji == CONSTANTS.emoji["down_arrow"]:
+            await reaction.remove(user)
             if "180" in embed.description:
                 parse = "120"
-                await reaction.remove(user)
-                await reaction.message.add_reaction(CONSTANTS.emoji["up_arrow"])
+                await message.add_reaction(CONSTANTS.emoji["up_arrow"])
+                return parse
             if "120" in embed.description:
                 parse = "60"
-                await reaction.remove(user)
                 await reaction.remove(self.bot.user)
-        return parse
+                return parse
+
+        elif reaction.emoji == CONSTANTS.emoji["star"]:
+            await reaction.remove(user)
+            if "parse" in embed.description.lower():
+                await message.remove_reaction(
+                    CONSTANTS.emoji["down_arrow"], self.bot.user
+                )
+                await message.remove_reaction(
+                    CONSTANTS.emoji["up_arrow"], self.bot.user
+                )
+                return "adv"
+            else:
+                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                return "180"
 
     @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
@@ -229,11 +247,16 @@ class Dragalia(commands.Cog):
             else:
                 adven = await self.query_adv(matched_list[0])
                 message = await ctx.send(embed=adven.embed())
-                # await message.add_reaction(CONSTANTS.emoji["star"])
+                await message.add_reaction(CONSTANTS.emoji["star"])
+                parse = None
 
-                """def check_response(reaction, user):
+                def check_response(reaction, user):
                     return (
-                        (reaction.emoji == CONSTANTS.emoji["star"])
+                        (
+                            reaction.emoji == CONSTANTS.emoji["up_arrow"]
+                            or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                            or reaction.emoji == CONSTANTS.emoji["star"]
+                        )
                         and user != self.bot.user
                         and message.id == reaction.message.id
                     )
@@ -248,14 +271,16 @@ class Dragalia(commands.Cog):
                     else:
                         embed = reaction.message.embeds[0]
                         parse = await self.proccess_parse_change(
-                            parse, embed, reaction, user
+                            embed=embed, reaction=reaction, user=user, parse=parse
                         )
-                        await reaction.message.edit(embed=adven.dps.embed(parse))"""
+                        if parse == "adv":
+                            await reaction.message.edit(embed=adven.embed())
+                        else:
+                            await reaction.message.edit(embed=adven.dps.embed(parse))
 
         else:
             return await ctx.send(
-                f'Either the adventurer "{adven}"'
-                " was not found, or an error occured."
+                f"Either the adventurer {adven} was not found, or an error occured."
             )
 
     @dragalia.command()
@@ -290,6 +315,7 @@ class Dragalia(commands.Cog):
                 message = await ctx.send(embed=adven.dps.embed(parse))
                 if "error" in message.embeds[0].title.lower():
                     return
+                await message.add_reaction(CONSTANTS.emoji["star"])
                 await message.add_reaction(CONSTANTS.emoji["down_arrow"])
 
                 def check_response(reaction, user):
@@ -297,6 +323,7 @@ class Dragalia(commands.Cog):
                         (
                             reaction.emoji == CONSTANTS.emoji["up_arrow"]
                             or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                            or reaction.emoji == CONSTANTS.emoji["star"]
                         )
                         and user != self.bot.user
                         and message.id == reaction.message.id
@@ -312,9 +339,12 @@ class Dragalia(commands.Cog):
                     else:
                         embed = reaction.message.embeds[0]
                         parse = await self.proccess_parse_change(
-                            parse, embed, reaction, user
+                            embed=embed, reaction=reaction, user=user, parse=parse
                         )
-                        await reaction.message.edit(embed=adven.dps.embed(parse))
+                        if parse == "adv":
+                            await reaction.message.edit(embed=adven.embed())
+                        else:
+                            await reaction.message.edit(embed=adven.dps.embed(parse))
 
         else:
             return await ctx.send(
@@ -394,7 +424,9 @@ class Dragalia(commands.Cog):
                 return
             else:
                 embed = reaction.message.embeds[0]
-                parse = await self.proccess_parse_change(parse, embed, reaction, user)
+                parse = await self.proccess_parse_change(
+                    embed=embed, reaction=reaction, user=user, parse=parse
+                )
                 element = reaction.message.embeds[0].title.split(" ")[0]
                 element = strip_all(element.lower().strip())
                 if element not in dragalia_elements:
