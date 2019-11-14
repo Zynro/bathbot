@@ -215,6 +215,35 @@ class Dragalia(commands.Cog):
                 await message.add_reaction(CONSTANTS.emoji["down_arrow"])
                 return "180"
 
+    async def adven_profile_process(self, ctx, message, adven, parse="180"):
+        def check_response(reaction, user):
+            return (
+                (
+                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
+                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                    or reaction.emoji == CONSTANTS.emoji["star"]
+                )
+                and user != self.bot.user
+                and message.id == reaction.message.id
+            )
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for(
+                    "reaction_add", timeout=120.0, check=check_response
+                )
+            except asyncio.TimeoutError:
+                return
+            else:
+                embed = reaction.message.embeds[0]
+                parse = await self.proccess_parse_change(
+                    embed=embed, reaction=reaction, user=user, parse=parse
+                )
+                if parse == "adv":
+                    await reaction.message.edit(embed=adven.embed())
+                else:
+                    await reaction.message.edit(embed=adven.dps.embed(parse))
+
     @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
         """
@@ -248,36 +277,7 @@ class Dragalia(commands.Cog):
                 adven = await self.query_adv(matched_list[0])
                 message = await ctx.send(embed=adven.embed())
                 await message.add_reaction(CONSTANTS.emoji["star"])
-                parse = None
-
-                def check_response(reaction, user):
-                    return (
-                        (
-                            reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                            or reaction.emoji == CONSTANTS.emoji["down_arrow"]
-                            or reaction.emoji == CONSTANTS.emoji["star"]
-                        )
-                        and user != self.bot.user
-                        and message.id == reaction.message.id
-                    )
-
-                while True:
-                    try:
-                        reaction, user = await self.bot.wait_for(
-                            "reaction_add", timeout=120.0, check=check_response
-                        )
-                    except asyncio.TimeoutError:
-                        return
-                    else:
-                        embed = reaction.message.embeds[0]
-                        parse = await self.proccess_parse_change(
-                            embed=embed, reaction=reaction, user=user, parse=parse
-                        )
-                        if parse == "adv":
-                            await reaction.message.edit(embed=adven.embed())
-                        else:
-                            await reaction.message.edit(embed=adven.dps.embed(parse))
-
+                await self.adven_profile_process(ctx, message, adven)
         else:
             return await ctx.send(
                 f"Either the adventurer {adven} was not found, or an error occured."
@@ -317,35 +317,7 @@ class Dragalia(commands.Cog):
                     return
                 await message.add_reaction(CONSTANTS.emoji["star"])
                 await message.add_reaction(CONSTANTS.emoji["down_arrow"])
-
-                def check_response(reaction, user):
-                    return (
-                        (
-                            reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                            or reaction.emoji == CONSTANTS.emoji["down_arrow"]
-                            or reaction.emoji == CONSTANTS.emoji["star"]
-                        )
-                        and user != self.bot.user
-                        and message.id == reaction.message.id
-                    )
-
-                while True:
-                    try:
-                        reaction, user = await self.bot.wait_for(
-                            "reaction_add", timeout=120.0, check=check_response
-                        )
-                    except asyncio.TimeoutError:
-                        return
-                    else:
-                        embed = reaction.message.embeds[0]
-                        parse = await self.proccess_parse_change(
-                            embed=embed, reaction=reaction, user=user, parse=parse
-                        )
-                        if parse == "adv":
-                            await reaction.message.edit(embed=adven.embed())
-                        else:
-                            await reaction.message.edit(embed=adven.dps.embed(parse))
-
+                await self.adven_profile_process(ctx, message, adven)
         else:
             return await ctx.send(
                 f"Either the adventurer {adven} was not found, or an error occured."
