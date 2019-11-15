@@ -243,7 +243,7 @@ class DPS:
                 [
                     (
                         dps_db[adven]["internal_name"],
-                        dps_db[adven]["parse"][parse]["damage"]["dps"],
+                        int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
                     )
                     for adven in dps_db.keys()
                 ],
@@ -256,7 +256,7 @@ class DPS:
                     [
                         (
                             dps_db[adven]["internal_name"],
-                            dps_db[adven]["parse"][parse]["damage"]["dps"],
+                            int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
                         )
                         for adven in dps_db.keys()
                         if dps_db[adven]["element"] == element
