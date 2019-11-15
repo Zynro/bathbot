@@ -180,7 +180,7 @@ def parse_adventurer(resp):
     adven["max_str"] = soup.find(id="adv-str").get_text()
     divs = soup.find(style="flex-grow:1;text-align:center")
     divs = divs.find_all(style="width:100%")
-    adven["defense"] = divs[6].find(class_="dd-description").get_text()
+    adven["defense"] = divs[6].find_all("div")[1].get_text()
     adven["adv_type"] = unit_types[divs[7].select("img[alt]")[0]["alt"]]
     adven["rarity"] = rarities[divs[10].select("img[alt]")[0]["alt"]]
 
@@ -205,16 +205,19 @@ def parse_adventurer(resp):
             ability_value = ability_value[0].find("p").get_text().split("(")[0]
         adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
 
-    adven["obtained"] = divs[-3].find(class_="dd-description").get_text()
-    adven["release"] = divs[-2].find(class_="dd-description").get_text()
-    adven["avail"] = divs[-1].find(class_="dd-description").get_text()
+    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
+    adven["release"] = divs[-2].find_all("div")[1].get_text()
+    adven["avail"] = divs[-1].find_all("div")[1].get_text()
     return adven
 
 
 def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
-    skill["i_frames"] = s_soup.find_all(class_="dd-description")[-3].get_text().strip()
+    temp = s_soup.find(class_="skill-levels skill-details")
+    skill["i_frames"] = (
+        temp.find_all(style="width:100%")[-3].find_all("div")[1].get_text().strip()
+    )
     skill["owner"] = (
         s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
     )
@@ -229,8 +232,8 @@ def parse_skill(resp, skill):
         skill["levels"][i]["desc"] = (
             skill_div.find_all("div")[1].get_text().replace("\\'", "'")
         )
-        sp_cost = skill_div.find_all(class_="dd-description")
-        skill["levels"][i]["sp_cost"] = sp_cost[0].get_text()
+        sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
+        skill["levels"][i]["sp_cost"] = sp_cost[1].get_text()
         skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
     return skill
 
