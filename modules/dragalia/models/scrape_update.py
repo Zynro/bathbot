@@ -216,7 +216,7 @@ def parse_skill(resp, skill):
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
     temp = s_soup.find(class_="skill-levels skill-details")
     skill["i_frames"] = (
-        temp.find_all(style="width:100%")[-3].find_all("div")[1].get_text().strip()
+        temp.find_all(style="width:100%")[-3].find_all("div")[-1].get_text().strip()
     )
     skill["owner"] = (
         s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
@@ -233,7 +233,7 @@ def parse_skill(resp, skill):
             skill_div.find_all("div")[1].get_text().replace("\\'", "'")
         )
         sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
-        skill["levels"][i]["sp_cost"] = sp_cost[1].get_text()
+        skill["levels"][i]["sp_cost"] = sp_cost[-1].get_text()
         skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
     return skill
 
