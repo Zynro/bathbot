@@ -413,14 +413,13 @@ class Dragalia(commands.Cog):
     @commands.cooldown(rate=1, per=60.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, force=False):
         await ctx.send("Now updating Adventurer entries...")
-        if force:
-            try:
-                await self.update.async_full_update(force=True)
-                self.adven_db = await self.async_create_names()
-                await ctx.send("Update successful!")
-            except Exception as e:
-                traceback.print_exc()
-                return await ctx.send(f"Update failed: {e}")
+        try:
+            await self.update.async_full_update(force=force)
+            self.adven_db = await self.async_create_names()
+            await ctx.send("Update successful!")
+        except Exception as e:
+            traceback.print_exc()
+            return await ctx.send(f"Update failed: {e}")
         await ctx.send("Now updating DPS entries...")
         try:
             self.dps_db = DPS.build_dps_db(

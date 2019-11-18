@@ -46,3 +46,15 @@ d_emoji = {
 }
 
 emoji = {"up_arrow": "⬆", "down_arrow": "⬇", "star": "⭐"}
+
+
+alts = [
+    "dragonyule",
+    "student",
+    "halloween",
+    "valentine's",
+    "summer",
+    "wedding",
+    "gala",
+    "beautician",
+]

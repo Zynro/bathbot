@@ -3,6 +3,7 @@ import sqlite3
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
+import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
@@ -108,12 +109,12 @@ exceptions = {"ku hai": "kuhai"}
 
 
 def shorten_name(name):
-    if name.lower().strip() in exceptions.keys():
-        return exceptions[name.lower().strip()]
     split = name.split(" ")
-    if len(split) == 1:
-        return name.lower()
-    return f"{split[0][0].lower()}{split[1].lower()}"
+    for each in CONSTANTS.alts:
+        if split[0].lower().strip() == each.strip().lower():
+            return f"{split[0][0].lower()}{split[1].lower()}"
+    else:
+        return name.lower().replace(" ", "")
 
 
 def fetch(URL):
@@ -421,7 +422,6 @@ async def aysnc_update_advs(session, db, force=False):
             else:
                 pass
         if not update and not force:
-            print(f"{name} already entered. Passing adventurer...")
             continue
         print(f"=====Updating: {name}=====")
         resp = await async_fetch(session, f"{MAIN_URL}{name}")
@@ -483,7 +483,7 @@ async def async_update_skills(session, db, force=False):
             except KeyError:
                 update = True
             if not update and not force:
-                print(f"    {name} already entered. Passing skill...")
+                # print(f"    {name} already entered. Passing skill...")
                 continue
             resp = await async_fetch(
                 session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
@@ -555,6 +555,10 @@ class Update:
     async def async_full_update(self, force=False):
         async with aiohttp.ClientSession() as session:
             async with async_sql.connect(self.db_file) as db:
+                if force:
+                    c = await db.cursor()
+                    await c.execute("DROP TABLE Adventurers")
+                    await c.execute("DROP TABLE Skills")
                 try:
                     await db.execute("SELECT * from Adventurers")
                 except sqlite3.OperationalError:

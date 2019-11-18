@@ -173,6 +173,7 @@ class Embeds:
         embed.add_field(
             name="OnmyoGuide Bounty Locations (Probably Outdated):",
             value=self.location_finder(shikigami_object),
+            inline=False,
         )
         embed.set_footer(text="Bugs? Bad Info? Issues? Message @zynro to report them!")
 
@@ -195,6 +196,7 @@ class Embeds:
             embed.add_field(
                 name="BubbleTea Database Bounty Locations:",
                 value="Temporarily disabled until the BubbleTea Shikigami Location Database is more populated.",
+                inline=False,
             )
         return embed, icon
 
