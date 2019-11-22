@@ -16,20 +16,18 @@ class Module:
         self.access = guild_access
 
 
-extension_dict = {}
-extension_dict["base"] = ["cogs.admin", "cogs.voicecmd", "cogs.basic", "cogs.modules"]
-
-extension_dict["onmyoji"] = [
-    "modules.onmyoji.cogs.guildcmd",
-    "modules.onmyoji.cogs.shikigami",
-    "modules.onmyoji.cogs.shard",
-]
-
-extension_dict["twitter"] = ["modules.twitter.cogs.twitter"]
-
-extension_dict["dragalia"] = ["modules.dragalia.cogs.dragalia"]
-
-extension_dict["mastodon"] = ["modules.mastodon.cogs.mastodon_cog"]
+extension_dict = {
+    "base": ["cogs.admin", "cogs.voicecmd", "cogs.basic", "cogs.modules"],
+    "onmyoji": [
+        "modules.onmyoji.cogs.guildcmd",
+        "modules.onmyoji.cogs.shikigami",
+        "modules.onmyoji.cogs.shard",
+    ],
+    "twitter": ["modules.twitter.cogs.twitter"],
+    "dragalia": ["modules.dragalia.cogs.dragalia"],
+    "mastodon": ["modules.mastodon.cogs.mastodon_cog"],
+    "ffxiv": ["modules.ffxiv.cogs.ffxiv"],
+}
 
 initial_extensions = []
 for group in extension_dict:
@@ -38,7 +36,7 @@ extensions = initial_extensions + config.memes_extensions
 
 
 def get_prefix(bot, message):
-    prefixes = ["&"]
+    prefixes = ["!"]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
