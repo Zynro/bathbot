@@ -82,7 +82,7 @@ class DPS:
         except (AttributeError, IndexError):
             embed = Embed(
                 title=f"__**Error:**__",
-                description=f"This adventurer currently does not have a"
+                description=f"This adventurer does exist, but currently does not have a"
                 " simulated DPS profile.\n"
                 "Check back later for updates!\n\n"
                 "You can also see their adventurer info embed by using the"
