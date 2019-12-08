@@ -24,12 +24,10 @@ extension_dict["onmyoji"] = [
     "modules.onmyoji.cogs.shikigami",
     "modules.onmyoji.cogs.shard",
 ]
-
 extension_dict["twitter"] = ["modules.twitter.cogs.twitter"]
-
 extension_dict["dragalia"] = ["modules.dragalia.cogs.dragalia"]
-
 extension_dict["mastodon"] = ["modules.mastodon.cogs.mastodon_cog"]
+extension_dict["roleplay"] = ["modules.roleplay.cogs.dice"]
 
 initial_extensions = []
 for group in extension_dict:
