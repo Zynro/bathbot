@@ -14,7 +14,7 @@ class Campaign:
     def __init__(self):
         return
 
-    def roll_dice(self, amount: int, dice: int = 6):
+    def roll_dice(self, amount: int, dice: int):
         return [random.randint(1, dice) for x in range(1, amount + 1)]
 
     @staticmethod
@@ -35,7 +35,7 @@ class Mutant(Campaign):
                 dice = int(dice_split[1].strip())
                 rolls.append(self.roll_dice(amount, dice))
             else:
-                rolls.append(self.roll_dice(int(each)))
+                rolls.append(self.roll_dice(int(each), 6))
         return rolls
 
     def dice(self, string):
@@ -48,6 +48,9 @@ class Mutant(Campaign):
             checks = False
             input_string = "+".join(roll_list)
             results = self.mutant_dice(roll_list)
+            roll_dict = {each: results[x] for x, each in enumerate(roll_list)}
+
+        # Begin creating embed
         embed = Embed(
             title=f"**`{input_string}`**", description=f" ", color=rand_color()
         )
@@ -63,6 +66,7 @@ class Mutant(Campaign):
         elif checks:
             joined = "".join(str(x) for x in self.roll_dice(3, 6))
             embed.add_field(name=f"**__Result:__**", value=joined)
+            roll_dict = None
         else:
             for index, each in enumerate(results):
                 embed.add_field(
@@ -78,7 +82,7 @@ class Mutant(Campaign):
                 value=f"Success: **{successes}**\nFailure: {failures}",
                 inline=False,
             )
-        return embed
+        return embed, roll_dict
 
 
 pnp_list = {"mutant": Mutant()}
