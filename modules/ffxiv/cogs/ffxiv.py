@@ -16,6 +16,7 @@ def randcolor():
 class FFXIV(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.module = self.bot.modules["ffxiv"]
         world_path = (
             "https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/"
             "csv/World.csv"
