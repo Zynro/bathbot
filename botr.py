@@ -37,7 +37,7 @@ extensions = initial_extensions + config.memes_extensions
 
 
 def get_prefix(bot, message):
-    prefixes = ["&"]
+    prefixes = ["/", "&"]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 

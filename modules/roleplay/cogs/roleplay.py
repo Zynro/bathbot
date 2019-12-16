@@ -1,7 +1,6 @@
-import discord
 from discord.ext import commands
 import random
-from modules.roleplay.models import campaign
+import modules.roleplay.models.campaign as Campaign
 import os
 import json
 
@@ -19,6 +18,7 @@ class Dice(commands.Cog):
         self.bot = bot
         self.initial_dir_creation()
         self.guild_info = self.load_guilds_info()
+        self.campaign = Campaign.pnp_list["mutant"]
 
     def initial_dir_creation(self):
         for guild in self.bot.module_access["roleplay"]:
@@ -47,37 +47,8 @@ class Dice(commands.Cog):
 
     @commands.command(name="roll")
     async def roll(self, ctx, *, string):
-        embed = discord.Embed(
-            title=f"**`{string}`**", description=f" ", color=generate_rand_color()
-        )
-        rolls = campaign.roll_dice(string)
-        if "d" in string:  # split by game mode later, temporary stopgap
-            for index, each in enumerate(rolls):
-                embed.add_field(
-                    name=f"**__{rolls[index]}__**",
-                    value=f"{', '.join([str(x) for x in each])}",
-                    inline=False,
-                )
-                flat = sum([item for sublist in rolls for item in sublist])
-                embed.add_field(
-                    name="**__Totals:__**", value=f"Sum: {flat}", inline=False
-                )
-        else:
-            for index, each in enumerate(rolls):
-                embed.add_field(
-                    name=f"**__{rolls[index]}d6__**",
-                    value=f"{', '.join([str(x) for x in each])}",
-                    inline=False,
-                )
-                flat = [item for sublist in rolls for item in sublist]
-                successes = flat.count(6)
-                failures = flat.count(1)
-                embed.add_field(
-                    name="**__Totals:__**",
-                    value=f"Success: **{successes}**\nFailure: {failures}",
-                    inline=False,
-                )
-        await ctx.send(embed=embed)
+        embed = self.campaign.dice(string)
+        await ctx.send(ctx.author.mention, embed=embed)
 
 
 def setup(bot):
