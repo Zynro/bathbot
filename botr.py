@@ -108,6 +108,8 @@ async def on_ready():
                 os.mkdir(f"guilds/{guild.id}")
             for module in bot.modules:
                 module = bot.modules[module]
+                if module.name == "bathmemes":
+                    continue
                 path = f"guilds/{guild.id}/{module.path}"
                 if not os.path.exists(path):
                     os.mkdir(path)
