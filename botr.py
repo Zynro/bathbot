@@ -6,16 +6,9 @@ import json
 import os
 import traceback
 import sys
+from models.module import Module
 
-
-class Module:
-    def __init__(self, name, path=None, cog_list=None, guild_access=None):
-        self.name = name
-        self.path = path
-        self.cog_list = cog_list
-        self.access = guild_access
-
-
+# automate this process, find all files in cogs folder, load them for all modules
 extension_dict = {}
 extension_dict["base"] = ["cogs.admin", "cogs.voicecmd", "cogs.basic", "cogs.modules"]
 
@@ -24,12 +17,10 @@ extension_dict["onmyoji"] = [
     "modules.onmyoji.cogs.shikigami",
     "modules.onmyoji.cogs.shard",
 ]
-
 extension_dict["twitter"] = ["modules.twitter.cogs.twitter"]
-
 extension_dict["dragalia"] = ["modules.dragalia.cogs.dragalia"]
-
 extension_dict["mastodon"] = ["modules.mastodon.cogs.mastodon_cog"]
+extension_dict["roleplay"] = ["modules.roleplay.cogs.roleplay"]
 
 initial_extensions = []
 for group in extension_dict:
@@ -38,7 +29,7 @@ extensions = initial_extensions + config.memes_extensions
 
 
 def get_prefix(bot, message):
-    prefixes = ["&"]
+    prefixes = ["/", "&"]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
@@ -65,10 +56,7 @@ for extension in extension_dict.keys():
     if extension == "base":
         continue
     bot.modules[extension] = Module(
-        extension,
-        f"modules/{extension}",
-        extension_dict[extension],
-        bot.module_access[extension],
+        extension, extension, extension_dict[extension], bot.module_access[extension]
     )
 bot.modules["bathmemes"] = Module(
     "bathmemes", config.memes_module_path, config.memes_extensions, config.memes_access
@@ -102,6 +90,7 @@ async def on_ready():
     if __name__ == "__main__":
 
         # Creates all module base folders
+        # Uncessary, remove later
         module_base_folder_list = ["cogs", "images", "lists", "models"]
         for module in bot.modules.keys():
             if not os.path.exists(f"modules/{module}"):
@@ -111,19 +100,21 @@ async def on_ready():
                     os.mkdir(f"modules/{module}/{folder}")
 
         # Create all necessary guild folders
-        required_dir_list = ["images", "lists", "modules"]
+        required_dir_list = ["images", "lists"]
         if not os.path.exists(f"guilds"):
             os.mkdir(f"guilds")
         for guild in bot.guilds:
             if not os.path.exists(f"guilds/{guild.id}"):
                 os.mkdir(f"guilds/{guild.id}")
-            for folder in required_dir_list:
-                if not os.path.exists(f"guilds/{guild.id}/{folder}"):
-                    os.mkdir(f"guilds/{guild.id}/{folder}")
             for module in bot.modules:
                 module = bot.modules[module]
-                if not os.path.exists(f"guilds/{guild.id}/{module.path}"):
-                    os.mkdir(f"guilds/{guild.id}/{module.path}")
+                path = f"guilds/{guild.id}/{module.path}"
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                for path_dir in required_dir_list:
+                    path = f"{path}/{path_dir}"
+                    if not os.path.exists(path):
+                        os.mkdir(path)
 
         # Load all extensions
         for extension in extensions:

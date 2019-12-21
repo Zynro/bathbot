@@ -43,10 +43,10 @@ class Dragalia(commands.Cog):
         self.bot = bot
         self.module = self.bot.modules["dragalia"]
 
-        self.MASTER_DB = f"{self.module.path}/lists/master.db"
+        self.MASTER_DB = f"modules/{self.module.path}/lists/master.db"
         self.update = ScrapeUpdate(self.MASTER_DB)
         self.update.full_update()
-        self.dps_db_path = f"{self.module.path}/lists/optimal_dps_data"
+        self.dps_db_path = f"modules/{self.module.path}/lists/optimal_dps_data"
         self.dps_csv = DPS.get_src_csv(self.dps_db_path)
         self.dps_db = DPS.build_dps_db(self.dps_csv)
         self.rank_db = DPS.build_rank_db(self.dps_db)
