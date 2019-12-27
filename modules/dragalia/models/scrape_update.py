@@ -177,13 +177,40 @@ def parse_adventurer(resp):
     adven["title"] = p.find_all("div")[0].get_text()
     adven["element"] = elements[p.select("img[alt]")[0]["alt"]]
     adven["weapon"] = weapons[p.select("img[alt]")[1]["alt"]]
-    adven["max_hp"] = soup.find(id="adv-hp").get_text()
-    adven["max_str"] = soup.find(id="adv-str").get_text()
     divs = soup.find(style="flex-grow:1;text-align:center")
     divs = divs.find_all(style="width:100%")
-    adven["defense"] = divs[6].find_all("div")[1].get_text()
-    adven["adv_type"] = unit_types[divs[7].select("img[alt]")[0]["alt"]]
-    adven["rarity"] = rarities[divs[10].select("img[alt]")[0]["alt"]]
+    for each in divs:
+        if each.find("div", {"class": "tooltip"}):
+            if (
+                "total max hp"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                adven["max_hp"] = (
+                    each.find("span", {"class": "tooltip"})
+                    .get_text()
+                    .split(")")[1]
+                    .split(" ")[0]
+                )
+            elif (
+                "total max str"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                adven["max_str"] = (
+                    each.find("span", {"class": "tooltip"})
+                    .get_text()
+                    .split(")")[1]
+                    .split(" ")[0]
+                )
+        elif each.find("div").get_text().lower() == "defense":
+            adven["defense"] = each.find_all("div")[1].get_text()
+        elif each.find("div").get_text().lower() == "class":
+            adven["adv_type"] = unit_types[each.select("img[alt]")[0]["alt"]]
+        elif each.find("div").get_text().lower() == "base rarity":
+            adven["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+
+    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
+    adven["release"] = divs[-2].find_all("div")[1].get_text()
+    adven["avail"] = divs[-1].find_all("div")[1].get_text()
 
     skill_sections = soup.find_all(class_="skill-section")
 
@@ -206,9 +233,6 @@ def parse_adventurer(resp):
             ability_value = ability_value[0].find("p").get_text().split("(")[0]
         adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
 
-    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
-    adven["release"] = divs[-2].find_all("div")[1].get_text()
-    adven["avail"] = divs[-1].find_all("div")[1].get_text()
     return adven
 
 
@@ -216,9 +240,17 @@ def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
     skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
     temp = s_soup.find(class_="skill-levels skill-details")
-    skill["i_frames"] = (
-        temp.find_all(style="width:100%")[-3].find_all("div")[-1].get_text().strip()
-    )
+    divs = temp.find_all(style="width:100%")
+    for each in divs:
+        if each.find("div", {"class": "tooltip"}):
+            if (
+                "camera duration"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                skill["i_frames"] = each.find_all("div")[-1].get_text()
+    # skill["i_frames"] = (
+    #    temp.find_all(style="width:100%")[-3].find_all("div")[-1].get_text().strip()
+    # )
     skill["owner"] = (
         s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
     )
