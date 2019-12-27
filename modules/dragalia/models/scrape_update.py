@@ -105,7 +105,7 @@ UPDATE Skills
 SET Image=?, Owner=?, Level=?, Description=?, SP_Cost=?, I_Frames=?
 WHERE Internal_Name=?
 """
-exceptions = {"ku hai": "kuhai"}
+exceptions = {"the prince": "Euden", "gala prince": "Gala Euden"}
 
 
 def shorten_name(name):
@@ -134,6 +134,8 @@ def fill_names(conn):
         td_list = each.find_all("td")
 
         name = td_list[1].select("a[title]")[0]["title"]
+        if name.lower() in [x.lower() for x in exceptions.keys()]:
+            name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
 
@@ -228,9 +230,12 @@ def parse_adventurer(resp):
         ability_title = each.find("th").select("a[title]")[0]["title"]
         ability_value = each.find_all(class_="tabbertab")
         try:
-            ability_value = ability_value[1].find("p").get_text().split("(")[0]
+            ability_value = ability_value[2].find("p").get_text().split("(")[0]
         except IndexError:
-            ability_value = ability_value[0].find("p").get_text().split("(")[0]
+            try:
+                ability_value = ability_value[1].find("p").get_text().split("(")[0]
+            except IndexError:
+                ability_value = ability_value[0].find("p").get_text().split("(")[0]
         adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
 
     return adven
@@ -254,6 +259,8 @@ def parse_skill(resp, skill):
     skill["owner"] = (
         s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
     )
+    if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
+        skill["owner"] = exceptions[skill["owner"].lower()]
     all_levels = s_soup.find(class_="skill-levels skill-details")
     all_levels = all_levels.find_all(class_="tabbertab")
     skill["levels"] = {}
@@ -404,6 +411,8 @@ async def async_fill_names(session, db):
         td_list = each.find_all("td")
 
         name = td_list[1].select("a[title]")[0]["title"]
+        if name.lower() in [x.lower() for x in exceptions.keys()]:
+            name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
 
