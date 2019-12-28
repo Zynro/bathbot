@@ -55,8 +55,9 @@ class Roleplay(commands.Cog):
 
     @commands.command(name="roll")
     async def roll(self, ctx, *, string):
-        embed, roll_dict = self.campaign.dice(string)
+        embed, roll_dict = self.campaign.dice(string, ctx.author)
         message = await ctx.send(ctx.author.mention, embed=embed)
+        return
 
         def check_response(reaction, user):
             return (

@@ -38,7 +38,11 @@ class Mutant(Campaign):
                 rolls.append(self.roll_dice(int(each), 6))
         return rolls
 
-    def dice(self, string):
+    def dice(self, string, author):
+        if author.nick:
+            name = author.nick
+        else:
+            name = author.name
         checks = ["scrap", "artifact"]
         roll_list = re.split(non_alpha, string)
         if roll_list[0] in checks:
@@ -52,7 +56,9 @@ class Mutant(Campaign):
 
         # Begin creating embed
         embed = Embed(
-            title=f"**`{input_string}`**", description=f" ", color=rand_color()
+            title=f"**{name}** rolls:\n`{input_string}`",
+            description=" ",
+            color=author.colour,
         )
         if "d" in input_string:  # split by game mode later, temporary stopgap
             for index, each in enumerate(results):
