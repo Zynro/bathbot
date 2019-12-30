@@ -351,8 +351,7 @@ class Dragalia(commands.Cog):
             )
         name_string = ""
         dps_string = ""
-        x = 1
-        for entry in self.rank_db[parse][element]:
+        for x, entry in enumerate(self.rank_db[parse][element]):
             if x == 11:
                 break
             adven = self.adven_db[entry]
@@ -414,6 +413,11 @@ class Dragalia(commands.Cog):
                 await reaction.message.edit(
                     embed=await self.return_rankings_embed(element=element, parse=parse)
                 )
+
+    @dragalia.command(name="abilities", aliases=["ability", "abs"])
+    async def get_abilities(self, ctx, *, abil):
+        if abil.lower().strip() not in CONSTANTS.dragalia_resists:
+            return await ctx.send(f"{abil} is not a status affliction, try again.")
 
     @dragalia.command(
         name="print-get", aliases=["printdownload", "print-update", "update"]

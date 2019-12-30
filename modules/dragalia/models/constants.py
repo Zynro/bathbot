@@ -18,6 +18,18 @@ dragalia_elements_images = {
     "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
 }
 
+dragalia_resistances = [
+    "poison",
+    "curse",
+    "burn",
+    "stun",
+    "freeze",
+    "bog",
+    "paralysis",
+    "blind",
+    "sleep",
+]
+
 elements_colors = {
     "flame": 0xE73031,
     "water": 0x1890DE,
