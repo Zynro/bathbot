@@ -51,14 +51,16 @@ class Mutant(Campaign):
         else:
             checks = False
             input_string = "+".join(roll_list)
+            if "d" in roll_list[0]:
+                title = input_string
+            else:
+                title = "+".join([f"{x}d6" for x in roll_list])
             results = self.mutant_dice(roll_list)
             roll_dict = {each: results[x] for x, each in enumerate(roll_list)}
 
         # Begin creating embed
         embed = Embed(
-            title=f"**{name}** rolls:\n`{input_string}`",
-            description=" ",
-            color=author.colour,
+            title=f"**{name}** rolls:\n`{title}`", description=" ", color=author.colour
         )
         if "d" in input_string:  # split by game mode later, temporary stopgap
             for index, each in enumerate(results):
