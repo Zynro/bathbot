@@ -74,7 +74,8 @@ class DPS:
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
-                description=f"*Parse: {parse_value} Seconds*",
+                description=f"**Parse:** {parse_value} Seconds\n"
+                f"**Team DPS:** {CONSTANTS.team_damage}",
                 colour=Colour(
                     CONSTANTS.elements_colors[self.adventurer.element.lower()]
                 ),
@@ -101,7 +102,7 @@ class DPS:
         element_rank = add_number_suffix(self.parse[parse_value].rank_element)
         overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
         embed.add_field(
-            name="__Rankings:__",
+            name="__Ranks:__",
             value=f"**{self.element.title()}:** {element_rank} "
             f"\n**Overall:** {overall_rank}",
         )

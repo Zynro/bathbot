@@ -59,3 +59,6 @@ alts = [
     "gala",
     "beautician",
 ]
+
+
+team_damage = "16,000"
