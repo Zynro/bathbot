@@ -864,6 +864,23 @@ class Update:
                 await async_fill_wp_names(session, db, force)
                 await async_update_wyrmprints(session, db, force)
 
+    async def update(self, tables, force=False):
+        sql_makes = {
+            "adv": sql_make_adv_table,
+            "skills": sql_make_skills_table,
+            "wps": sql_make_wyrmprints_table,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with async_sql.connect(self.db_file) as db:
+                if force:
+                    c = await db.curosr()
+                    for each in tables:
+                        await c.execute(f"DROP TABLE {each}")
+                        try:
+                            await db.execute(f"SELECT * from {each}")
+                        except sqlite3.OpertationalError:
+                            await db.execute(sql_makes[each])
+
     def update(self, conn, data):
         if data == "adven":
             fill_adv_names(conn)
