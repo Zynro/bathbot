@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import random
 import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
@@ -8,6 +7,7 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
 import modules.dragalia.models.constants as CONSTANTS
+import lib.misc_methods as MISC
 import asyncio
 import traceback
 
@@ -32,10 +32,6 @@ elements_images = {
     "shadow": "https://b1ueb1ues.github.io//dl-sim/pic/element/shadow.png",
     "all": "https://icon-library.net/images/muscle-icon-png/muscle-icon-png-24.jpg",
 }
-
-
-def generate_rand_color():
-    return random.randint(0, 0xFFFFFF)
 
 
 async def lev_dist_similar(a, b):
@@ -177,7 +173,7 @@ class Dragalia(commands.Cog):
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(
             title="I found multiple results for your search:",
-            colour=discord.Colour(generate_rand_color()),
+            colour=discord.Colour(MISC.generate_random_color()),
             description=char_result_list,
         )
         embed.set_footer(text="Try your search again" " with a adventurer specified.")
@@ -315,11 +311,18 @@ class Dragalia(commands.Cog):
                 parse = "180"
                 adven = await self.query_adv(matched_list[0])
                 if adven.weapon == "Staff":
-                    return await ctx.send(
-                        "Healers do not have DPS records.\n"
-                        "Assume a good wyrmprint combinaiton is **Cleo's Ruse**"
-                        " and **Jewels of the Sun**."
+                    embed = discord.Embed(
+                        title=f"__**Healers do not have DPS records.**__",
+                        description=f"A good wyrmprint combinatio"
+                        " is **Give Me Your Wou"
+                        "nded** and **Pipe Down**.\n\nOther alternatives include"
+                        ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
+                        "United by Vision\n\nKeep in mind healers require "
+                        "**Skill Haste** and **Recovery Potency** as "
+                        "their primary stats.",
+                        colour=MISC.generate_random_color(),
                     )
+                    return await ctx.send(embed=embed)
                 message = await ctx.send(embed=adven.dps.embed(parse))
                 if "error" in message.embeds[0].title.lower():
                     return
@@ -347,7 +350,7 @@ class Dragalia(commands.Cog):
             embed = discord.Embed(
                 title=f"**All Elements Top 10 Rankings**",
                 description=f"*Parse: {parse} Seconds*",
-                colour=discord.Colour(generate_rand_color()),
+                colour=discord.Colour(MISC.generate_random_color()),
             )
         name_string = ""
         dps_string = ""

@@ -7,6 +7,7 @@ import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
+WYRMPRINT_LIST_URL = "https://dragalialost.gamepedia.com/Wyrmprint_List"
 
 MASTER_DB = "master.db"
 
@@ -64,7 +65,7 @@ CREATE TABLE Adventurers(Name text,
             Release text,
             Shortcuts text
             )
-"""
+            """
 
 sql_make_skills_table = """
 CREATE TABLE Skills(Internal_Name text PRIMARY KEY,
@@ -76,7 +77,23 @@ CREATE TABLE Skills(Internal_Name text PRIMARY KEY,
             SP_Cost integer,
             I_Frames text
             )
-"""
+            """
+
+sql_make_wp_table = """
+CREATE TABLE Wyrmprints(Internal_Name text PRIMARY KEY,
+            Name text,
+            Image text,
+            Max_HP text,
+            Max_STR text,
+            Rarity text,
+            Ability_1 text,
+            Ability_2 text,
+            Ability_3 text,
+            Obtained text,
+            Availability text, 
+            Release text,
+            )
+            """
 
 sql_adven_insert = """
 INSERT INTO Adventurers
