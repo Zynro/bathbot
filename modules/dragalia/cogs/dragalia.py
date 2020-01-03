@@ -42,6 +42,11 @@ def strip_all(input_str):
     return "".join([x for x in input_str if x.isalpha()])
 
 
+def get_master_hash(repo):
+    versions = str(MISC.git_subprocess("ls-remote", repo))
+    return versions.split("\\n")[-2].split("\\")[0]
+
+
 class Dragalia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
