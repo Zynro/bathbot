@@ -60,25 +60,24 @@ class Dragalia(commands.Cog):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
     def create_names(self):
-        conn = sqlite3.connect(self.MASTER_DB)
-        c = conn.cursor()
-        try:
-            c.execute("SELECT * from Adventurers LIMIT 1")
-        except sqlite3.OperationalError:
-            self.update.scrape(conn)
-        try:
-            c.execute("SELECT * from Skills LIMIT 1")
-        except sqlite3.OperationalError:
-            self.update.scrape(conn)
-        c.row_factory = sqlite3.Row
-        query = c.execute("SELECT * FROM Adventurers")
-        results = query.fetchall()
-        conn.close()
-        adven_classes = {}
-        for each in results:
-            adven_classes[each["internal_name"]] = Adventurer(
-                {"name": each["name"], "internal_name": each["internal_name"]}
-            )
+        with sqlite3.connect(self.MASTER_DB) as conn:
+            c = conn.cursor()
+            try:
+                c.execute("SELECT * from Adventurers LIMIT 1")
+            except sqlite3.OperationalError:
+                self.update.full_update()
+            try:
+                c.execute("SELECT * from Skills LIMIT 1")
+            except sqlite3.OperationalError:
+                self.update.full_update()
+            c.row_factory = sqlite3.Row
+            query = c.execute("SELECT * FROM Adventurers")
+            results = query.fetchall()
+            adven_classes = {}
+            for each in results:
+                adven_classes[each["internal_name"]] = Adventurer(
+                    {"name": each["name"], "internal_name": each["internal_name"]}
+                )
         return adven_classes
 
     async def async_create_names(self):
@@ -418,19 +417,30 @@ class Dragalia(commands.Cog):
                     embed=await self.return_rankings_embed(element=element, parse=parse)
                 )
 
-    @dragalia.command(
-        name="print-get", aliases=["printdownload", "print-update", "update"]
-    )
-    @commands.cooldown(rate=1, per=60.00, type=commands.BucketType.default)
-    async def update_draglia_data(self, ctx, force=False):
-        await ctx.send("Now updating Adventurer entries...")
-        try:
-            await self.update.async_full_update(force=force)
-            self.adven_db = await self.async_create_names()
-            await ctx.send("Update successful!")
-        except Exception as e:
-            traceback.print_exc()
-            return await ctx.send(f"Update failed: {e}")
+    @dragalia.command(name="update")
+    @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
+    async def update_draglia_data(self, ctx, force=False, tables=None):
+        if tables:
+            await ctx.send("Now updating selected entries...")
+            try:
+                updated = await self.update.update(force=force)
+                self.adven_db = await self.async_create_names()
+                await ctx.send(f"__Updates successful!__")
+                if "adv" in tables:
+                    await ctx.send(f"\n{updated['adv']} new Adventurers.")
+                if "wp" in tables:
+                    await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
+            except Exception as e:
+                traceback.print_exc()
+                return await ctx.send(f"Update failed: {e}")
+        else:
+            await ctx.send("Now updating Adventurer, Skill, Wyrmprint entries...")
+            updated = await self.update.async_full_update(force=force)
+            await ctx.send(
+                f"__Updates successful!__"
+                f"\n{updated['adv']} new Adventurers."
+                f"\n{updated['wp']} new Wyrmprints."
+            )
         await ctx.send("Now updating DPS entries...")
         try:
             self.dps_db = DPS.build_dps_db(

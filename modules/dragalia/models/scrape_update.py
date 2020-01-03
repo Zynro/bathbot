@@ -475,9 +475,7 @@ async def async_fill_wp_names(session, db):
         name = td_list[1].select("a[title]")[0]["title"]
         thumbnail = td_list[0].select("img[src]")[0]["src"]
 
-        cursor = await db.execute(
-            "SELECT Name FROM Adventurers WHERE name = ?", (name,)
-        )
+        cursor = await db.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
         result = await cursor.fetchone()
         if result is None:
             await db.execute(
@@ -837,53 +835,46 @@ class Update:
             update_wyrmprints(conn, force)
 
     async def async_full_update(self, force=False):
-        async with aiohttp.ClientSession() as session:
-            async with async_sql.connect(self.db_file) as db:
-                if force:
-                    c = await db.cursor()
-                    await c.execute("DROP TABLE Adventurers")
-                    await c.execute("DROP TABLE Skills")
-                    await c.execute("DROP TABLE Wyrmprints")
-                try:
-                    await db.execute("SELECT * from Adventurers")
-                except sqlite3.OperationalError:
-                    await db.execute(sql_make_adv_table)
-                try:
-                    await db.execute("SELECT * from Skills")
-                except sqlite3.OperationalError:
-                    await db.execute(sql_make_skills_table)
-                try:
-                    await db.execute("SELECT * from Wyrmprints")
-                except sqlite3.OperationalError:
-                    await db.execute(sql_make_wyrmprints_table)
-
-                await async_fill_adv_names(session, db)
-                await aysnc_update_advs(session, db, force)
-                await async_update_skills(session, db, force)
-
-                await async_fill_wp_names(session, db, force)
-                await async_update_wyrmprints(session, db, force)
+        tables = ["adv", "wp"]
+        return await self.update(tables, force)
 
     async def update(self, tables, force=False):
-        sql_makes = {
-            "adv": sql_make_adv_table,
-            "skills": sql_make_skills_table,
-            "wps": sql_make_wyrmprints_table,
-        }
+        updated = {}
         async with aiohttp.ClientSession() as session:
             async with async_sql.connect(self.db_file) as db:
-                if force:
-                    c = await db.curosr()
-                    for each in tables:
-                        await c.execute(f"DROP TABLE {each}")
-                        try:
-                            await db.execute(f"SELECT * from {each}")
-                        except sqlite3.OpertationalError:
-                            await db.execute(sql_makes[each])
+                if "adv" in tables:
+                    updated["adv"] = await self.adventurer_update(force, session, db)
+                if "wp" in tables:
+                    updated["wp"] = await self.wyrmprint_update(force, session, db)
+        return updated
 
-    def update(self, conn, data):
-        if data == "adven":
-            fill_adv_names(conn)
-            update_advs(conn)
-        elif data == "skills":
-            update_skills(conn)
+    async def adventurer_update(self, force, session, db):
+        c = await db.cursor()
+        try:
+            await db.execute("SELECT * from Adventurers")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_adv_table)
+        try:
+            await db.execute("SELECT * from Skills")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_skills_table)
+        if force:
+            await c.execute("DROP TABLE Adventurers")
+            await c.execute("DROP TABLE Skills")
+            await db.execute(sql_make_adv_table)
+        await async_fill_adv_names(session, db)
+        updated = await aysnc_update_advs(session, db, force)
+        await async_update_skills(session, db, force)
+        return updated
+
+    async def wyrmprint_update(self, force, session, db):
+        c = await db.cursor()
+        try:
+            await db.execute("SELECT * from Wyrmprints")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_wyrmprints_table)
+        if force:
+            await c.execute("DROP TABLE Wyrmprints")
+            await db.execute(sql_make_wyrmprints_table)
+        await async_fill_wp_names(session, db)
+        return await async_update_wyrmprints(session, db, force)
