@@ -125,6 +125,14 @@ class DPS:
         embed.set_author(name="Adventurer:")
         return embed
 
+    def embed_update(self):
+        return Embed(
+            title="__**Notice:**__",
+            description="There is an update available"
+            " for adventurer DPS profiles.\nPlease run the command `&drag update` and "
+            "check your adventurer again after the update has completed.",
+        )
+
     @staticmethod
     def get_src_csv(path):
         dps_dict = {}
