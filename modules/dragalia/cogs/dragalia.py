@@ -308,9 +308,8 @@ class Dragalia(commands.Cog):
         current = MISC.get_master_hash(CONSTANTS.REPO_URL)
         if self.dps_hash != current:
             embed = discord.Embed(
-                title="There are updates to the DPS records."
-                "\nPlease wait while the updater is called...",
-                description=" ",
+                title="There are updates to the DPS records.",
+                description="Please wait while the updater is called...",
             )
             await ctx.send(embed=embed)
             command = self.bot.get_command("dragalia update")
