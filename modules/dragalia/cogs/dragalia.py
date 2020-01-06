@@ -433,6 +433,10 @@ class Dragalia(commands.Cog):
                     embed=await self.return_rankings_embed(element=element, parse=parse)
                 )
 
+    @dragalia.command(name="wp")
+    async def wyrmprint(self, ctx, *, wp):
+        return
+
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
