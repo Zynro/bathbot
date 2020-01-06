@@ -2,9 +2,11 @@ import requests
 import aiohttp
 import csv
 import random
+import json
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONSTANTS
+import lib.misc_methods as MISC
 
 
 def remove_brackets(input_str):
@@ -134,7 +136,16 @@ class DPS:
         )
 
     @staticmethod
+    def update_master_hash():
+        path = f"modules/dragalia/lists"
+        with open(f"{path}/dps_hash.json", "w") as file:
+            version = MISC.get_master_hash(CONSTANTS.REPO_URL)
+            json.dump(version, file, indent=4)
+            return version
+
+    @staticmethod
     def get_src_csv(path):
+        # DPS.update_master_hash()
         dps_dict = {}
         dps_dict["180"] = requests.get(CONSTANTS.DPS_URL_180).text
         dps_dict["120"] = requests.get(CONSTANTS.DPS_URL_120).text

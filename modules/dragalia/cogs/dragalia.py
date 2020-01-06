@@ -10,10 +10,7 @@ import modules.dragalia.models.constants as CONSTANTS
 import lib.misc_methods as MISC
 import asyncio
 import traceback
-
-DPS_URL_60 = "https://b1ueb1ues.github.io/dl-sim/60/data_kr.csv"
-DPS_URL_120 = "https://b1ueb1ues.github.io/dl-sim/120/data_kr.csv"
-DPS_URL_180 = "https://b1ueb1ues.github.io/dl-sim/180/data_kr.csv"
+import json
 
 dragalia_elements = {
     "flame": "flame",
@@ -43,7 +40,7 @@ def strip_all(input_str):
 
 
 def get_master_hash(repo):
-    versions = str(MISC.git_subprocess("ls-remote", repo))
+    versions = str(MISC.git_sub("ls-remote", repo))
     return versions.split("\\n")[-2].split("\\")[0]
 
 
@@ -58,6 +55,9 @@ class Dragalia(commands.Cog):
         self.dps_db_path = f"modules/{self.module.path}/lists/optimal_dps_data"
         self.dps_csv = DPS.get_src_csv(self.dps_db_path)
         self.dps_db = DPS.build_dps_db(self.dps_csv)
+        with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
+            self.dps_hash = json.loads(file.read())
+
         self.rank_db = DPS.build_rank_db(self.dps_db)
         self.adven_db = self.create_names()
 
@@ -304,6 +304,18 @@ class Dragalia(commands.Cog):
             return await ctx.send(
                 "An adventurer must be entered to search the database."
             )
+
+        current = MISC.get_master_hash(CONSTANTS.REPO_URL)
+        if self.dps_hash != current:
+            embed = discord.Embed(
+                title="There are updates to the DPS records."
+                "\nPlease wait while the updater is called...",
+                description=" ",
+            )
+            await ctx.send(embed=embed)
+            command = self.bot.get_command("dragalia update")
+            await ctx.invoke(command, tables="dps")
+
         adven = adven.lower().strip()
         matched_list = await self.adven_validate(adven)
         if matched_list:
@@ -424,39 +436,54 @@ class Dragalia(commands.Cog):
 
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
-    async def update_draglia_data(self, ctx, force=False, tables=None):
+    async def update_draglia_data(self, ctx, *, tables=None):
+        force = False
         if tables:
+            if "force" in tables.lower():
+                force = True
+            tables = tables.split(" ")
             await ctx.send("Now updating selected entries...")
             try:
-                updated = await self.update.update(force=force)
-                self.adven_db = await self.async_create_names()
-                await ctx.send(f"__Updates successful!__")
-                if "adv" in tables:
-                    await ctx.send(f"\n{updated['adv']} new Adventurers.")
-                if "wp" in tables:
-                    await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
+                updated = await self.update.update(tables=tables, force=force)
             except Exception as e:
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
         else:
             await ctx.send("Now updating Adventurer, Skill, Wyrmprint entries...")
-            updated = await self.update.async_full_update(force=force)
-            await ctx.send(
-                f"__Updates successful!__"
-                f"\n{updated['adv']} new Adventurers."
-                f"\n{updated['wp']} new Wyrmprints."
-            )
-        await ctx.send("Now updating DPS entries...")
-        try:
-            self.dps_db = DPS.build_dps_db(
-                await DPS.async_get_src_csv(self.dps_db_path)
-            )
-            self.rank_db = DPS.build_rank_db(self.dps_db)
-            await ctx.send("DPS update complete!")
-        except Exception as e:
-            traceback.print_exc()
-            return await ctx.send(f"Update failed: {e}")
+            try:
+                updated = await self.update.async_full_update(force=force)
+            except Exception as e:
+                traceback.print_exc()
+                return await ctx.send(f"Update failed: {e}")
+
+        self.adven_db = await self.async_create_names()
+        if updated:
+            await ctx.send(f"__Updates successful!__")
+        if "adv" in updated:
+            await ctx.send(f"\n{updated['adv']} new Adventurers.")
+        if "wp" in updated:
+            await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
+
+        if not tables or "dps" in tables:
+            await ctx.send("Updating DPS entries...")
+            try:
+                self.dps_db = DPS.build_dps_db(
+                    await DPS.async_get_src_csv(self.dps_db_path)
+                )
+                self.rank_db = DPS.build_rank_db(self.dps_db)
+                self.dps_hash = DPS.update_master_hash()
+                await ctx.send("__DPS update complete!__")
+            except Exception as e:
+                traceback.print_exc()
+                return await ctx.send(f"Update failed: {e}")
         return
+
+    @update_draglia_data.error
+    async def update_draglia_data_error(ctx, error):
+        if isinstance(error, commands.CommandOnCooldown):
+            await ctx.send(
+                "This command is currently on cooldown, please try again later."
+            )
 
 
 def setup(bot):
