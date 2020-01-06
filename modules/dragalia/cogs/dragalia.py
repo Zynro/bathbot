@@ -81,7 +81,7 @@ class Dragalia(commands.Cog):
             adven_classes = {}
             for each in results:
                 adven_classes[each["internal_name"]] = Adventurer(
-                    {"name": each["name"], "internal_name": each["internal_name"]}
+                    each["name"], each["internal_name"]
                 )
         return adven_classes
 
@@ -93,7 +93,7 @@ class Dragalia(commands.Cog):
         adven_classes = {}
         for each in results:
             adven_classes[each["internal_name"]] = Adventurer(
-                {"name": each["name"], "internal_name": each["internal_name"]}
+                each["name"], each["internal_name"]
             )
         return adven_classes
 
@@ -125,10 +125,9 @@ class Dragalia(commands.Cog):
                 "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
             )
             skills = await c.fetchall()
-            adventurer = self.adven_db[internal_name] = Adventurer(
-                adven_row, skills, self.dps_db, self.rank_db
-            )
-        return adventurer
+            adven = self.adven_db[internal_name]
+            adven.update(adven_row, skills, self.dps_db, self.rank_db)
+        return adven
 
     async def adven_validate(self, adven_input):
         if '"' in adven_input:
