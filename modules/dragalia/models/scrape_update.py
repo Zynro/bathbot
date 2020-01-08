@@ -7,6 +7,7 @@ import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
+WYRMPRINT_LIST_URL = "https://dragalialost.gamepedia.com/Wyrmprint_List"
 
 MASTER_DB = "master.db"
 
@@ -41,6 +42,12 @@ rarities = {
     "Icon Rarity Row 5.png": 5,
 }
 
+exceptions = {"the prince": "Euden", "gala prince": "Gala Euden"}
+
+###################
+# Table Creations #
+###################
+
 sql_make_adv_table = """
 CREATE TABLE Adventurers(Name text,
             Image text,
@@ -59,12 +66,12 @@ CREATE TABLE Adventurers(Name text,
             Ability_1 text,
             Ability_2 text,
             Ability_3 text,
-            Availability text,
             Obtained text,
             Release text,
+            Availability text,
             Shortcuts text
             )
-"""
+            """
 
 sql_make_skills_table = """
 CREATE TABLE Skills(Internal_Name text PRIMARY KEY,
@@ -76,13 +83,36 @@ CREATE TABLE Skills(Internal_Name text PRIMARY KEY,
             SP_Cost integer,
             I_Frames text
             )
-"""
+            """
+
+sql_make_wyrmprints_table = """
+CREATE TABLE Wyrmprints(Name text PRIMARY KEY,
+            Thumbnail text,
+            Image text,
+            Max_HP integer,
+            Max_STR integer,
+            Rarity text,
+            Ability_1 text,
+            Ability_2 text,
+            Ability_3 text,
+            Obtained text,
+            Release text,
+            Availability text,
+            Shortcuts text
+            )
+            """
+
+###############
+# SQL Inserts #
+###############
+# These originally pull the informaiton from the list view, some additional info is
+# also pulled but otherwise it will be pulled from each individual print's page.
 
 sql_adven_insert = """
 INSERT INTO Adventurers
 (Name, Image, Internal_Name, Title, Max_HP, Max_STR, Defense, Type, Rarity, Element,
     Weapon, Max_CoAb, Skill_1, Skill_2, Ability_1, Ability_2, Ability_3,
-    Availability, Obtained, Release, Shortcuts)
+    Obtained, Release, Availability, Shortcuts)
 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 """
 
@@ -92,11 +122,24 @@ INSERT INTO Skills
 VALUES (?,?,?,?,?,?,?,?)
 """
 
+sql_wp_insert = """
+INSERT INTO Wyrmprints
+(Name, Thumbnail, Image, Max_HP, Max_STR, Rarity, Ability_1, Ability_2,
+    Ability_3, Obtained, Release, Availability, Shortcuts)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+###############
+# SQL Updates #
+###############
+# Finishes filling out the informaiton per print from before, ignoring already existing
+# information.
+
 sql_adven_update = """
 UPDATE Adventurers
 SET Title=?, Max_HP=?, Max_STR=?, Defense=?, Type=?, Rarity=?, Element=?,
     Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
-    Ability_1=?, Ability_2=?, Ability_3=?, Availability=?, Obtained=?, Release=?
+    Ability_1=?, Ability_2=?, Ability_3=?, Obtained=?, Release=?, Availability=?
 WHERE Name=?
 """
 
@@ -105,7 +148,13 @@ UPDATE Skills
 SET Image=?, Owner=?, Level=?, Description=?, SP_Cost=?, I_Frames=?
 WHERE Internal_Name=?
 """
-exceptions = {"the prince": "Euden", "gala prince": "Gala Euden"}
+
+sql_wp_update = """
+UPDATE Wyrmprints
+SET Image=?, Max_HP=?, Max_STR=?, Rarity=?, Ability_1=?,
+    Ability_2=?, Ability_3=?, Obtained=?, Release=?, Availability=?
+WHERE Name=?
+"""
 
 
 def shorten_name(name):
@@ -127,7 +176,7 @@ async def async_fetch(session, URL):
         return await response.text()
 
 
-def fill_names(conn):
+def fill_adv_names(conn):
     resp = fetch(ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
@@ -172,110 +221,39 @@ def fill_names(conn):
     conn.commit()
 
 
-def parse_adventurer(resp):
-    adven = {}
+def fill_wp_names(conn):
+    # this does stuff
+    resp = fetch(WYRMPRINT_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
-    p = soup.find(class_="panel-heading")
-    adven["title"] = p.find_all("div")[0].get_text()
-    adven["element"] = elements[p.select("img[alt]")[0]["alt"]]
-    adven["weapon"] = weapons[p.select("img[alt]")[1]["alt"]]
-    divs = soup.find(style="flex-grow:1;text-align:center")
-    divs = divs.find_all(style="width:100%")
-    for each in divs:
-        if each.find("div", {"class": "tooltip"}):
-            if (
-                "total max hp"
-                in each.find("div", {"class": "tooltip"}).get_text().lower()
-            ):
-                adven["max_hp"] = (
-                    each.find("span", {"class": "tooltip"})
-                    .get_text()
-                    .split(")")[1]
-                    .split(" ")[0]
-                )
-            elif (
-                "total max str"
-                in each.find("div", {"class": "tooltip"}).get_text().lower()
-            ):
-                adven["max_str"] = (
-                    each.find("span", {"class": "tooltip"})
-                    .get_text()
-                    .split(")")[1]
-                    .split(" ")[0]
-                )
-        elif each.find("div").get_text().lower() == "defense":
-            adven["defense"] = each.find_all("div")[1].get_text()
-        elif each.find("div").get_text().lower() == "class":
-            adven["adv_type"] = unit_types[each.select("img[alt]")[0]["alt"]]
-        elif each.find("div").get_text().lower() == "base rarity":
-            adven["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
+        td_list = each.find_all("td")
 
-    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
-    adven["release"] = divs[-2].find_all("div")[1].get_text()
-    adven["avail"] = divs[-1].find_all("div")[1].get_text()
+        name = td_list[1].select("a[title]")[0]["title"]
+        thumbnail = td_list[0].select("img[src]")[0]["src"]
 
-    skill_sections = soup.find_all(class_="skill-section")
-
-    all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
-    adven["skill_1"] = all_skills[0].find("th").select("a[title]")[0]["title"]
-    adven["skill_2"] = all_skills[1].find("th").select("a[title]")[0]["title"]
-
-    max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
-    value = skill_sections[1].find(title="Lv5").get_text()
-    adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
-
-    adven["abilities"] = {1: None, 2: None, 3: None}
-    all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
-    for i, each in enumerate(all_abilities):
-        ability_title = each.find("th").select("a[title]")[0]["title"]
-        ability_value = each.find_all(class_="tabbertab")
-        try:
-            ability_value = ability_value[2].find("p").get_text().split("(")[0]
-        except IndexError:
-            try:
-                ability_value = ability_value[1].find("p").get_text().split("(")[0]
-            except IndexError:
-                ability_value = ability_value[0].find("p").get_text().split("(")[0]
-        adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
-
-    return adven
-
-
-def parse_skill(resp, skill):
-    s_soup = BeautifulSoup(resp, "html.parser")
-    skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
-    temp = s_soup.find(class_="skill-levels skill-details")
-    divs = temp.find_all(style="width:100%")
-    for each in divs:
-        if each.find("div", {"class": "tooltip"}):
-            if (
-                "camera duration"
-                in each.find("div", {"class": "tooltip"}).get_text().lower()
-            ):
-                skill["i_frames"] = each.find_all("div")[-1].get_text()
-    # skill["i_frames"] = (
-    #    temp.find_all(style="width:100%")[-3].find_all("div")[-1].get_text().strip()
-    # )
-    skill["owner"] = (
-        s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
-    )
-    if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
-        skill["owner"] = exceptions[skill["owner"].lower()]
-    all_levels = s_soup.find(class_="skill-levels skill-details")
-    all_levels = all_levels.find_all(class_="tabbertab")
-    skill["levels"] = {}
-    for i in range(1, len(all_levels) + 1):
-        skill_div = all_levels[i - 1]
-        skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
-        for br in skill_div.find_all("br"):
-            br.replace_with("\n")
-        skill["levels"][i]["desc"] = (
-            skill_div.find_all("div")[1].get_text().replace("\\'", "'")
-        )
-        sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
-        skill["levels"][i]["sp_cost"] = sp_cost[-1].get_text()
-        skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
-    return skill
+        c = conn.cursor()
+        c.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
+        result = c.fetchone()
+        if result is None:
+            c.execute(
+                sql_wp_insert,
+                (
+                    name,
+                    thumbnail,
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                ),
+            )
+    conn.commit()
 
 
 def update_advs(conn, force=False):
@@ -314,9 +292,9 @@ def update_advs(conn, force=False):
                 adven["abilities"][1],
                 adven["abilities"][2],
                 adven["abilities"][3],
-                adven["avail"],
                 adven["obtained"],
                 adven["release"],
+                adven["avail"],
                 name,
             ),
         )
@@ -404,7 +382,45 @@ def update_skills(conn, force=False):
                 conn.commit()
 
 
-async def async_fill_names(session, db):
+def update_wyrmprints(conn, force=False):
+    cursor = conn.cursor()
+    full_list = cursor.execute("SELECT * FROM Wyrmprints")
+    full_list = full_list.fetchall()
+    for row in full_list:
+        name = row[0]
+        update = False
+        for entry in row[:-1]:
+            if entry == "?" or not entry:
+                update = True
+            else:
+                pass
+        if not update and not force:
+            # print(f"{name} already entered. Passing...")
+            continue
+        print(f"=====Updating Wyrmprint: {name}=====")
+        resp = fetch(f"{MAIN_URL}{name}")
+        wp = parse_wyrmprint(resp)
+        cursor.execute(
+            sql_wp_update,
+            (
+                wp["image"],
+                wp["max_hp"],
+                wp["max_str"],
+                wp["rarity"],
+                wp["abilities"][1],
+                wp["abilities"][2],
+                wp["abilities"][3],
+                wp["obtained"],
+                wp["release"],
+                wp["availability"],
+                name,
+            ),
+        )
+        conn.commit()
+        print(f"++++Updated!++++")
+
+
+async def async_fill_adv_names(session, db):
     resp = await async_fetch(session, ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
@@ -450,7 +466,41 @@ async def async_fill_names(session, db):
     await db.commit()
 
 
+async def async_fill_wp_names(session, db):
+    resp = await async_fetch(session, WYRMPRINT_LIST_URL)
+    soup = BeautifulSoup(resp, "html.parser")
+    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
+        td_list = each.find_all("td")
+
+        name = td_list[1].select("a[title]")[0]["title"]
+        thumbnail = td_list[0].select("img[src]")[0]["src"]
+
+        cursor = await db.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
+        result = await cursor.fetchone()
+        if result is None:
+            await db.execute(
+                sql_wp_insert,
+                (
+                    name,
+                    thumbnail,
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                    "?",
+                ),
+            )
+    await db.commit()
+
+
 async def aysnc_update_advs(session, db, force=False):
+    new = 0
     full_list = await db.execute("SELECT * FROM Adventurers")
     full_list = await full_list.fetchall()
     for row in full_list:
@@ -484,17 +534,20 @@ async def aysnc_update_advs(session, db, force=False):
                 adven["abilities"][1],
                 adven["abilities"][2],
                 adven["abilities"][3],
-                adven["avail"],
                 adven["obtained"],
                 adven["release"],
+                adven["avail"],
                 name,
             ),
         )
         await db.commit()
         print(f"++++Updated!++++")
+        new += 1
+    return new
 
 
 async def async_update_skills(session, db, force=False):
+    new = 0
     full_skill_list = await db.execute("SELECT * FROM Skills")
     full_skill_list = await full_skill_list.fetchall()
     full_adven_list = await db.execute("SELECT * FROM Adventurers")
@@ -572,6 +625,186 @@ async def async_update_skills(session, db, force=False):
                     )
                 await db.commit()
                 print("    Updated!")
+                new += 1
+    return new
+
+
+async def async_update_wyrmprints(session, db, force=False):
+    new = 0
+    full_list = await db.execute("SELECT * FROM Wyrmprints")
+    full_list = await full_list.fetchall()
+    for row in full_list:
+        wp = {}
+        name = row[0]
+        update = False
+        for entry in row[:-1]:
+            if entry == "?" or not entry:
+                update = True
+            else:
+                pass
+        if not update and not force:
+            continue
+        print(f"=====Updating Wyrmprint: {name}=====")
+        resp = await async_fetch(session, f"{MAIN_URL}{name}")
+        wp = parse_wyrmprint(resp)
+        await db.execute(
+            sql_wp_update,
+            (
+                wp["image"],
+                wp["max_hp"],
+                wp["max_str"],
+                wp["rarity"],
+                wp["abilities"][1],
+                wp["abilities"][2],
+                wp["abilities"][3],
+                wp["obtained"],
+                wp["availability"],
+                wp["release"],
+                name,
+            ),
+        )
+        await db.commit()
+        print(f"++++Updated!++++")
+        new += 1
+    return new
+
+
+def parse_adventurer(resp):
+    adven = {}
+    soup = BeautifulSoup(resp, "html.parser")
+    p = soup.find(class_="panel-heading")
+    adven["title"] = p.find_all("div")[0].get_text()
+    adven["element"] = elements[p.select("img[alt]")[0]["alt"]]
+    adven["weapon"] = weapons[p.select("img[alt]")[1]["alt"]]
+    divs = soup.find(style="flex-grow:1;text-align:center")
+    divs = divs.find_all(style="width:100%")
+    for each in divs:
+        if each.find("div", {"class": "tooltip"}):
+            if (
+                "total max hp"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                adven["max_hp"] = (
+                    each.find("span", {"class": "tooltip"})
+                    .get_text()
+                    .split(")")[1]
+                    .split(" ")[0]
+                )
+            elif (
+                "total max str"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                adven["max_str"] = (
+                    each.find("span", {"class": "tooltip"})
+                    .get_text()
+                    .split(")")[1]
+                    .split(" ")[0]
+                )
+        elif each.find("div").get_text().lower() == "defense":
+            adven["defense"] = each.find_all("div")[1].get_text()
+        elif each.find("div").get_text().lower() == "class":
+            adven["adv_type"] = unit_types[each.select("img[alt]")[0]["alt"]]
+        elif each.find("div").get_text().lower() == "base rarity":
+            adven["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+
+    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
+    adven["release"] = divs[-2].find_all("div")[1].get_text()
+    adven["avail"] = divs[-1].find_all("div")[1].get_text()
+
+    skill_sections = soup.find_all(class_="skill-section")
+
+    all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
+    adven["skill_1"] = all_skills[0].find("th").select("a[title]")[0]["title"]
+    adven["skill_2"] = all_skills[1].find("th").select("a[title]")[0]["title"]
+
+    max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
+    value = skill_sections[1].find(title="Lv5").get_text()
+    adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
+
+    adven["abilities"] = {1: None, 2: None, 3: None}
+    all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
+    for i, each in enumerate(all_abilities):
+        ability_title = each.find("th").select("a[title]")[0]["title"]
+        ability_value = each.find_all(class_="tabbertab")
+        try:
+            ability_value = ability_value[2].find("p").get_text().split("(")[0]
+        except IndexError:
+            try:
+                ability_value = ability_value[1].find("p").get_text().split("(")[0]
+            except IndexError:
+                ability_value = ability_value[0].find("p").get_text().split("(")[0]
+        adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
+
+    return adven
+
+
+def parse_skill(resp, skill):
+    s_soup = BeautifulSoup(resp, "html.parser")
+    skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
+    temp = s_soup.find(class_="skill-levels skill-details")
+    divs = temp.find_all(style="width:100%")
+    for each in divs:
+        if each.find("div", {"class": "tooltip"}):
+            if (
+                "camera duration"
+                in each.find("div", {"class": "tooltip"}).get_text().lower()
+            ):
+                skill["i_frames"] = each.find_all("div")[-1].get_text()
+    skill["owner"] = (
+        s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
+    )
+    if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
+        skill["owner"] = exceptions[skill["owner"].lower()]
+    all_levels = s_soup.find(class_="skill-levels skill-details")
+    all_levels = all_levels.find_all(class_="tabbertab")
+    skill["levels"] = {}
+    for i in range(1, len(all_levels) + 1):
+        skill_div = all_levels[i - 1]
+        skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
+        for br in skill_div.find_all("br"):
+            br.replace_with("\n")
+        skill["levels"][i]["desc"] = (
+            skill_div.find_all("div")[1].get_text().replace("\\'", "'")
+        )
+        sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
+        skill["levels"][i]["sp_cost"] = sp_cost[-1].get_text()
+        skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
+    return skill
+
+
+def parse_wyrmprint(resp):
+    wp = {}
+    soup = BeautifulSoup(resp, "html.parser")
+    max_hp = soup.find("div", {"id": "adv-hp"}).get_text()
+    wp["max_hp"] = max_hp.split(" ")[-1]
+    max_str = soup.find("div", {"id": "adv-str"}).get_text()
+    wp["max_str"] = max_str.split(" ")[-1]
+    wp["image"] = (
+        soup.find_all(class_="image")[0].select("img[src]")[0]["src"].split("?")[0]
+    )
+    divs = soup.find_all(style="width:100%")
+    for each in divs:
+        if each.find("div").get_text().lower() == "rarity":
+            wp["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+
+    wp["abilities"] = {1: None, 2: "N/A", 3: "N/A"}
+    all_abilities = soup.find_all(class_="skill-table skill-levels")
+    for i, each in enumerate(all_abilities):
+        ability_title = each.find("th").select("a[title]")[0]["title"]
+        ability_value = each.find_all(class_="tabbertab")
+        try:
+            ability_value = ability_value[2].find("p").get_text().split("(")[0]
+        except IndexError:
+            try:
+                ability_value = ability_value[1].find("p").get_text().split("(")[0]
+            except IndexError:
+                ability_value = ability_value[0].find("p").get_text().split("(")[0]
+        wp["abilities"][i + 1] = f"{ability_title}: {ability_value}"
+
+    wp["obtained"] = divs[-3].find_all("div")[1].get_text()
+    wp["release"] = divs[-2].find_all("div")[1].get_text()
+    wp["availability"] = divs[-1].find_all("div")[1].get_text()
+    return wp
 
 
 class Update:
@@ -589,32 +822,59 @@ class Update:
                 c.execute("SELECT * from Skills")
             except sqlite3.OperationalError:
                 c.execute(sql_make_skills_table)
-            fill_names(conn)
+            try:
+                c.execute("SELECT * from Wyrmprints")
+            except sqlite3.OperationalError:
+                c.execute(sql_make_wyrmprints_table)
+
+            fill_adv_names(conn)
             update_advs(conn, force)
             update_skills(conn, force)
 
+            fill_wp_names(conn)
+            update_wyrmprints(conn, force)
+
     async def async_full_update(self, force=False):
+        tables = ["adv", "wp"]
+        return await self.update(tables, force)
+
+    async def update(self, tables, force=False):
+        updated = {}
         async with aiohttp.ClientSession() as session:
             async with async_sql.connect(self.db_file) as db:
-                if force:
-                    c = await db.cursor()
-                    await c.execute("DROP TABLE Adventurers")
-                    await c.execute("DROP TABLE Skills")
-                try:
-                    await db.execute("SELECT * from Adventurers")
-                except sqlite3.OperationalError:
-                    await db.execute(sql_make_adv_table)
-                try:
-                    await db.execute("SELECT * from Skills")
-                except sqlite3.OperationalError:
-                    await db.execute(sql_make_skills_table)
-                await async_fill_names(session, db)
-                await aysnc_update_advs(session, db, force)
-                await async_update_skills(session, db, force)
+                if "adv" in tables:
+                    updated["adv"] = await self.adventurer_update(force, session, db)
+                if "wp" in tables:
+                    updated["wp"] = await self.wyrmprint_update(force, session, db)
+        return updated
 
-    def update(self, conn, data):
-        if data == "adven":
-            fill_names(conn)
-            update_advs(conn)
-        elif data == "skills":
-            update_skills(conn)
+    async def adventurer_update(self, force, session, db):
+        c = await db.cursor()
+        try:
+            await db.execute("SELECT * from Adventurers")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_adv_table)
+        try:
+            await db.execute("SELECT * from Skills")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_skills_table)
+        if force:
+            await c.execute("DROP TABLE Adventurers")
+            await c.execute("DROP TABLE Skills")
+            await db.execute(sql_make_adv_table)
+        await async_fill_adv_names(session, db)
+        updated = await aysnc_update_advs(session, db, force)
+        await async_update_skills(session, db, force)
+        return updated
+
+    async def wyrmprint_update(self, force, session, db):
+        c = await db.cursor()
+        try:
+            await db.execute("SELECT * from Wyrmprints")
+        except sqlite3.OperationalError:
+            await db.execute(sql_make_wyrmprints_table)
+        if force:
+            await c.execute("DROP TABLE Wyrmprints")
+            await db.execute(sql_make_wyrmprints_table)
+        await async_fill_wp_names(session, db)
+        return await async_update_wyrmprints(session, db, force)

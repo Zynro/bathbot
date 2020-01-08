@@ -5,7 +5,11 @@ import modules.dragalia.models.constants as CONSTANTS
 
 
 class Adventurer:
-    def __init__(self, adven_dict, skills=None, dps_db=None, rank_db=None):
+    def __init__(self, name, internal_name):
+        self.name = name
+        self.internal_name = internal_name
+
+    def update(self, adven_dict, skills=None, dps_db=None, rank_db=None):
         for k in adven_dict.keys():
             k = k.lower()
             setattr(self, k, adven_dict[k])

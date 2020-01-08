@@ -1,12 +1,13 @@
 import random
 
-REPO_URL = (
+RAW_REPO_URL = (
     "https://raw.githubusercontent.com/Mushymato/mushymato.github.io/master/dl-sim"
 )
+REPO_URL = "https://github.com/Mushymato/mushymato.github.io"
 
-DPS_URL_60 = f"{REPO_URL}/60/data_kr.csv"
-DPS_URL_120 = f"{REPO_URL}/120/data_kr.csv"
-DPS_URL_180 = f"{REPO_URL}/180/data_kr.csv"
+DPS_URL_60 = f"{RAW_REPO_URL}/60/data_kr.csv"
+DPS_URL_120 = f"{RAW_REPO_URL}/120/data_kr.csv"
+DPS_URL_180 = f"{RAW_REPO_URL}/180/data_kr.csv"
 
 dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
 dragalia_elements_images = {
