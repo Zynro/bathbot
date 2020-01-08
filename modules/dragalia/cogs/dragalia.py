@@ -4,6 +4,7 @@ import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
 from modules.dragalia.models.adventurer import Adventurer
+from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
 import modules.dragalia.models.constants as CONSTANTS
@@ -59,12 +60,13 @@ class Dragalia(commands.Cog):
             self.dps_hash = json.loads(file.read())
 
         self.rank_db = DPS.build_rank_db(self.dps_db)
-        self.adven_db = self.create_names()
+        self.adven_db = self.create_names("Adventurers")
+        self.wp_db = self.create_names("Wyrmprints")
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
-    def create_names(self):
+    def create_names(self, table):
         with sqlite3.connect(self.MASTER_DB) as conn:
             c = conn.cursor()
             try:
@@ -76,110 +78,131 @@ class Dragalia(commands.Cog):
             except sqlite3.OperationalError:
                 self.update.full_update()
             c.row_factory = sqlite3.Row
-            query = c.execute("SELECT * FROM Adventurers")
+            query_string = f"SELECT * FROM {table}"
+            query = c.execute(query_string)
             results = query.fetchall()
-            adven_classes = {}
-            for each in results:
-                adven_classes[each["internal_name"]] = Adventurer(
-                    each["name"], each["internal_name"]
-                )
-        return adven_classes
+        return self.parse_name_results(table, results)
 
-    async def async_create_names(self):
+    async def async_adv_create_names(self, table):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            query = await db.execute("SELECT * FROM Adventurers")
+            query_string = f"SELECT * FROM {table}"
+            query = await db.execute(query_string)
             results = await query.fetchall()
-        adven_classes = {}
-        for each in results:
-            adven_classes[each["internal_name"]] = Adventurer(
-                each["name"], each["internal_name"]
-            )
-        return adven_classes
+        return self.parse_name_results(table, results)
 
-    async def query_adv(self, query):
+    def parse_name_results(self, table, results):
+        names = {}
+        if table == "Adventurers":
+            for each in results:
+                names[each["internal_name"]] = Adventurer(
+                    each["name"], each["internal_name"]
+                )
+        elif table == "Wyrmprints":
+            for each in results:
+                names[each["name"]] = Wyrmprint(each["name"])
+        return names
+
+    async def query_dict(self, query, db):
         try:
             query = query.internal_name
         except AttributeError:
-            pass
+            query = query.name
         try:
-            adventurer = self.adven_db[query].element
-            return self.adven_db[query]
+            temp = db.max_hp
+            temp = temp
+            return db[query]
         except (KeyError, AttributeError):
-            adventurer = await self.generate_adven_class(query)
-        return adventurer
+            result = await self.generate_queried_class(query, db)
+        return result
 
-    async def generate_adven_class(self, name):
-        try:
-            name = name.internal_name
-        except AttributeError:
-            pass
+    async def generate_queried_class(self, name, db):
+        class_type = type(next(iter(db.values())))
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            c = await db.execute(
-                "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
-            )
-            adven_row = await c.fetchone()
-            internal_name = adven_row["internal_name"]
-            c = await db.execute(
-                "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
-            )
-            skills = await c.fetchall()
-            adven = self.adven_db[internal_name]
-            adven.update(adven_row, skills, self.dps_db, self.rank_db)
-        return adven
+            if class_type is Adventurer:
+                c = await db.execute(
+                    "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
+                )
+                adven_row = await c.fetchone()
+                internal_name = adven_row["internal_name"]
+                c = await db.execute(
+                    "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
+                )
+                skills = await c.fetchall()
+                adven = self.adven_db[internal_name]
+                adven.update(adven_row, skills, self.dps_db, self.rank_db)
+                return adven
+            elif class_type is Wyrmprint:
+                c = await db.execute("SELECT * FROM Wyrmprints WHERE Name=?", (name,))
+                wp_row = await c.fetchone()
+                wp = self.wp_db[wp_row["name"]]
+                wp.update(wp_row)
+                return wp
 
-    async def adven_validate(self, adven_input):
-        if '"' in adven_input:
-            adven_input.replace('"', "")
+    async def validate_query(self, query, db):
+        if '"' in query:
+            query.replace('"', "")
             try:
-                return self.adven_db[adven_input.lower().strip()]
+                return db[query.lower().strip()]
             except KeyError:
                 return None
-        adven_input.replace('"', "")
-        adven_input = adven_input.lower()
-        adven_results = []
+        query.replace('"', "")
+        query = query.lower()
+        results = []
         high_score_name = 0
         high_score_i_name = 0
-        for adven in self.adven_db.keys():
-            adven = self.adven_db[adven]
-            temp_score_name = await lev_dist_similar(adven_input, adven.name.lower())
-            temp_score_i_name = await lev_dist_similar(
-                adven_input, adven.internal_name.lower()
-            )
+        for term in db.keys():
+            term = db[term]
+            temp_score_name = await lev_dist_similar(query, term.name.lower())
             if temp_score_name > high_score_name:
                 high_score_name = temp_score_name
-            if temp_score_i_name > high_score_i_name:
-                high_score_i_name = temp_score_i_name
-        for adven in self.adven_db.keys():
-            adven = self.adven_db[adven]
-            name_score = await lev_dist_similar(adven_input, adven.name.lower())
-            i_name_score = await lev_dist_similar(
-                adven_input, adven.internal_name.lower()
-            )
+            try:
+                temp_score_i_name = await lev_dist_similar(
+                    query, term.internal_name.lower()
+                )
+                if temp_score_i_name > high_score_i_name:
+                    high_score_i_name = temp_score_i_name
+            except AttributeError:
+                # If object has no internal name
+                pass
+        for term in db.keys():
+            term = db[term]
+            name_score = await lev_dist_similar(query, term.name.lower())
+            try:
+                i_name_score = await lev_dist_similar(query, term.internal_name.lower())
+            except AttributeError:
+                # If object has no internal name
+                i_name_score = None
             if high_score_name == 100 or high_score_i_name == 100:
                 if i_name_score == 100:
-                    return [adven]
+                    return [term]
                 if name_score == 100 or i_name_score == 100:
-                    adven_results.append(adven)
+                    results.append(term)
             else:
                 if high_score_name - 5 <= name_score <= high_score_name + 5:
-                    adven_results.append(adven)
-                if high_score_i_name - 5 <= i_name_score <= high_score_i_name + 5:
-                    adven_results.append(adven)
-        return list(set(adven_results))
+                    results.append(term)
+                if i_name_score:
+                    if high_score_i_name - 5 <= i_name_score <= high_score_i_name + 5:
+                        results.append(term)
+        return list(set(results))
 
     async def return_multiple_results(self, multiple_results):
         char_result_list = []
         for each in multiple_results:
-            char_result_list.append(f"{each.name} / {each.internal_name}")
+            temp = f"{each.name}"
+            try:
+                temp = f" / {each.internal_name}"
+            except AttributeError:
+                pass
+            char_result_list.append(temp)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(
             title="I found multiple results for your search:",
             colour=discord.Colour(MISC.generate_random_color()),
             description=char_result_list,
         )
-        embed.set_footer(text="Try your search again" " with a adventurer specified.")
+        embed.set_footer(text="Try your search again with a more exact name.")
         return embed
 
     async def proccess_parse_change(
@@ -274,14 +297,14 @@ class Dragalia(commands.Cog):
         if not adven:
             return await ctx.send("An query must be entered to search the database.")
         adven = adven.lower().strip()
-        matched_list = await self.adven_validate(adven)
+        matched_list = await self.validate_query(adven, self.adven_db)
         if matched_list:
             if len(matched_list) > 1:
                 return await ctx.send(
                     embed=await self.return_multiple_results(matched_list)
                 )
             else:
-                adven = await self.query_adv(matched_list[0])
+                adven = await self.query_dict(matched_list[0], self.adven_db)
                 message = await ctx.send(embed=adven.embed())
                 await message.add_reaction(CONSTANTS.emoji["star"])
                 await self.adven_profile_process(ctx, message, adven)
@@ -289,6 +312,30 @@ class Dragalia(commands.Cog):
             return await ctx.send(
                 f"Either the adventurer {adven} was not found, or an error occured."
             )
+
+    @dragalia.command(name="wp")
+    async def wyrmprint(self, ctx, *, wp):
+        if not wp:
+            return await ctx.send("An query must be entered to search the database.")
+        wp = wp.lower().strip()
+        matched_list = await self.validate_query(wp, self.wp_db)
+        if matched_list:
+            if len(matched_list) > 1:
+                return await ctx.send(
+                    embed=await self.return_multiple_results(matched_list)
+                )
+            else:
+                wp = await self.query_dict(matched_list[0], self.wp_db)
+                return await ctx.send(embed=wp.embed())
+                """
+                await message.add_reaction(CONSTANTS.emoji["star"])
+                await self.adven_profile_process(ctx, message, adven)
+                """
+        else:
+            return await ctx.send(
+                f"Either the wyrmprint {wp} was not found, or an error occured."
+            )
+        return
 
     @dragalia.command()
     async def dps(self, ctx, *, adven: str = None):
@@ -315,7 +362,7 @@ class Dragalia(commands.Cog):
             await ctx.invoke(command, tables="dps")
 
         adven = adven.lower().strip()
-        matched_list = await self.adven_validate(adven)
+        matched_list = await self.validate_query(adven, self.adven_db)
         if matched_list:
             if len(matched_list) > 1:
                 return await ctx.send(
@@ -432,10 +479,6 @@ class Dragalia(commands.Cog):
                     embed=await self.return_rankings_embed(element=element, parse=parse)
                 )
 
-    @dragalia.command(name="wp")
-    async def wyrmprint(self, ctx, *, wp):
-        return
-
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
@@ -458,7 +501,7 @@ class Dragalia(commands.Cog):
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
 
-        self.adven_db = await self.async_create_names()
+        self.adven_db = await self.async_adv_create_names()
         if updated:
             await ctx.send(f"__Updates successful!__")
         if "adv" in updated:
