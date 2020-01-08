@@ -56,8 +56,11 @@ class Dragalia(commands.Cog):
         self.dps_db_path = f"modules/{self.module.path}/lists/optimal_dps_data"
         self.dps_csv = DPS.get_src_csv(self.dps_db_path)
         self.dps_db = DPS.build_dps_db(self.dps_csv)
-        with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
-            self.dps_hash = json.loads(file.read())
+        try:
+            with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
+                self.dps_hash = json.loads(file.read())
+        except FileNotFoundError:
+            DPS.update_master_hash()
 
         self.rank_db = DPS.build_rank_db(self.dps_db)
         self.adven_db = self.create_names("Adventurers")
