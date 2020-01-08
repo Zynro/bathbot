@@ -373,7 +373,7 @@ class Dragalia(commands.Cog):
                 )
             else:
                 parse = "180"
-                adven = await self.query_adv(matched_list[0])
+                adven = await self.query_dict(matched_list[0], self.adven_db)
                 if adven.weapon == "Staff":
                     embed = discord.Embed(
                         title=f"__**Healers do not have DPS records.**__",
