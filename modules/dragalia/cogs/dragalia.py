@@ -60,7 +60,7 @@ class Dragalia(commands.Cog):
             with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
                 self.dps_hash = json.loads(file.read())
         except FileNotFoundError:
-            DPS.update_master_hash()
+            self.dps_hash = DPS.update_master_hash()
 
         self.rank_db = DPS.build_rank_db(self.dps_db)
         self.adven_db = self.create_names("Adventurers")
