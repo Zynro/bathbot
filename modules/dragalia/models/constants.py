@@ -1,12 +1,13 @@
 import random
 
-REPO_URL = (
+RAW_REPO_URL = (
     "https://raw.githubusercontent.com/Mushymato/mushymato.github.io/master/dl-sim"
 )
+REPO_URL = "https://github.com/Mushymato/mushymato.github.io"
 
-DPS_URL_60 = f"{REPO_URL}/60/data_kr.csv"
-DPS_URL_120 = f"{REPO_URL}/120/data_kr.csv"
-DPS_URL_180 = f"{REPO_URL}/180/data_kr.csv"
+DPS_URL_60 = f"{RAW_REPO_URL}/60/data_kr.csv"
+DPS_URL_120 = f"{RAW_REPO_URL}/120/data_kr.csv"
+DPS_URL_180 = f"{RAW_REPO_URL}/180/data_kr.csv"
 
 dragalia_elements = ["flame", "water", "wind", "light", "shadow"]
 dragalia_elements_images = {
@@ -36,6 +37,7 @@ d_emoji = {
     "sword": "<:sword:641010676042825740>",
     "blade": "<:blade_:641010564784586763>",
     "dagger": "<:dagger_:641010584057544744>",
+    "axe": "<:axe_:641010556089663498>",
     "lance": "<:lance_:641010603804065802>",
     "bow": "<:bow_:641010576767582209>",
     "wand": "<:wand_:641010751607406623>",
@@ -58,3 +60,6 @@ alts = [
     "gala",
     "beautician",
 ]
+
+
+team_damage = "16,000"

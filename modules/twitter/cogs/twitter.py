@@ -118,8 +118,11 @@ class Twitter(commands.Cog):
             if "mobile" in true_url:
                 json = self.get_tweet(true_url)._json
                 tweet_id = self.get_tweet_id(true_url)
-                return_url = f"https://twitter.com/{json['user']['screen_name']}/status/{tweet_id}"
-                await message.channel.send(return_url)
+                return_url = (
+                    f"https://twitter.com/{json['user']['screen_name']}"
+                    f"/status/{tweet_id}"
+                )
+                # await message.channel.send(return_url)
             tweet_id = tweet._json["id"]
             # media_urls = self.get_media_urls(tweet_id) Depracated
             # if media_urls: Depracated

@@ -2,9 +2,11 @@ import requests
 import aiohttp
 import csv
 import random
+import json
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONSTANTS
+import lib.misc_methods as MISC
 
 
 def remove_brackets(input_str):
@@ -74,7 +76,8 @@ class DPS:
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
-                description=f"*Parse: {parse_value} Seconds*",
+                description=f"**Parse:** {parse_value} Seconds\n"
+                f"**Team DPS:** {CONSTANTS.team_damage}",
                 colour=Colour(
                     CONSTANTS.elements_colors[self.adventurer.element.lower()]
                 ),
@@ -82,7 +85,7 @@ class DPS:
         except (AttributeError, IndexError):
             embed = Embed(
                 title=f"__**Error:**__",
-                description=f"This adventurer currently does not have a"
+                description=f"This adventurer does exist, but currently does not have a"
                 " simulated DPS profile.\n"
                 "Check back later for updates!\n\n"
                 "You can also see their adventurer info embed by using the"
@@ -101,7 +104,7 @@ class DPS:
         element_rank = add_number_suffix(self.parse[parse_value].rank_element)
         overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
         embed.add_field(
-            name="__Rankings:__",
+            name="__Ranks:__",
             value=f"**{self.element.title()}:** {element_rank} "
             f"\n**Overall:** {overall_rank}",
         )
@@ -124,8 +127,25 @@ class DPS:
         embed.set_author(name="Adventurer:")
         return embed
 
+    def embed_update(self):
+        return Embed(
+            title="__**Notice:**__",
+            description="There is an update available"
+            " for adventurer DPS profiles.\nPlease run the command `&drag update` and "
+            "check your adventurer again after the update has completed.",
+        )
+
+    @staticmethod
+    def update_master_hash():
+        path = f"modules/dragalia/lists"
+        with open(f"{path}/dps_hash.json", "w") as file:
+            version = MISC.get_master_hash(CONSTANTS.REPO_URL)
+            json.dump(version, file, indent=4)
+            return version
+
     @staticmethod
     def get_src_csv(path):
+        # DPS.update_master_hash()
         dps_dict = {}
         dps_dict["180"] = requests.get(CONSTANTS.DPS_URL_180).text
         dps_dict["120"] = requests.get(CONSTANTS.DPS_URL_120).text
@@ -193,9 +213,13 @@ class DPS:
                     del row[9]
                 if "_" in row[1]:
                     internal_name = row[1].replace("_", "").lower().strip()
-                    if "geuden" in internal_name:
+                    """if (
+                        "geuden" in internal_name
+                    ):  # dps has it as geuden, wiki is gala prince
                         internal_name = "gprince"
-                    alt = True
+                    if "euden" in internal_name:  # same as above, but normal version
+                        internal_name = "theprince"
+                    alt = True"""
                 else:
                     internal_name = row[1].lower().strip()
                     alt = False

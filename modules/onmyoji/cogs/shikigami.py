@@ -5,8 +5,6 @@ from discord.ext import commands
 import os.path
 from googleapiclient.discovery import build
 from googleapiclient.http import *
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 import io
 import csv
@@ -62,7 +60,11 @@ def generate_random_color():
 
 def bracket_check(arg):
     if "<" in arg or ">" in arg:
-        return "Please do not include brackets in your command uses. They are to demonstrate that terms are optional, or what terms can be used, for that specific command."
+        return (
+            "Please do not include brackets in your command uses. They are to demonst"
+            "rate that terms are optional, or what terms can be used,"
+            " for that specific command."
+        )
     else:
         return None
 
@@ -85,7 +87,8 @@ class DriveAPI:
         file_id = config.bounty_file_id
         request = cls.drive_service.files().export_media(
             fileId=file_id,
-            mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            mimeType="application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet",
         )
         buffer_file = io.BytesIO()
         downloader = MediaIoBaseDownload(buffer_file, request)
@@ -187,7 +190,7 @@ class Embeds:
                 all_locations.append(f"{bold(main[0])} - {sub_locs}")
                 count += 1
             all_locations = "\n".join(all_locations)
-            embed.add_field(
+            """embed.add_field(
                 name="BubbleTea Database Bounty Locations:", value=all_locations
             )
         else:
@@ -197,7 +200,7 @@ class Embeds:
                 name="BubbleTea Database Bounty Locations:",
                 value="Temporarily disabled until the BubbleTea Shikigami Location Database is more populated.",
                 inline=False,
-            )
+            )"""
         return embed, icon
 
     def multiple_results_embed(self, shiki_result_list):
@@ -286,7 +289,8 @@ class ShikigamiClass:
 
     def shiki_validate(self, shiki_input, shikigami_db):
         """
-        Given a search term of "shiki input" and the shikigami database, returns a list of Shikigami objects.
+        Given a search term of "shiki input" and the shikigami database,
+        returns a list of Shikigami objects.
         If none are found, returns an empty list.
         """
         shikigami_result_list = []
@@ -333,7 +337,8 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         return ctx.author.id in owner_list or ctx.author.id in editor_list
 
     def create_classes(self):
-        """Creates all the Shikigami classes with each of their vairables in a dictionary."""
+        """Creates all the Shikigami classes with each of their vairables
+        in a dictionary."""
         # Opens and creates the shikigami list from the full list of shikigami
         with open(config.bbt_csv_shikigami_list_file, newline="") as shiki_list_csv:
             shiki_list_reader = csv.reader(shiki_list_csv)
@@ -389,7 +394,8 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
             await ctx.send("This command cannot be used in this channel.")
         else:
             await ctx.send(
-                f"Here is the link for the Onmyoji database:\n{config.database_google_link}"
+                f"Here is the link for the Onmyoji database"
+                f":\n{config.database_google_link}"
             )
 
     @get_shared_doc_link.error
@@ -416,13 +422,14 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
     async def download_shikigami_update_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
             await ctx.send(
-                "You do not have permission to update the database file.\nPlease tag an @Officer to have them update it."
+                "You do not have permission to update the database file."
+                "\nPlease tag an @Officer to have them update it."
             )
 
     @commands.command()
     async def bounty(self, ctx, *, search=None):
         """Enter a Shikigami to search for it's recommended bounties.
-        
+
         Parameters:
         search (str): The Shikigami to search for."""
         final_shikigami = []
@@ -440,9 +447,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
             await ctx.send(file=shiki_icon, embed=shiki_embed)
             return
         else:
-            await ctx.send(
-                "For all my bath powers, I could not find your term, or something went wrong."
-            )
+            await ctx.send("Something went wrong, or an error occured.")
 
     @commands.command()
     async def tengu(self, ctx):
