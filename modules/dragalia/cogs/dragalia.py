@@ -86,7 +86,7 @@ class Dragalia(commands.Cog):
             results = query.fetchall()
         return self.parse_name_results(table, results)
 
-    async def async_adv_create_names(self, table):
+    async def async_create_names(self, table):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query_string = f"SELECT * FROM {table}"
@@ -504,7 +504,8 @@ class Dragalia(commands.Cog):
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
 
-        self.adven_db = await self.async_adv_create_names()
+        self.adven_db = await self.async_create_names("Adventurers")
+        self.wp_db = await self.async_create_names("Wyrmprints")
         if updated:
             await ctx.send(f"__Updates successful!__")
         if "adv" in updated:
