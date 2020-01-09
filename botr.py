@@ -8,24 +8,29 @@ import traceback
 import sys
 from models.module import Module
 
-# automate this process, find all files in cogs folder, load them for all modules
-extension_dict = {}
-extension_dict["base"] = ["cogs.admin", "cogs.voicecmd", "cogs.basic", "cogs.modules"]
 
-extension_dict["onmyoji"] = [
-    "modules.onmyoji.cogs.guildcmd",
-    "modules.onmyoji.cogs.shikigami",
-    "modules.onmyoji.cogs.shard",
+def ext_checks(x):
+    return (".py" in x) and ("except" not in x)
+
+
+ext_dict = {}
+bot_directory_modules = [name for name in os.listdir("./modules")]
+for module in bot_directory_modules:
+    print(module)
+    ext_dict[module] = [
+        f"modules.{module}.cogs.{x.replace('.py','')}"
+        for x in os.listdir(f"./modules/{module}/cogs")
+        if ext_checks(x)
+    ]
+ext_dict["base"] = [
+    f'cogs.{x.replace(".py", "")}' for x in os.listdir("./cogs") if ".py" in x
 ]
-extension_dict["twitter"] = ["modules.twitter.cogs.twitter"]
-extension_dict["dragalia"] = ["modules.dragalia.cogs.dragalia"]
-extension_dict["mastodon"] = ["modules.mastodon.cogs.mastodon_cog"]
-extension_dict["roleplay"] = ["modules.roleplay.cogs.roleplay"]
 
-initial_extensions = []
-for group in extension_dict:
-    initial_extensions.extend(extension_dict[group])
-extensions = initial_extensions + config.memes_extensions
+# temporary stopgap until more refined solution for ordering cog loads
+ext_dict["onmyoji"] = [ext_dict["onmyoji"][-1]] + ext_dict["onmyoji"][:-1]
+
+
+extensions = [item for sublist in ext_dict.values() for item in sublist]
 
 
 def get_prefix(bot, message):
@@ -33,7 +38,7 @@ def get_prefix(bot, message):
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
-bot = commands.Bot(command_prefix=get_prefix, description="I am Bathbot. I" " meme.")
+bot = commands.Bot(command_prefix=get_prefix, description="Bathbot")
 
 with open(f"tokens/module_access.json") as file:
     bot.module_access = json.loads(file.read())
@@ -52,11 +57,11 @@ else:
     writeout = False
 
 bot.modules = {}
-for extension in extension_dict.keys():
+for extension in ext_dict.keys():
     if extension == "base":
         continue
     bot.modules[extension] = Module(
-        extension, extension, extension_dict[extension], bot.module_access[extension]
+        extension, extension, ext_dict[extension], bot.module_access[extension]
     )
 bot.modules["bathmemes"] = Module(
     "bathmemes", config.memes_module_path, config.memes_extensions, config.memes_access
@@ -120,9 +125,12 @@ async def on_ready():
 
         # Load all extensions
         for extension in extensions:
+            if "dev" in extension:
+                continue
             try:
+                print(f"Loading {extension}...")
                 bot.load_extension(extension)
-                print(extension + " has been loaded!")
+                print("Success!")
             except Exception:
                 print(f"Failed to load extension {extension}.", file=sys.stderr)
                 traceback.print_exc()

@@ -2,7 +2,6 @@
 *.pyc
 .idea
 bottoken.py
-cogs/archive
 bot_token.py
 config.py
 config_old.py
