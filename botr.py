@@ -16,7 +16,6 @@ def ext_checks(x):
 ext_dict = {}
 bot_directory_modules = [name for name in os.listdir("./modules")]
 for module in bot_directory_modules:
-    print(module)
     ext_dict[module] = [
         f"modules.{module}.cogs.{x.replace('.py','')}"
         for x in os.listdir(f"./modules/{module}/cogs")

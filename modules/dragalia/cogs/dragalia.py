@@ -69,7 +69,7 @@ class Dragalia(commands.Cog):
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
-    def dps_update_check(self, ctx):
+    async def dps_update_check(self, ctx):
         current = MISC.get_master_hash(CONSTANTS.REPO_URL)
         if self.dps_hash != current:
             embed = discord.Embed(
