@@ -366,7 +366,7 @@ class Dragalia(commands.Cog):
                 "An adventurer must be entered to search the database."
             )
 
-        self.dps_update_check(ctx)
+        await self.dps_update_check(ctx)
 
         adven = adven.lower().strip()
         matched_list = await self.validate_query(adven, self.adven_db)
@@ -450,7 +450,7 @@ class Dragalia(commands.Cog):
 
         Element can be any element, or 'all' for overall top 10 list.
         """
-        self.dps_update_check(ctx)
+        await self.dps_update_check(ctx)
         parse = "180"
         embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
