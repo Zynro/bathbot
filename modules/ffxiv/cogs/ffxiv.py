@@ -5,12 +5,21 @@ import requests
 import aiohttp
 import json
 import pprint
+from modules.ffxiv.models.parse import Parse
+from tokens.fflogs_tokens import public_token as FFLOGS_TOKEN
 
-ITEM_SEARCH_PATH = "https://xivapi.com/search?string="
+XIV_API = "https://xivapi.com/search?string="
+FFLOGS_API = "https://www.fflogs.com:443/v1"
 
 
 def randcolor():
     return random.randint(0, 0xFFFFFF)
+
+
+def generate_fflogs_link(self, character, world, method="rankings"):
+    return (
+        f"{FFLOGS_API}/{method}/character/{character}/{world}/NA?api_key={FFLOGS_TOKEN}"
+    )
 
 
 class FFXIV(commands.Cog):
@@ -37,14 +46,14 @@ class FFXIV(commands.Cog):
         item = item.lower().strip()
         results = []
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{ITEM_SEARCH_PATH}{item}") as resp:
+            async with session.get(f"{XIV_API}{item}") as resp:
                 json_result = json.loads(await resp.text())
                 for each in json_result["Results"]:
                     if each["UrlType"] == "Item":
                         results.append((each["Name"], each["ID"]))
         return results
 
-    async def embed_results(self, results):
+    async def universalis_embed(self, results):
         embed = discord.Embed(
             title=f"FFXIV Universalis Marketboard", colour=discord.Colour(randcolor())
         )
@@ -78,7 +87,21 @@ class FFXIV(commands.Cog):
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
         results = await self.find_item(item)
-        return await ctx.send(embed=await self.embed_results(results))
+        return await ctx.send(embed=await self.universalis_embed(results))
+
+    @ffxiv.command(name="fflogs", aliases=["log", "logs", "fflog", "ffl"])
+    async def fflogs(
+        self, ctx, first_name=None, last_name=None, world=None, method=None
+    ):
+        character = f"{first_name} {last_name}"
+        if not first_name or not last_name or not world:
+            return await ctx.send(
+                "A name and a world must be provided to search FFlogs."
+            )
+        if world.lower() not in self.worlds:
+            return await ctx.send(f"World {world} was not found.")
+
+        return
 
 
 def setup(bot):
