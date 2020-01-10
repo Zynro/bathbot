@@ -6,20 +6,13 @@ import aiohttp
 import json
 import pprint
 from modules.ffxiv.models.parse import Parse
-from tokens.fflogs_tokens import public_token as FFLOGS_TOKEN
+from modules.ffxiv.models.parse import FFLogs
 
 XIV_API = "https://xivapi.com/search?string="
-FFLOGS_API = "https://www.fflogs.com:443/v1"
 
 
 def randcolor():
     return random.randint(0, 0xFFFFFF)
-
-
-def generate_fflogs_link(self, character, world, method="rankings"):
-    return (
-        f"{FFLOGS_API}/{method}/character/{character}/{world}/NA?api_key={FFLOGS_TOKEN}"
-    )
 
 
 class FFXIV(commands.Cog):
