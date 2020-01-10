@@ -69,6 +69,18 @@ class Dragalia(commands.Cog):
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
+    def dps_update_check(self, ctx):
+        current = MISC.get_master_hash(CONSTANTS.REPO_URL)
+        if self.dps_hash != current:
+            embed = discord.Embed(
+                title="There are updates available for the the DPS records.",
+                description="Please wait while the updater is called...",
+            )
+            await ctx.send(embed=embed)
+            command = self.bot.get_command("dragalia update")
+            await ctx.invoke(command, tables="dps")
+        return
+
     def create_names(self, table):
         with sqlite3.connect(self.MASTER_DB) as conn:
             c = conn.cursor()
@@ -354,15 +366,7 @@ class Dragalia(commands.Cog):
                 "An adventurer must be entered to search the database."
             )
 
-        current = MISC.get_master_hash(CONSTANTS.REPO_URL)
-        if self.dps_hash != current:
-            embed = discord.Embed(
-                title="There are updates available for the the DPS records.",
-                description="Please wait while the updater is called...",
-            )
-            await ctx.send(embed=embed)
-            command = self.bot.get_command("dragalia update")
-            await ctx.invoke(command, tables="dps")
+        self.dps_update_check(ctx)
 
         adven = adven.lower().strip()
         matched_list = await self.validate_query(adven, self.adven_db)
@@ -446,6 +450,7 @@ class Dragalia(commands.Cog):
 
         Element can be any element, or 'all' for overall top 10 list.
         """
+        self.dps_update_check(ctx)
         parse = "180"
         embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
