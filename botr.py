@@ -26,7 +26,11 @@ ext_dict["base"] = [
 ]
 
 # temporary stopgap until more refined solution for ordering cog loads
-ext_dict["onmyoji"] = [ext_dict["onmyoji"][-1]] + ext_dict["onmyoji"][:-1]
+ext_dict["onmyoji"] = [
+    "modules.onmyoji.cogs.guildcmd",
+    "modules.onmyoji.cogs.shikigami",
+    "modules.onmyoji.cogs.shard",
+]
 
 
 extensions = [item for sublist in ext_dict.values() for item in sublist]
