@@ -107,10 +107,9 @@ class Twitter(commands.Cog):
                 true_url = each
                 break
             if "t.co" in split:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(split) as response:
-                        true_url = str(response.url)
-                        break
+                async with self.bot.session.get(split) as response:
+                    true_url = str(response.url)
+                    break
         if not true_url:
             return
         tweet = self.get_tweet(true_url)

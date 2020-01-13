@@ -6,6 +6,7 @@ import json
 import os
 import traceback
 import sys
+import aiohttp
 from models.module import Module
 
 
@@ -122,6 +123,9 @@ async def on_ready():
                     path = f"{path}/{path_dir}"
                     if not os.path.exists(path):
                         os.mkdir(path)
+
+        # Create global aiohttp ClientSession
+        bot.session = aiohttp.ClientSession()
 
         # Load all extensions
         for extension in extensions:

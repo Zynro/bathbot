@@ -5,7 +5,8 @@ import requests
 import aiohttp
 import json
 import pprint
-from modules.ffxiv.models.parse import Parse
+
+# from modules.ffxiv.models.parse import Parse
 from modules.ffxiv.models.parse import FFLogs
 
 XIV_API = "https://xivapi.com/search?string="

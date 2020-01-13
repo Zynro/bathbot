@@ -808,8 +808,9 @@ def parse_wyrmprint(resp):
 
 
 class Update:
-    def __init__(self, db_file):
+    def __init__(self, session, db_file):
         self.db_file = db_file
+        self.session = session
 
     def full_update(self, force=False):
         with sqlite3.connect(self.db_file) as conn:
@@ -840,12 +841,11 @@ class Update:
 
     async def update(self, tables, force=False):
         updated = {}
-        async with aiohttp.ClientSession() as session:
-            async with async_sql.connect(self.db_file) as db:
-                if "adv" in tables:
-                    updated["adv"] = await self.adventurer_update(force, session, db)
-                if "wp" in tables:
-                    updated["wp"] = await self.wyrmprint_update(force, session, db)
+        async with async_sql.connect(self.db_file) as db:
+            if "adv" in tables:
+                updated["adv"] = await self.adventurer_update(force, self.session, db)
+            if "wp" in tables:
+                updated["wp"] = await self.wyrmprint_update(force, self.session, db)
         return updated
 
     async def adventurer_update(self, force, session, db):
