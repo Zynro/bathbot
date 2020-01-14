@@ -27,7 +27,11 @@ ext_dict["base"] = [
 ]
 
 # temporary stopgap until more refined solution for ordering cog loads
-ext_dict["onmyoji"] = [ext_dict["onmyoji"][-1]] + ext_dict["onmyoji"][:-1]
+ext_dict["onmyoji"] = [
+    "modules.onmyoji.cogs.guildcmd",
+    "modules.onmyoji.cogs.shikigami",
+    "modules.onmyoji.cogs.shard",
+]
 
 
 extensions = [item for sublist in ext_dict.values() for item in sublist]
@@ -169,9 +173,9 @@ async def cog_locator(arg):
 # Hidden means it won't show up on the default help.
 @bot.command(name="load", hidden=True)
 @commands.check(permission_check)
-async def load_cog(ctx, *, arg: str = None):
+async def load_cog(ctx, *, arg=None):
     """Command which Loads a cog."""
-    if not arg and bot.last_loaded_cog is not None:
+    if not arg and bot.last_loaded_cog:
         try:
             bot.load_extension(bot.last_loaded_cog)
             return
@@ -179,6 +183,8 @@ async def load_cog(ctx, *, arg: str = None):
             await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
             traceback.print_exc()
             return
+        else:
+            await ctx.send("**Success:** " + bot.last_loaded_cog + " has been loaded!")
     try:
         if "." in arg:
             bot.load_extension(arg)
@@ -215,18 +221,21 @@ async def unload_cog(ctx, *, arg: str):
 
 @bot.command(name="reload", hidden=True)
 @commands.check(permission_check)
-async def reload_cog(ctx, *, arg: str = None):
+async def reload_cog(ctx, *, arg=None):
     """Command which Reloads a Module.
     Remember to use dot path. e.g: cogs.owner"""
-    if not arg and bot.last_loaded_cog is not None:
+    if not arg and bot.last_loaded_cog:
         try:
             bot.unload_extension(bot.last_loaded_cog)
             bot.load_extension(bot.last_loaded_cog)
-            print("woop")
-            return
         except Exception as e:
             await ctx.send(f"**ERROR:** {type(e).__name__} - {e}")
             traceback.print_exc()
+            return
+        else:
+            await ctx.send(
+                "**Success:** " + bot.last_loaded_cog + " has been reloaded!"
+            )
             return
     try:
         if "." in arg:
