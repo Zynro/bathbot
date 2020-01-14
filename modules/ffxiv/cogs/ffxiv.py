@@ -5,6 +5,7 @@ import requests
 import aiohttp
 import json
 from tokens.fflogs_credentials import public_key as FFLOGS_PUBLIC_KEY
+import pprint
 
 # from modules.ffxiv.models.parse import Parse
 from modules.ffxiv.models.fflogs import FFLogs
@@ -14,6 +15,9 @@ XIV_API = "https://xivapi.com/search?string="
 
 def randcolor():
     return random.randint(0, 0xFFFFFF)
+
+
+pprint = pprint.PrettyPrinter()
 
 
 class FFXIV(commands.Cog):
@@ -95,9 +99,8 @@ class FFXIV(commands.Cog):
             )
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
-        print(await self.fflogs.embed(character, world))
-
-        return
+        embed = await self.fflogs.embed(character, world)
+        return await ctx.send(embed=embed)
 
 
 def setup(bot):
