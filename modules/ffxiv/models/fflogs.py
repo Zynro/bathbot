@@ -2,6 +2,7 @@ import aiohttp
 from discord import Embed, Colour
 from modules.ffxiv.models.parse import Parse
 
+
 parse_colors = {
     0: 0x666666,
     25: 0x1EFF00,
@@ -18,6 +19,8 @@ job_icon_dict = {}
 def parse_json(json_resp, job=None):
     tier = {}
     for encounter in json_resp:
+        if int(encounter["difficulty"]) == 100:
+            continue
         fight_name = encounter["encounterName"]
         if fight_name not in tier.keys():
             tier[fight_name] = None
@@ -67,8 +70,8 @@ class FFLogs:
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
         embed = Embed(
-            title=f"{character} - {world}",
-            description=f"Parses for {str.title(method)}",
+            title=f"{character}",
+            description=f"**[{world}]**\n*Parses for {str.title(method)}*",
             colour=Colour(color),
         )
         tier_list = []
