@@ -4,10 +4,10 @@ import random
 import requests
 import aiohttp
 import json
-import pprint
+from tokens.fflogs_credentials import public_key as FFLOGS_PUBLIC_KEY
 
 # from modules.ffxiv.models.parse import Parse
-from modules.ffxiv.models.parse import FFLogs
+from modules.ffxiv.models.fflogs import FFLogs
 
 XIV_API = "https://xivapi.com/search?string="
 
@@ -25,6 +25,7 @@ class FFXIV(commands.Cog):
             "csv/World.csv"
         )
         self.worlds = self.get_worlds(world_path)
+        self.fflogs = FFLogs(FFLOGS_PUBLIC_KEY, self.bot.session)
 
     def get_worlds(self, path):
         temp_dict = requests.get(path).text.split("\n")
@@ -69,7 +70,7 @@ class FFXIV(commands.Cog):
             )
             return embed
 
-    @commands.group(name="ffxiv")
+    @commands.group(name="ffxiv", aliases=["ff"])
     async def ffxiv(self, ctx):
         if not ctx.invoked_subcommand:
             return
@@ -94,6 +95,7 @@ class FFXIV(commands.Cog):
             )
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
+        print(await self.fflogs.embed(character, world))
 
         return
 
