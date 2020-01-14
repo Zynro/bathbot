@@ -70,13 +70,14 @@ class FFLogs:
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
         embed = Embed(
-            title=f"{character}",
-            description=f"**[{world}]**\n*Parses for {str.title(method)}, Historical*",
+            title=f"{character} @ {world}",
+            description=f"Parses for {str.title(method)}, Historical",
             colour=Colour(color),
         )
         tier_list = []
         for encounter in results.values():
-            job = f"**__{encounter.job}__**"
+            fight = f"__{str.title(encounter.fight)}__"
+            job = f"`{encounter.job}`"
             parse = f"**[{encounter.percentile}%]**"
             dps = round(encounter.total, 2)
             rank = f"{encounter.rank}/{encounter.outof}"
@@ -85,7 +86,7 @@ class FFLogs:
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{job}: {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{fight}: {job}, {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
         embed.add_field(name="**Eden's Gate (Savage)**", value=tier_string)
