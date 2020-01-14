@@ -8,6 +8,8 @@ class FFLogs:
         self.token = token
         if not session:
             self.session = aiohttp.ClientSession()
+        else:
+            self.session = session
 
     async def get_json(self, URL):
         async with self.session.get(URL) as response:
