@@ -64,14 +64,14 @@ class FFLogs:
     async def embed(self, character, world, metric="rdps", method="rankings"):
         URL = (
             f"{self.API}/{method}/character/{character}/"
-            f"{world}/NA?metric={metric}&api_key={self.token}"
+            f"{world}/NA?metric={metric}&timeframe=historical&api_key={self.token}"
         )
         results = parse_json(await self.get_json(URL))
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
         embed = Embed(
             title=f"{character}",
-            description=f"**[{world}]**\n*Parses for {str.title(method)}*",
+            description=f"**[{world}]**\n*Parses for {str.title(method)}, Historical*",
             colour=Colour(color),
         )
         tier_list = []
