@@ -6,6 +6,7 @@ import json
 import os
 import traceback
 import sys
+import aiohttp
 from models.module import Module
 
 
@@ -37,7 +38,7 @@ extensions = [item for sublist in ext_dict.values() for item in sublist]
 
 
 def get_prefix(bot, message):
-    prefixes = ["/", "&"]
+    prefixes = ["!"]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
@@ -125,6 +126,9 @@ async def on_ready():
                     path = f"{path}/{path_dir}"
                     if not os.path.exists(path):
                         os.mkdir(path)
+
+        # Create global aiohttp ClientSession
+        bot.session = aiohttp.ClientSession()
 
         # Load all extensions
         for extension in extensions:

@@ -168,7 +168,7 @@ class DPS:
         return dps_dict
 
     @staticmethod
-    async def async_get_src_csv(path):
+    async def async_get_src_csv(session, path):
         dps_dict = {}
         async with aiohttp.ClientSession() as session:
             async with session.get(CONSTANTS.DPS_URL_180) as response:
