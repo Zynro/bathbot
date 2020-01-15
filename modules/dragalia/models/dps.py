@@ -13,25 +13,6 @@ def remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
 
 
-def number_emoji_generator(dps: str = None):
-    number_emoji_dict = {
-        "1": ":one:",
-        "2": ":two:",
-        "3": ":three:",
-        "4": ":four:",
-        "5": ":five:",
-        "6": ":six:",
-        "7": ":seven:",
-        "8": ":eight:",
-        "9": ":nine:",
-        "0": ":zero:",
-    }
-    dps_string = ""
-    for digit in dps:
-        dps_string += number_emoji_dict[digit]
-    return dps_string
-
-
 def add_number_suffix(number):
     number = int(number)
     suffixes = {1: "st", 2: "nd", 3: "rd", "1": "st", "2": "nd", "3": "rd"}
@@ -98,7 +79,7 @@ class DPS:
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",
-            value=number_emoji_generator(self.parse[parse_value].dps),
+            value=MISC.number_emoji_generator(self.parse[parse_value].dps),
             inline=True,
         )
         element_rank = add_number_suffix(self.parse[parse_value].rank_element)

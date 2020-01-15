@@ -3,6 +3,7 @@ from discord import Embed, Colour
 from bs4 import BeautifulSoup
 from modules.ffxiv.models.parse import Parse
 import modules.ffxiv.models.constants as CONST
+import lib.misc_methods as MISC
 
 API = "https://www.fflogs.com:443/v1"
 FFLOGS_URL = "https://www.fflogs.com"
