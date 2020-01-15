@@ -7,6 +7,8 @@ import modules.ffxiv.models.constants as CONST
 API = "https://www.fflogs.com:443/v1"
 FFLOGS_URL = "https://www.fflogs.com"
 
+difficulty_ids = {"Normal": 100, "Savage": 101}
+
 
 async def async_fetch(session, URL):
     async with session.get(URL) as response:
@@ -17,6 +19,9 @@ def parse_json(json_resp, job=None):
     tier = {"Savage": {}, "Normal": {}}
     for encounter in json_resp:
         for diff in tier.keys():
+            diff_id = difficulty_ids[diff]
+            if int(encounter["difficulty"]) != diff_id:
+                continue
             fight_name = encounter["encounterName"]
             if fight_name not in tier[diff].keys():
                 tier[diff][fight_name] = None
@@ -24,13 +29,14 @@ def parse_json(json_resp, job=None):
                 not tier[diff][fight_name]
                 or tier[diff][fight_name].percentile <= encounter["percentile"]
             ):
-                if int(encounter["difficulty"]) == 101:
-                    tier[diff][fight_name] = Parse(encounter)
+                tier[diff][fight_name] = Parse(encounter)
     if not tier["Savage"]:
         diff = "Normal"
+        print(tier[diff])
         return diff, tier[diff]
     else:
         diff = "Savage"
+        print(tier[diff])
         return diff, tier[diff]
 
 
@@ -76,6 +82,10 @@ class FFLogs:
             return await response.json()
 
     async def embed(self, character, world, metric, method="rankings", region="NA"):
+        """
+        Returns a discord embed object given a character, world, metric, method, and region.
+        Everything but character, world, and metric have defaults.
+        """
         if not metric:
             metric = "rdps"
         URL = (
