@@ -1,19 +1,7 @@
 import aiohttp
 from discord import Embed, Colour
 from modules.ffxiv.models.parse import Parse
-
-
-parse_colors = {
-    0: 0x666666,
-    25: 0x1EFF00,
-    50: 0x0070FF,
-    75: 0xA335EE,
-    95: 0xFF8000,
-    99: 0xE268A8,
-    100: 0xE5CC80,
-}
-
-job_icon_dict = {}
+import modules.ffxiv.models.constants as CONST
 
 
 def parse_json(json_resp, job=None):
@@ -34,18 +22,18 @@ def parse_json(json_resp, job=None):
 
 def get_parse_color(value: int):
     try:
-        return parse_colors[value]
+        return CONST.parse_colors[value]
     except (KeyError, AttributeError):
         if value < 25:
-            return parse_colors[0]
+            return CONST.parse_colors[0]
         elif 25 < value < 50:
-            return parse_colors[25]
+            return CONST.parse_colors[25]
         elif 50 < value < 75:
-            return parse_colors[50]
+            return CONST.parse_colors[50]
         elif 75 < value < 95:
-            return parse_colors[75]
+            return CONST.parse_colors[75]
         elif 95 < value < 99:
-            return parse_colors[95]
+            return CONST.parse_colors[95]
 
 
 class FFLogs:
@@ -75,9 +63,13 @@ class FFLogs:
             colour=Colour(color),
         )
         tier_list = []
+        # max_name_length = max([len(x.fight) for x in results.values()])
         for encounter in results.values():
-            fight = f"__{str.title(encounter.fight)}__"
-            job = f"`{encounter.job}`"
+            # extra_spaces = max_name_length - len(encounter.fight)
+            fight_name = str.title(encounter.fight)
+            # fight = f"__{fight_name}__ " + (" " * extra_spaces)
+            fight = f"__{fight_name}__ "
+            job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
             parse = f"**[{encounter.percentile}%]**"
             dps = round(encounter.total, 2)
             rank = f"{encounter.rank}/{encounter.outof}"
@@ -86,7 +78,7 @@ class FFLogs:
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{fight}: {job}, {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{job} {fight} {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
         embed.add_field(name="**Eden's Gate (Savage)**", value=tier_string)
