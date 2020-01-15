@@ -75,9 +75,9 @@ class FFLogs:
         async with self.session.get(URL) as response:
             return await response.json()
 
-    async def embed(
-        self, character, world, metric="rdps", method="rankings", region="NA"
-    ):
+    async def embed(self, character, world, metric, method="rankings", region="NA"):
+        if not metric:
+            metric = "rdps"
         URL = (
             f"{API}/{method}/character/{character}/"
             f"{world}/NA?metric={metric}&timeframe=historical&api_key={self.token}"
