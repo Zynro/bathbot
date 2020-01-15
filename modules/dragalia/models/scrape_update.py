@@ -1,6 +1,5 @@
 import aiosqlite as async_sql
 import sqlite3
-import aiohttp
 import requests
 from bs4 import BeautifulSoup
 import modules.dragalia.models.constants as CONSTANTS
@@ -717,14 +716,18 @@ def parse_adventurer(resp):
     adven["skill_1"] = all_skills[0].find("th").select("a[title]")[0]["title"]
     adven["skill_2"] = all_skills[1].find("th").select("a[title]")[0]["title"]
 
-    max_coab = skill_sections[1].find("th").select("a[title]")[0]["title"]
+    max_coab = (
+        skill_sections[1].find(class_="ability-header").select("a[title]")[0]["title"]
+    )
     value = skill_sections[1].find(title="Lv5").get_text()
     adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
 
     adven["abilities"] = {1: None, 2: None, 3: None}
     all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
     for i, each in enumerate(all_abilities):
-        ability_title = each.find("th").select("a[title]")[0]["title"]
+        ability_title = each.find(class_="ability-header").select("a[title]")[0][
+            "title"
+        ]
         ability_value = each.find_all(class_="tabbertab")
         try:
             ability_value = ability_value[2].find("p").get_text().split("(")[0]
