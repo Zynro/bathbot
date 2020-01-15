@@ -32,11 +32,9 @@ def parse_json(json_resp, job=None):
                 tier[diff][fight_name] = Parse(encounter)
     if not tier["Savage"]:
         diff = "Normal"
-        print(tier[diff])
         return diff, tier[diff]
     else:
         diff = "Savage"
-        print(tier[diff])
         return diff, tier[diff]
 
 
@@ -83,7 +81,8 @@ class FFLogs:
 
     async def embed(self, character, world, metric, method="rankings", region="NA"):
         """
-        Returns a discord embed object given a character, world, metric, method, and region.
+        Returns a discord embed object given a character, world, metric, method,
+        and region.
         Everything but character, world, and metric have defaults.
         """
         if not metric:
