@@ -87,7 +87,7 @@ class FFXIV(commands.Cog):
 
     @ffxiv.command(name="fflogs", aliases=["log", "logs", "fflog", "ffl"])
     async def fflogs(
-        self, ctx, first_name=None, last_name=None, world=None, method=None
+        self, ctx, first_name=None, last_name=None, world=None, metric=None
     ):
         character = f"{first_name} {last_name}"
         if not first_name or not last_name or not world:
@@ -96,7 +96,7 @@ class FFXIV(commands.Cog):
             )
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
-        embed = await self.fflogs.embed(character, world)
+        embed = await self.fflogs.embed(character, world, metric)
         return await ctx.send(embed=embed)
 
 
