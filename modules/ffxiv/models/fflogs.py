@@ -1,23 +1,50 @@
 import aiohttp
 from discord import Embed, Colour
+from bs4 import BeautifulSoup
 from modules.ffxiv.models.parse import Parse
 import modules.ffxiv.models.constants as CONST
 
+API = "https://www.fflogs.com:443/v1"
+FFLOGS_URL = "https://www.fflogs.com"
+
+
+async def async_fetch(session, URL):
+    async with session.get(URL) as response:
+        return await response.text()
+
 
 def parse_json(json_resp, job=None):
-    tier = {}
+    tier = {"Savage": {}, "Normal": {}}
     for encounter in json_resp:
-        if int(encounter["difficulty"]) == 100:
-            continue
-        fight_name = encounter["encounterName"]
-        if fight_name not in tier.keys():
-            tier[fight_name] = None
-        if (
-            not tier[fight_name]
-            or tier[fight_name].percentile <= encounter["percentile"]
-        ):
-            tier[fight_name] = Parse(encounter)
-    return tier
+        for diff in tier.keys():
+            fight_name = encounter["encounterName"]
+            if fight_name not in tier[diff].keys():
+                tier[diff][fight_name] = None
+            if (
+                not tier[diff][fight_name]
+                or tier[diff][fight_name].percentile <= encounter["percentile"]
+            ):
+                if int(encounter["difficulty"]) == 101:
+                    tier[diff][fight_name] = Parse(encounter)
+    if not tier["Savage"]:
+        diff = "Normal"
+        return diff, tier[diff]
+    else:
+        diff = "Savage"
+        return diff, tier[diff]
+
+
+async def scrape_char(session, url):
+    resp = await async_fetch(session, url)
+    soup = BeautifulSoup(resp, "html.parser")
+    info = {}
+    info["thumbnail"] = soup.find(class_="character-name-link").select("img[src]")[0][
+        "src"
+    ]
+    ilevel = soup.find("div", {"id": "gear-box-ilvl-text"}).get_text()
+    ilevel = ilevel.split(" ")[-1]
+    info["ilevel"] = ilevel
+    return info
 
 
 def get_parse_color(value: int):
@@ -38,7 +65,6 @@ def get_parse_color(value: int):
 
 class FFLogs:
     def __init__(self, token, session=None):
-        self.API = "https://www.fflogs.com:443/v1"
         self.token = token
         if not session:
             self.session = aiohttp.ClientSession()
@@ -49,25 +75,38 @@ class FFLogs:
         async with self.session.get(URL) as response:
             return await response.json()
 
-    async def embed(self, character, world, metric="rdps", method="rankings"):
+    async def embed(
+        self, character, world, metric="rdps", method="rankings", region="NA"
+    ):
         URL = (
-            f"{self.API}/{method}/character/{character}/"
+            f"{API}/{method}/character/{character}/"
             f"{world}/NA?metric={metric}&timeframe=historical&api_key={self.token}"
         )
-        results = parse_json(await self.get_json(URL))
+        difficulty, results = parse_json(await self.get_json(URL))
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
+        char_url = (
+            f"{FFLOGS_URL}/character/{region}/{world}/{character.replace(' ', '%20')}"
+        )
+        fflogs_char = await scrape_char(self.session, char_url)
+        thumbnail = fflogs_char["thumbnail"]
+        ilevel = fflogs_char["ilevel"]
         embed = Embed(
             title=f"{str.title(character)} @ {str.title(world)}",
-            description=f"Parses for {str.title(method)}, Historical",
+            description=f"Parses for {str.title(method)}, Historical\n\n"
+            f"*Average i-Level:* ***{ilevel}***",
+            url=char_url,
             colour=Colour(color),
         )
+        embed.set_thumbnail(url=thumbnail)
         tier_list = []
         # max_name_length = max([len(x.fight) for x in results.values()])
         for encounter in results.values():
-            # extra_spaces = max_name_length - len(encounter.fight)
+            # extra_spaces = ((max_name_length - len(encounter.fight)) * 3) - 5
+            # if extra_spaces <= 0:
+            #    extra_spaces = 0
             fight_name = str.title(encounter.fight)
-            # fight = f"__{fight_name}__ " + (" " * extra_spaces)
+            # fight = f"__{fight_name}__ " + (" " * extra_spaces)
             fight = f"__{fight_name}__"
             job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
             parse = f"**[{encounter.percentile}%]**"
@@ -78,8 +117,8 @@ class FFLogs:
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{job}      {fight} {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{job} {fight} {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
-        embed.add_field(name="**Eden's Gate (Savage)**", value=tier_string)
+        embed.add_field(name=f"**Eden's Gate ({difficulty})**", value=tier_string)
         return embed
