@@ -1,4 +1,5 @@
 import lib.misc_methods as MISC
+import modules.ffxiv.models.constants as CONST
 
 API_URL = "https://xivapi.com"
 
