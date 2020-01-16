@@ -2,6 +2,7 @@ import aiohttp
 from discord import Embed, Colour
 from bs4 import BeautifulSoup
 from modules.ffxiv.models.parse import Parse
+from modules.ffxiv.models.xivapi import XIVAPI
 import modules.ffxiv.models.constants as CONST
 import lib.misc_methods as MISC
 
@@ -9,11 +10,6 @@ API = "https://www.fflogs.com:443/v1"
 FFLOGS_URL = "https://www.fflogs.com"
 
 difficulty_ids = {"Normal": 100, "Savage": 101}
-
-
-async def async_fetch(session, URL):
-    async with session.get(URL) as response:
-        return await response.text()
 
 
 def parse_json(json_resp, job=None):
@@ -40,7 +36,7 @@ def parse_json(json_resp, job=None):
 
 
 async def scrape_char(session, url):
-    resp = await async_fetch(session, url)
+    resp = await MISC.async_fetch_text(session, url)
     soup = BeautifulSoup(resp, "html.parser")
     info = {}
     info["thumbnail"] = soup.find(class_="character-name-link").select("img[src]")[0][
@@ -75,10 +71,7 @@ class FFLogs:
             self.session = aiohttp.ClientSession()
         else:
             self.session = session
-
-    async def get_json(self, URL):
-        async with self.session.get(URL) as response:
-            return await response.json()
+        self.xivapi = XIVAPI(self.session)
 
     async def embed(self, character, world, metric, method="rankings", region="NA"):
         """
@@ -92,7 +85,7 @@ class FFLogs:
             f"{API}/{method}/character/{character}/"
             f"{world}/NA?metric={metric}&timeframe=historical&api_key={self.token}"
         )
-        difficulty, results = parse_json(await self.get_json(URL))
+        difficulty, results = parse_json(await MISC.async_get_json(URL))
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
         char_url = (
@@ -118,7 +111,7 @@ class FFLogs:
             fight_name = str.title(encounter.fight)
             # fight = f"__{fight_name}__ " + (" " * extra_spaces)
             fight = f"__{fight_name}__"
-            job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
+            job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"            parse = f"**[{MISC.number_emoji_generator(encounter.percentile)}%]**"
             parse = f"**{MISC.num_emoji_gen(f'{encounter.percentile}%')}**"
             dps = round(encounter.total, 2)
             rank = f"{encounter.rank}/{encounter.outof}"

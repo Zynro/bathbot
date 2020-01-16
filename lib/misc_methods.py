@@ -61,3 +61,13 @@ def num_emoji_gen(number):
     for digit in number:
         number_string += number_emoji_dict[digit]
     return number_string
+
+
+async def async_get_json(session, URL):
+    async with session.get(URL) as response:
+        return await response.json()
+
+
+async def async_fetch_text(session, URL):
+    async with session.get(URL) as response:
+        return await response.text()
