@@ -490,9 +490,11 @@ class Dragalia(commands.Cog):
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
         force = False
+        if "force" in tables.lower():
+            force = True
+            tables = tables.replace("force", "")
+            tables = tables.strip()
         if tables:
-            if "force" in tables.lower():
-                force = True
             tables = tables.split(" ")
             await ctx.send("Now updating selected entries...")
             try:

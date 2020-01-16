@@ -2,6 +2,7 @@ import aiosqlite as async_sql
 import sqlite3
 import requests
 from bs4 import BeautifulSoup
+import lib.misc_methods as MISC
 import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
@@ -168,11 +169,6 @@ def shorten_name(name):
 def fetch(URL):
     resp = requests.get(URL)
     return resp.text
-
-
-async def async_fetch(session, URL):
-    async with session.get(URL) as response:
-        return await response.text()
 
 
 def fill_adv_names(conn):
@@ -420,7 +416,7 @@ def update_wyrmprints(conn, force=False):
 
 
 async def async_fill_adv_names(session, db):
-    resp = await async_fetch(session, ADVEN_LIST_URL)
+    resp = await MISC.async_fetch_text(session, ADVEN_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
         td_list = each.find_all("td")
@@ -466,7 +462,7 @@ async def async_fill_adv_names(session, db):
 
 
 async def async_fill_wp_names(session, db):
-    resp = await async_fetch(session, WYRMPRINT_LIST_URL)
+    resp = await MISC.async_fetch_text(session, WYRMPRINT_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
         td_list = each.find_all("td")
@@ -514,7 +510,7 @@ async def aysnc_update_advs(session, db, force=False):
         if not update and not force:
             continue
         print(f"=====Updating: {name}=====")
-        resp = await async_fetch(session, f"{MAIN_URL}{name}")
+        resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
         adven = parse_adventurer(resp)
         await db.execute(
             sql_adven_update,
@@ -578,7 +574,7 @@ async def async_update_skills(session, db, force=False):
             if not update and not force:
                 # print(f"    {name} already entered. Passing skill...")
                 continue
-            resp = await async_fetch(
+            resp = await MISC.async_fetch_text(
                 session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
             )
             skills[x].update(parse_skill(resp, skills[x]))
@@ -644,7 +640,7 @@ async def async_update_wyrmprints(session, db, force=False):
         if not update and not force:
             continue
         print(f"=====Updating Wyrmprint: {name}=====")
-        resp = await async_fetch(session, f"{MAIN_URL}{name}")
+        resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
         wp = parse_wyrmprint(resp)
         await db.execute(
             sql_wp_update,
