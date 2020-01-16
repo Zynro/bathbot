@@ -127,7 +127,7 @@ class FFLogs:
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{job} {fight} {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{job} {fight} - {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
         embed.add_field(name=f"**Eden's Gate ({difficulty})**", value=tier_string)
