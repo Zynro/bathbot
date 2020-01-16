@@ -79,7 +79,7 @@ class DPS:
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",
-            value=MISC.number_emoji_generator(self.parse[parse_value].dps),
+            value=MISC.num_emoji_gen(self.parse[parse_value].dps),
             inline=True,
         )
         element_rank = add_number_suffix(self.parse[parse_value].rank_element)

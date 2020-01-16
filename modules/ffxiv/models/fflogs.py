@@ -119,7 +119,7 @@ class FFLogs:
             # fight = f"__{fight_name}__ " + (" " * extra_spaces)
             fight = f"__{fight_name}__"
             job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
-            parse = f"**[{encounter.percentile}%]**"
+            parse = f"**{MISC.num_emoji_gen(f'{encounter.percentile}%')}**"
             dps = round(encounter.total, 2)
             rank = f"{encounter.rank}/{encounter.outof}"
             report_url = (

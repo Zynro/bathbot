@@ -41,7 +41,7 @@ def gen_traceback(exception):
     return f"```{traceback_text}```"
 
 
-def number_emoji_generator(number):
+def num_emoji_gen(number):
     number = str(number)
     number_emoji_dict = {
         "1": ":one:",
@@ -54,6 +54,8 @@ def number_emoji_generator(number):
         "8": ":eight:",
         "9": ":nine:",
         "0": ":zero:",
+        ".": "<:periodt:667205110937419786>",
+        "%": "<:percentmoji:667203548639002642>",
     }
     number_string = ""
     for digit in number:
