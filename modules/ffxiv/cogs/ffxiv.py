@@ -31,25 +31,25 @@ def get_worlds(path):
 class FFXIV(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.session = self.bot.session
         self.module = self.bot.modules["ffxiv"]
         self.worlds = get_worlds(CONST.world_path)
-        self.fflogs = FFLogs(FFLOGS_PUBLIC_KEY, self.bot.session)
+        self.fflogs = FFLogs(FFLOGS_PUBLIC_KEY, self.session)
         self.xivapi = XIVAPI(self.session)
-        self.FF_CHARS = self.load_char_json()
+        self.load_char_json()
 
     async def cog_check(self, ctx):
         return ctx.guild.id in self.bot.module_access["ffxiv"]
 
-    def load_char_json(self, ctx):
+    def load_char_json(self):
         try:
             with open("modules/ffxiv/lists/ff_chars.json", "r") as file:
-                FF_CHARS = json.load(file)
+                self.FF_CHARS = json.load(file)
         except FileNotFoundError:
-            FF_CHARS = {}
+            self.FF_CHARS = {}
             self.char_set_writeout()
-        return FF_CHARS
 
-    def char_set_writeout(self, ctx):
+    def char_set_writeout(self):
         with open("modules/ffxiv/lists/ff_chars.json", "w") as file:
             json.dump(self.FF_CHARS, file, indent=2)
 
