@@ -9,12 +9,18 @@ def rand_color():
 
 non_alpha = "[^a-zA-Z0-9]"
 
+mutant_emoji = {
+    6: "<:Success:667845837304496150>",
+    "1g": "<:GearBreak:667845865452470311>",
+    1: "<:Failure:667845820288204820>",
+}
+
 
 class Campaign:
     def __init__(self):
         return
 
-    def roll_dice(self, amount: int, dice: int):
+    def DICE(self, amount: int, dice: int):
         return [random.randint(1, dice) for x in range(1, amount + 1)]
 
     @staticmethod
@@ -33,9 +39,9 @@ class Mutant(Campaign):
                 dice_split = each.split("d")
                 amount = int(dice_split[0].strip())
                 dice = int(dice_split[1].strip())
-                rolls.append(self.roll_dice(amount, dice))
+                rolls.append(self.DICE(amount, dice))
             else:
-                rolls.append(self.roll_dice(int(each), 6))
+                rolls.append(self.DICE(int(each), 6))
         return rolls
 
     def dice(self, string, author):
@@ -72,7 +78,7 @@ class Mutant(Campaign):
             flat = sum([item for sublist in results for item in sublist])
             embed.add_field(name="**__Totals:__**", value=f"Sum: {flat}", inline=False)
         elif checks:
-            joined = "".join(str(x) for x in self.roll_dice(3, 6))
+            joined = "".join(str(x) for x in self.DICE(3, 6))
             embed.add_field(name=f"**__Result:__**", value=joined)
             roll_dict = None
         else:
