@@ -1,22 +1,4 @@
-job_dict = {
-    "warrior": "WAR",
-    "paladin": "PLD",
-    "gunbreaker": "GNB",
-    "dragoon": "DRG",
-    "monk": "MNK",
-    "ninja": "NIN",
-    "samurai": "SAM",
-    "bard": "BRD",
-    "machinist": "MCH",
-    "black mage": "BLM",
-    "summoner": "SMN",
-    "white mage": "WHM",
-    "scholar": "SCH",
-    "astrologian": "AST",
-    "dark knight": "DRK",
-    "dancer": "DNC",
-    "red mage": "RDM",
-}
+import modules.ffxiv.models.constants as CONST
 
 
 class Parse:
@@ -32,7 +14,7 @@ class Parse:
             elif k.lower() == "ilvlkeyorpatch":
                 i = "patch"
             setattr(self, i, parse_dict[k])
-        self.job = job_dict[self.job.lower()]
+        self.job = CONST.job_dict[self.job.lower()]
 
     def __call__(self):
         return

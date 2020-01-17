@@ -1,10 +1,12 @@
+from discord import Embed, Colour
 import lib.misc_methods as MISC
 import modules.ffxiv.models.constants as CONST
 
 API_URL = "https://xivapi.com"
+API_URL_SEARCH = "https://xivapi.com/search?string="
 
 
-def xiv_char_search(name, server=None, page=None):
+def xiv_url_gen(name, server=None, page=None):
     """
     Given a name, server (optional), and a page(optional),
     returns a XIV API endpoint URL for searching Characters.
@@ -19,14 +21,16 @@ def xiv_char_search(name, server=None, page=None):
 
 class XIVChar:
     """
-    A class to contain specific characters and some assorted methods.
+    A class to contain specific characters and some related assorted methods.
     """
 
     def __init__(self, name, char_id, server, thumbnail):
-        self.name = name
+        self.name = str.title(name)
         self.id = char_id
         self.thumbnail = thumbnail
-        self.server = server.split("(")[0].strip()
+        split = server.split("(")
+        self.server = str.title(split[0].strip())
+        self.region = CONST["".join([c for c in split[1] if c.isalpha()])]
         return
 
     @classmethod
@@ -37,6 +41,9 @@ class XIVChar:
                 cls(char["Name"], char["ID"], char["Server"], char["Avatar"])
             )
         return char_results
+
+    def to_string(self):
+        return f"{self.name} @ {self.server}"
 
 
 class XIVAPI:
@@ -56,7 +63,39 @@ class XIVAPI:
                 json_resp["Results"].append(next_page)
         return json_resp["Results"]
 
-    def xiv_get_chars(cls, name, server=None, page=None):
-        json_resp = MISC.async_get_json(xiv_char_search(name, server, page))
+    def xiv_get_chars(self, name, server=None, page=None):
+        url = xiv_url_gen(name, server, page)
+        json_resp = MISC.async_get_json(self.session, url)
         results = XIVChar.parse_chars(json_resp, name, server)
-        return XIVChar()
+        return results
+
+    async def xiv_find_item(self, item):
+        item = item.lower().strip()
+        results = []
+        json_result = await MISC.async_get_json(self.session, f"{API_URL_SEARCH}{item}")
+        for each in json_result["Results"]:
+            if each["UrlType"] == "Item":
+                results.append((each["Name"], each["ID"]))
+        return results
+
+    async def universalis_embed(self, results):
+        embed = Embed(
+            title=f"FFXIV Universalis Marketboard", colour=Colour(MISC.rand_color())
+        )
+        if len(results) == 0:
+            embed.add_field(
+                name="__Error:__", value=f"No results were found for the search term."
+            )
+            return embed
+        elif len(results) > 1 < 20:
+            results = "\n".join([x[0] for x in results])
+            embed.add_field(name="**Multiple Results Found**:", value=results)
+            embed.set_footer(text="Try searching again with a more specific term.")
+            return embed
+        else:
+            embed.add_field(
+                name="**Error:**",
+                value=f"There are either too much results"
+                " to display, or an unknown error has occured.",
+            )
+            return embed

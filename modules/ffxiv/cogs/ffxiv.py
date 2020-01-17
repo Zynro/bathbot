@@ -4,74 +4,56 @@ import random
 import requests
 import aiohttp
 import json
+from modules.ffxiv.models.xivapi import XIVAPI
 from tokens.fflogs_credentials import public_key as FFLOGS_PUBLIC_KEY
+import modules.ffxiv.models.constants as CONST
 
 
 # from modules.ffxiv.models.parse import Parse
 from modules.ffxiv.models.fflogs import FFLogs
-
-XIV_API = "https://xivapi.com/search?string="
 
 
 def randcolor():
     return random.randint(0, 0xFFFFFF)
 
 
+def get_worlds(path):
+    temp_dict = requests.get(path).text.split("\n")
+    temp_dict = temp_dict[3:]
+    world_dict = []
+    for line in temp_dict:
+        line = line.split(",")
+        if "true" in line[-1].lower():
+            world_dict.append(line[1].replace('"', "").lower())
+    return world_dict
+
+
 class FFXIV(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.module = self.bot.modules["ffxiv"]
-        world_path = (
-            "https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/"
-            "csv/World.csv"
-        )
-        self.worlds = self.get_worlds(world_path)
+        self.worlds = get_worlds(CONST.world_path)
         self.fflogs = FFLogs(FFLOGS_PUBLIC_KEY, self.bot.session)
+        self.xivapi = XIVAPI(self.session)
+        self.FF_CHARS = self.load_char_json()
 
-    def get_worlds(self, path):
-        temp_dict = requests.get(path).text.split("\n")
-        temp_dict = temp_dict[3:]
-        world_dict = []
-        for line in temp_dict:
-            line = line.split(",")
-            if "true" in line[-1].lower():
-                world_dict.append(line[1].replace('"', "").lower())
-        return world_dict
+    async def cog_check(self, ctx):
+        return ctx.guild.id in self.bot.module_access["ffxiv"]
 
-    async def find_item(self, item):
-        item = item.lower().strip()
-        results = []
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{XIV_API}{item}") as resp:
-                json_result = json.loads(await resp.text())
-                for each in json_result["Results"]:
-                    if each["UrlType"] == "Item":
-                        results.append((each["Name"], each["ID"]))
-        return results
+    def load_char_json(self, ctx):
+        try:
+            with open("modules/ffxiv/lists/ff_chars.json", "r") as file:
+                FF_CHARS = json.load(file)
+        except FileNotFoundError:
+            FF_CHARS = {}
+            self.char_set_writeout()
+        return FF_CHARS
 
-    async def universalis_embed(self, results):
-        embed = discord.Embed(
-            title=f"FFXIV Universalis Marketboard", colour=discord.Colour(randcolor())
-        )
-        if len(results) == 0:
-            embed.add_field(
-                name="__Error:__", value=f"No results were found for the search term."
-            )
-            return embed
-        elif len(results) > 1 < 20:
-            results = "\n".join([x[0] for x in results])
-            embed.add_field(name="**Multiple Results Found**:", value=results)
-            embed.set_footer(text="Try searching again with a more specific term.")
-            return embed
-        else:
-            embed.add_field(
-                name="**Error:**",
-                value=f"There are either too much results"
-                " to display, or an unknown error has occured.",
-            )
-            return embed
+    def char_set_writeout(self, ctx):
+        with open("modules/ffxiv/lists/ff_chars.json", "w") as file:
+            json.dump(self.FF_CHARS, file, indent=2)
 
-    @commands.group(name="ffxiv", aliases=["ff"])
+    @commands.group(name="ffxiv", aliases=["ff", "xiv"])
     async def ffxiv(self, ctx):
         if not ctx.invoked_subcommand:
             return
@@ -82,22 +64,28 @@ class FFXIV(commands.Cog):
             return await ctx.send("Both a world and an item must be provided.")
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
-        results = await self.find_item(item)
+        results = await self.xiv_find_item(item)
         return await ctx.send(embed=await self.universalis_embed(results))
 
     @ffxiv.command(name="fflogs", aliases=["log", "logs", "fflog", "ffl"])
     async def fflogs(
         self, ctx, first_name=None, last_name=None, world=None, metric=None
     ):
-        character = f"{first_name} {last_name}"
-        if not first_name or not last_name or not world:
-            return await ctx.send(
-                "A name and a world must be provided to search FFlogs."
-            )
+        character = f"{first_name} {last_name}".strip()
+        if not first_name and not last_name:
+            return await ctx.send("A name must be provided.")
         if world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
+        results = self.xivapi.find_char(character)
         embed = await self.fflogs.embed(character, world, metric)
         return await ctx.send(embed=embed)
+
+    @ffxiv.command(name="me")
+    async def set_self_character(
+        self, ctx, first_name=None, last_name=None, world=None
+    ):
+        if not first_name or not last_name or not world:
+            return await ctx.send("Both a name and world must be provided.")
 
 
 def setup(bot):

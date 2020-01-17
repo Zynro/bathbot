@@ -2,7 +2,6 @@ import aiohttp
 from discord import Embed, Colour
 from bs4 import BeautifulSoup
 from modules.ffxiv.models.parse import Parse
-from modules.ffxiv.models.xivapi import XIVAPI
 import modules.ffxiv.models.constants as CONST
 import lib.misc_methods as MISC
 
@@ -71,7 +70,6 @@ class FFLogs:
             self.session = aiohttp.ClientSession()
         else:
             self.session = session
-        self.xivapi = XIVAPI(self.session)
 
     async def embed(self, character, world, metric, method="rankings", region="NA"):
         """
@@ -83,9 +81,10 @@ class FFLogs:
             metric = "rdps"
         URL = (
             f"{API}/{method}/character/{character}/"
-            f"{world}/NA?metric={metric}&timeframe=historical&api_key={self.token}"
+            f"{world}/{region}?metric={metric}"
+            f"&timeframe=historical&api_key={self.token}"
         )
-        difficulty, results = parse_json(await MISC.async_get_json(URL))
+        difficulty, results = parse_json(await MISC.async_get_json(self.session, URL))
         highest = int(max([x.percentile for x in results.values()]))
         color = get_parse_color(highest)
         char_url = (
@@ -111,7 +110,7 @@ class FFLogs:
             fight_name = str.title(encounter.fight)
             # fight = f"__{fight_name}__ " + (" " * extra_spaces)
             fight = f"__{fight_name}__"
-            job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"            parse = f"**[{MISC.number_emoji_generator(encounter.percentile)}%]**"
+            job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
             parse = f"**{MISC.num_emoji_gen(f'{encounter.percentile}%')}**"
             dps = round(encounter.total, 2)
             rank = f"{encounter.rank}/{encounter.outof}"

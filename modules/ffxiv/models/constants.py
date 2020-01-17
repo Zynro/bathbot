@@ -111,3 +111,27 @@ parse_colors = {
     99: 0xE268A8,
     100: 0xE5CC80,
 }
+
+job_dict = {
+    "warrior": "WAR",
+    "paladin": "PLD",
+    "gunbreaker": "GNB",
+    "dragoon": "DRG",
+    "monk": "MNK",
+    "ninja": "NIN",
+    "samurai": "SAM",
+    "bard": "BRD",
+    "machinist": "MCH",
+    "black mage": "BLM",
+    "summoner": "SMN",
+    "white mage": "WHM",
+    "scholar": "SCH",
+    "astrologian": "AST",
+    "dark knight": "DRK",
+    "dancer": "DNC",
+    "red mage": "RDM",
+}
+
+world_path = (
+    "https://raw.githubusercontent.com/xivapi/ffxiv-datamining/master/" "csv/World.csv"
+)

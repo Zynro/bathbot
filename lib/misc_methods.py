@@ -3,7 +3,7 @@ import subprocess
 import traceback
 
 
-def generate_random_color():
+def rand_color():
     return random.randint(0, 0xFFFFFF)
 
 
