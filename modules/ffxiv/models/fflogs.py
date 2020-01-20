@@ -71,7 +71,19 @@ class FFLogs:
         else:
             self.session = session
 
-    async def embed(self, character, world, metric, method="rankings", region="NA"):
+    async def get_json(self, URL):
+        async with self.session.get(URL) as response:
+            return await response.json()
+
+    async def embed(
+        self,
+        character,
+        world,
+        metric,
+        region="NA",
+        timeframe="historical",
+        method="rankings",
+    ):
         """
         Returns a discord embed object given a character, world, metric, method,
         and region.
@@ -82,7 +94,7 @@ class FFLogs:
         URL = (
             f"{API}/{method}/character/{character}/"
             f"{world}/{region}?metric={metric}"
-            f"&timeframe=historical&api_key={self.token}"
+            f"&timeframe={timeframe}&api_key={self.token}"
         )
         difficulty, results = parse_json(await MISC.async_get_json(self.session, URL))
         highest = int(max([x.percentile for x in results.values()]))
@@ -95,7 +107,7 @@ class FFLogs:
         ilevel = fflogs_char["ilevel"]
         embed = Embed(
             title=f"{str.title(character)} @ {str.title(world)}",
-            description=f"Parses for {str.title(method)}, Historical\n\n"
+            description=f"Parses for {str.title(method)}, {str.title(timeframe)}\n\n"
             f"*Average i-Level:* ***{ilevel}***",
             url=char_url,
             colour=Colour(color),
@@ -119,7 +131,7 @@ class FFLogs:
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{job} {fight} - {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{job} {fight} 🔸 {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
         embed.add_field(name=f"**Eden's Gate ({difficulty})**", value=tier_string)
