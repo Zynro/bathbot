@@ -120,14 +120,14 @@ class FFLogs:
             fight = f"__{fight_name}__"
             job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
             parse = f"**{MISC.num_emoji_gen(f'{encounter.percentile}%')}**"
-            dps = round(encounter.total, 2)
+            dps = round(encounter.total)
             rank = f"{encounter.rank}/{encounter.outof}"
             report_url = (
                 f"https://www.fflogs.com/reports/{encounter.reportid}"
                 f"#fight={encounter.fightid}"
             )
             tier_list.append(
-                f"{job} {fight} - {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
+                f"{job} {fight} 🔸 {parse} 🔸 [{dps} rDPS]({report_url}) 🔸 Rank: {rank}"
             )
         tier_string = "\n".join(tier_list)
         embed.add_field(name=f"**Eden's Gate ({difficulty})**", value=tier_string)
