@@ -278,7 +278,7 @@ class Dragalia(commands.Cog):
                     "reaction_add", timeout=120.0, check=check_response
                 )
             except asyncio.TimeoutError:
-                return
+                return await message.clear_reactions()
             else:
                 embed = reaction.message.embeds[0]
                 parse = await self.proccess_parse_change(
