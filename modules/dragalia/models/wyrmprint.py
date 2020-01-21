@@ -13,7 +13,8 @@ class Wyrmprint:
             k = k.lower()
             if k.lower().startswith("ability") and "N/A" not in wp_dict[k]:
                 name = wp_dict[k].split(":")[0].strip()
-                desc = wp_dict[k].split(":")[1].strip()
+                desc = ":".join(wp_dict[k].split(":")[1:])
+                desc = desc.strip()
                 self.abilities[name] = desc
             setattr(self, k, wp_dict[k])
 
