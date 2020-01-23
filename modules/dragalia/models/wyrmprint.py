@@ -21,9 +21,7 @@ class Wyrmprint:
     def embed(self):
         rarity = CONSTANTS.d_emoji[str(self.rarity) + "*"] * int(self.rarity)
         embed = Embed(
-            title=self.name,
-            description=rarity,
-            colour=Colour(MISC.generate_random_color()),
+            title=self.name, description=rarity, colour=Colour(MISC.rand_color())
         )
         embed.set_thumbnail(url=self.thumbnail)
 

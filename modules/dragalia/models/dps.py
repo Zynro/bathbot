@@ -1,12 +1,12 @@
 import requests
-import aiohttp
 import csv
 import random
 import json
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
-import modules.dragalia.models.constants as CONSTANTS
+import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
+from itertools import combinations as combs
 
 
 def remove_brackets(input_str):
@@ -40,7 +40,7 @@ class DPS:
         else:
             self.dragon = dps_dict["dragon"]
         self.parse = {}
-        for parse_value in ["180", "120", "60"]:
+        for parse_value in CONST.parses:
             self.parse[parse_value] = Parse(dps_dict["parse"][parse_value])
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
@@ -58,10 +58,8 @@ class DPS:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
                 description=f"**Parse:** {parse_value} Seconds\n"
-                f"**Team DPS:** {CONSTANTS.team_damage}",
-                colour=Colour(
-                    CONSTANTS.elements_colors[self.adventurer.element.lower()]
-                ),
+                f"**Team DPS:** {CONST.team_damage}",
+                colour=Colour(CONST.elements_colors[self.adventurer.element.lower()]),
             )
         except (AttributeError, IndexError):
             embed = Embed(
@@ -120,17 +118,48 @@ class DPS:
     def update_master_hash():
         path = f"modules/dragalia/lists"
         with open(f"{path}/dps_hash.json", "w") as file:
-            version = MISC.get_master_hash(CONSTANTS.REPO_URL)
+            version = MISC.get_master_hash(CONST.REPO_URL)
             json.dump(version, file, indent=4)
             return version
 
     @staticmethod
-    def get_src_csv(path):
-        # DPS.update_master_hash()
+    def build_csv_dict(path):
+        """
+        Given a path, gets and saves all csvs for all co-ability combinations
+        from source, returning a complete dictionary of all combinations and all parses.
+        """
+        dps_dict = {"none": {}}
+        parsed_dict = {}
+        for x in range(0, 4):
+            for combo in combs(MISC.coab_sort, x):
+                dps_dict[combo] = {}
+                dps_dict[combo]["180"] = requests.get(CONST.GET_URL(180, combo)).text
+                dps_dict[combo]["120"] = requests.get(CONST.GET_URL(120, combo)).text
+                dps_dict[combo]["60"] = requests.get(CONST.GET_URL(60, combo)).text
+                for parse in combo.keys():
+                    path_to_file = f"{path}_{combo}_{parse}.csv"
+                    with open(path_to_file, "w", newline="", encoding="utf-8") as file:
+                        writer = csv.writer(file)
+                        dps_dict[parse] = dps_dict[parse].split("\n")
+                        for row in dps_dict[parse]:
+                            row = row.split(",")
+                            try:
+                                if "_c_" in row[1]:
+                                    continue
+                                else:
+                                    row[1] = row[1].replace("_", "").lower().strip()
+                                    writer.writerow(row)
+                            except IndexError:
+                                continue
+                parsed_dict[combo] = DPS.build_dps_dict(dps_dict[combo])
+        return parsed_dict
+
+    @staticmethod
+    async def async_get_src_csv(session, path, coabs=None):
         dps_dict = {}
-        dps_dict["180"] = requests.get(CONSTANTS.DPS_URL_180).text
-        dps_dict["120"] = requests.get(CONSTANTS.DPS_URL_120).text
-        dps_dict["60"] = requests.get(CONSTANTS.DPS_URL_60).text
+        dps_dict["180"] = MISC.async_fetch_text(session, CONST.GET_URL(180, coabs))
+        dps_dict["120"] = MISC.async_fetch_text(session, CONST.GET_URL(120, coabs))
+        dps_dict["60"] = MISC.async_fetch_text(session, CONST.GET_URL(60, coabs))
         for parse in dps_dict.keys():
             path_to_file = f"{path}_{parse}.csv"
             with open(path_to_file, "w", newline="", encoding="utf-8") as file:
@@ -142,40 +171,15 @@ class DPS:
                         if "_c_" in row[1]:
                             continue
                         else:
-                            row[1] = row[1].replace("_", "").lower().strip()
                             writer.writerow(row)
                     except IndexError:
                         continue
         return dps_dict
 
     @staticmethod
-    async def async_get_src_csv(session, path):
-        dps_dict = {}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(CONSTANTS.DPS_URL_180) as response:
-                dps_dict["180"] = await response.text()
-            async with session.get(CONSTANTS.DPS_URL_120) as response:
-                dps_dict["120"] = await response.text()
-            async with session.get(CONSTANTS.DPS_URL_60) as response:
-                dps_dict["60"] = await response.text()
-        for parse in dps_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                dps_dict[parse] = dps_dict[parse].split("\n")
-                for row in dps_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        if "_c_" in row[1]:
-                            continue
-                        else:
-                            writer.writerow(row)
-                    except IndexError:
-                        continue
-        return dps_dict
-
-    @staticmethod
-    def build_dps_db(response_dict):
+    def build_dps_dict(response_dict):
+        """Given a csv of dps values for a specific combination of
+        parse time and co-abilities, returns a parsed dict for all chars in csv."""
         all_char_dps = {}
         damage = {}
         for parse_value in response_dict.keys():
@@ -237,8 +241,8 @@ class DPS:
                 all_char_dps[internal_name]["parse"][parse_value]["comment"] = row[8]
         return all_char_dps
 
-    @staticmethod
-    def build_rank_db(dps_db):
+    @classmethod
+    def build_ranking(cls, dps_db):
         rankings_db = {}
         parses = ["180", "120", "60"]
 
@@ -256,7 +260,7 @@ class DPS:
                 reverse=True,
             )
             rankings_db[parse]["all"] = [i[0] for i in sorted_list]
-            for element in CONSTANTS.dragalia_elements:
+            for element in CONST.dragalia_elements:
                 sorted_list = sorted(
                     [
                         (
@@ -270,4 +274,12 @@ class DPS:
                     reverse=True,
                 )
                 rankings_db[parse][element] = [i[0] for i in sorted_list]
-        return rankings_db
+        return cls(rankings_db)
+
+    @staticmethod
+    def gen_ranks(dps_db):
+        rank_dict = {"none": DPS.build_ranking(dps_db)}
+        for x in range(0, 4):
+            for each in combs(MISC.coab_sort, x):
+                rank_dict[each] = None
+        return rank_dict

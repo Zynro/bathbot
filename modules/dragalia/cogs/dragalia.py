@@ -7,6 +7,7 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
+from modules.dragalia.models.ranking import Ranking
 import modules.dragalia.models.constants as CONSTANTS
 import lib.misc_methods as MISC
 import asyncio
@@ -53,16 +54,17 @@ class Dragalia(commands.Cog):
         self.MASTER_DB = f"modules/{self.module.path}/lists/master.db"
         self.update = ScrapeUpdate(self.bot.session, self.MASTER_DB)
         self.update.full_update()
-        self.dps_db_path = f"modules/{self.module.path}/lists/optimal_dps_data"
-        self.dps_csv = DPS.get_src_csv(self.dps_db_path)
-        self.dps_db = DPS.build_dps_db(self.dps_csv)
+
+        self.dps_db_path = f"modules/{self.module.path}/lists/"
+        self.dps_db = DPS.build_csv_dict(self.dps_db_path)
         try:
             with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
                 self.dps_hash = json.loads(file.read())
         except FileNotFoundError:
             self.dps_hash = DPS.update_master_hash()
 
-        self.rank_db = DPS.build_rank_db(self.dps_db)
+        self.rank_db = self.Ranking.create_rank_db(self.dps_db)
+
         self.adven_db = self.create_names("Adventurers")
         self.wp_db = self.create_names("Wyrmprints")
 
@@ -124,11 +126,11 @@ class Dragalia(commands.Cog):
         except AttributeError:
             query = query.name
         try:
-            temp = db.max_hp
-            temp = temp
-            return db[query]
+            db.max_hp
         except (KeyError, AttributeError):
             result = await self.generate_queried_class(query, db)
+        else:
+            return db[query]
         return result
 
     async def generate_queried_class(self, name, db):
@@ -490,11 +492,16 @@ class Dragalia(commands.Cog):
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
-        force = False
+        force = dps = False
         if "force" in tables.lower():
             force = True
             tables = tables.replace("force", "")
             tables = tables.strip()
+        if "dps" in tables.lower():
+            dps = True
+            tables = tables.replace("dps", "")
+            tables = tables.strip()
+
         if tables:
             tables = tables.split(" ")
             await ctx.send("Now updating selected entries...")
@@ -520,13 +527,13 @@ class Dragalia(commands.Cog):
         if "wp" in updated:
             await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
-        if not tables or "dps" in tables:
+        if dps:
             await ctx.send("Updating DPS entries...")
             try:
                 self.dps_db = DPS.build_dps_db(
-                    await DPS.async_get_src_csv(self.bot.session, self.dps_db_path)
+                    await DPS.async_get_src_csvs(self.bot.session, self.dps_db_path)
                 )
-                self.rank_db = DPS.build_rank_db(self.dps_db)
+                self.rank_db = Ranking.build_rank_db(self.dps_db)
                 self.dps_hash = DPS.update_master_hash()
                 await ctx.send("__DPS update complete!__")
             except Exception as e:
@@ -537,9 +544,7 @@ class Dragalia(commands.Cog):
     @update_draglia_data.error
     async def update_draglia_data_error(self, ctx, error):
         if isinstance(error, commands.CommandOnCooldown):
-            await ctx.send(
-                "This command is currently on cooldown, please try again later."
-            )
+            await ctx.send("This command is currently on cooldown.")
 
 
 def setup(bot):
