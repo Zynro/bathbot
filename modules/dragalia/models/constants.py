@@ -3,6 +3,8 @@ import random
 RAW_REPO_URL = "https://mushymato.github.io/dl-sim"
 REPO_URL = "https://github.com/Mushymato/mushymato.github.io"
 
+COAB_DICT = {"blade": "k", "wand": "r", "dagger": "d", "bow": "b", "none": "_"}
+
 DATA_FILE = "data__.csv"
 
 DPS_URL_60 = f"{RAW_REPO_URL}/60/{DATA_FILE}"
