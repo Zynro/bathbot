@@ -423,14 +423,13 @@ class Dragalia(commands.Cog):
         name_string = ""
         dps_string = ""
         for x, entry in enumerate(self.rank_db[parse][element]):
-            if x == 16:
+            if x == 15:
                 break
             adven = self.adven_db[entry]
-            name = f"{x}. {adven.name}"
+            name = f"{x+1}. {adven.name}"
             adven = await self.query_dict(adven, self.adven_db)
             name_string += f"{name}\n"
             dps_string += f"{adven.dps.parse[parse].dps}\n"
-            x += 1
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=elements_images[element])
