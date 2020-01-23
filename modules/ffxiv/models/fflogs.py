@@ -46,9 +46,12 @@ async def scrape_char(session, url):
     info["thumbnail"] = soup.find(class_="character-name-link").select("img[src]")[0][
         "src"
     ]
-    ilevel = soup.find("div", {"id": "gear-box-ilvl-text"}).get_text()
-    ilevel = ilevel.split(" ")[-1]
-    info["ilevel"] = ilevel
+    try:
+        ilevel = soup.find("div", {"id": "gear-box-ilvl-text"}).get_text()
+        ilevel = ilevel.split(" ")[-1]
+        info["ilevel"] = ilevel
+    except AttributeError:
+        info["ilevel"] = "N/A"
     return info
 
 
