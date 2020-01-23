@@ -534,7 +534,7 @@ class Dragalia(commands.Cog):
         return
 
     @update_draglia_data.error
-    async def update_draglia_data_error(ctx, error):
+    async def update_draglia_data_error(self, ctx, error):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(
                 "This command is currently on cooldown, please try again later."
