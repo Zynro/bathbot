@@ -214,7 +214,7 @@ class Dragalia(commands.Cog):
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(
             title="I found multiple results for your search:",
-            colour=discord.Colour(MISC.generate_random_color()),
+            colour=discord.Colour(MISC.rand_color()),
             description=char_result_list,
         )
         embed.set_footer(text="Try your search again with a more exact name.")
