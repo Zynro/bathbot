@@ -4,6 +4,7 @@ import random
 import json
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
+from modules.dragalia.models.ranking import Ranking
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 from itertools import combinations as combs
@@ -68,7 +69,7 @@ class DPS:
                 rank_db[parse_value]["all"].index(self.owner) + 1
             )
 
-    def embed(self, parse_value="180"):
+    def embed(self, parse_value="180", coabs="none"):
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
@@ -226,7 +227,7 @@ class DPS:
                             "dragon": dragon,
                             "alt": alt,
                         }
-                        all_char_dps[i_name][coabs] = {}
+                        all_char_dps[i_name][parse_val] = {}
                     damage = {}
                     damage_list = row[9:]
                     damage["dps"] = row[0]
@@ -242,41 +243,6 @@ class DPS:
                     )
                     all_char_dps[i_name][parse_val][coabs]["comment"] = row[8]
         return all_char_dps
-
-    @classmethod
-    def build_ranking(cls, dps_db):
-        rankings_db = {}
-        parses = ["180", "120", "60"]
-
-        for parse in parses:
-            rankings_db[parse] = {}
-            sorted_list = sorted(
-                [
-                    (
-                        dps_db[adven]["internal_name"],
-                        int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
-                    )
-                    for adven in dps_db.keys()
-                ],
-                key=lambda x: x[1],
-                reverse=True,
-            )
-            rankings_db[parse]["all"] = [i[0] for i in sorted_list]
-            for element in CONST.dragalia_elements:
-                sorted_list = sorted(
-                    [
-                        (
-                            dps_db[adven]["internal_name"],
-                            int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
-                        )
-                        for adven in dps_db.keys()
-                        if dps_db[adven]["element"] == element
-                    ],
-                    key=lambda x: x[1],
-                    reverse=True,
-                )
-                rankings_db[parse][element] = [i[0] for i in sorted_list]
-        return cls(rankings_db)
 
     @staticmethod
     def gen_ranks(dps_db):
