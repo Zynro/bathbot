@@ -138,7 +138,7 @@ class DPS:
             return version
 
     @staticmethod
-    def build_csv_dict(path):
+    def pull_csvs(path):
         """
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
@@ -164,7 +164,7 @@ class DPS:
         return parsed_dict
 
     @staticmethod
-    async def async_get_src_csv(session, path):
+    async def async_pull_csvs(session, path):
         """
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
@@ -198,8 +198,10 @@ class DPS:
 
     @staticmethod
     def build_dps_dict(response_dict):
-        """Given a csv of dps values for a specific combination of
-        parse time and co-abilities, returns a parsed dict for all chars in csv."""
+        """
+        Given a csv of dps values for a specific combination of
+        parse time and co-abilities, returns a parsed dict for all chars in csv.
+        """
         all_char_dps = {}
         damage = {}
         for parse_value in response_dict.keys():
