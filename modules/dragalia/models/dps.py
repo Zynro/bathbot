@@ -143,24 +143,20 @@ class DPS:
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
         """
-        dps_dict = {}
-        parsed_dict = {}
-        dps_dict["none"] = {
-            "180": requests.get(CONST.GET_URL(180, "none")).text,
-            "120": requests.get(CONST.GET_URL(120, "none")).text,
-            "60": requests.get(CONST.GET_URL(60, "none")).text,
+        dps_dict = {
+            "180": {"none": requests.get(CONST.GET_URL(180, "none")).text},
+            "120": {"none": requests.get(CONST.GET_URL(120, "none")).text},
+            "60": {"none": requests.get(CONST.GET_URL(60, "none")).text},
         }
         for x in range(1, len(CONST.coab_sort) + 1):
             for coabs in combs(CONST.coab_sort, x):
-                dps_dict[coabs] = {}
-                dps_dict[coabs]["180"] = requests.get(CONST.GET_URL(180, coabs)).text
-                dps_dict[coabs]["120"] = requests.get(CONST.GET_URL(120, coabs)).text
-                dps_dict[coabs]["60"] = requests.get(CONST.GET_URL(60, coabs)).text
-                parsed_dict[coabs] = {}
-                for parse, dps_dict in dps_dict[coabs].items():
-                    path_to_file = f"{path}_{coabs}_{parse}.csv"
-                    parsed_dict[coabs][parse] = DPS.build_dps_dict(dps_dict[coabs])
+                for parse in dps_dict.keys():
+                    dps_dict[parse][coabs] = requests.get(
+                        CONST.GET_URL(parse, coabs)
+                    ).text
+                    path_to_file = f"{path}_{parse}_{coabs}.csv"
                     save_parse_csvs(path_to_file, dps_dict)
+        parsed_dict = DPS.build_dps_dict(dps_dict)
         return parsed_dict
 
     @staticmethod
@@ -170,30 +166,20 @@ class DPS:
         from source, returning a complete dictionary of all combinations and all parses.
         ++ASYNC version++
         """
-        dps_dict = {}
-        parsed_dict = {}
-        dps_dict["none"] = {
-            "180": requests.get(CONST.GET_URL(180, "none")).text,
-            "120": requests.get(CONST.GET_URL(120, "none")).text,
-            "60": requests.get(CONST.GET_URL(60, "none")).text,
+        dps_dict = {
+            "180": {"none": MISC.async_fetch_text(session, CONST.GET_URL(180, "none"))},
+            "120": {"none": MISC.async_fetch_text(session, CONST.GET_URL(120, "none"))},
+            "60": {"none": MISC.async_fetch_text(session, CONST.GET_URL(60, "none"))},
         }
         for x in range(1, len(CONST.coab_sort) + 1):
             for coabs in combs(CONST.coab_sort, x):
-                dps_dict[coabs] = {}
-                dps_dict[coabs]["180"] = MISC.async_fetch_text(
-                    session, CONST.GET_URL(180, coabs)
-                )
-                dps_dict[coabs]["120"] = MISC.async_fetch_text(
-                    session, CONST.GET_URL(120, coabs)
-                )
-                dps_dict[coabs]["60"] = MISC.async_fetch_text(
-                    session, CONST.GET_URL(60, coabs)
-                )
-                parsed_dict[coabs] = {}
-                for parse, dps_dict in dps_dict[coabs].items():
-                    path_to_file = f"{path}_{coabs}_{parse}.csv"
-                    parsed_dict[coabs][parse] = DPS.build_dps_dict(dps_dict[coabs])
+                for parse in dps_dict.keys():
+                    dps_dict[parse][coabs] = MISC.async_fetch_text(
+                        session, CONST.GET_URL(parse, coabs)
+                    )
+                    path_to_file = f"{path}_{parse}_{coabs}.csv"
                     save_parse_csvs(path_to_file, dps_dict)
+        parsed_dict = DPS.build_dps_dict(dps_dict)
         return parsed_dict
 
     @staticmethod
@@ -204,63 +190,57 @@ class DPS:
         """
         all_char_dps = {}
         damage = {}
-        for parse_value in response_dict.keys():
-            del response_dict[parse_value][0]
-            parse = response_dict[parse_value]
-            for row in parse:
-                row = row.split(",")
-                # print(row)
-                try:
-                    row[1]
-                except IndexError:
-                    continue
-                if "_c_" in row[1]:
-                    continue
-                if "fleur" in row[1]:
-                    del row[9]
-                if "_" in row[1]:
-                    internal_name = row[1].replace("_", "").lower().strip()
-                    """if (
-                        "geuden" in internal_name
-                    ):  # dps has it as geuden, wiki is gala prince
-                        internal_name = "gprince"
-                    if "euden" in internal_name:  # same as above, but normal version
-                        internal_name = "theprince"
-                    alt = True"""
-                else:
-                    internal_name = row[1].lower().strip()
-                    alt = False
-                if parse_value == "180":
-                    amulets = row[6].split("][")
-                    wyrmprints = amulets[0].split("+")
-                    wyrmprints = remove_brackets(" + ".join(wyrmprints))
-                    wyrmprints = wyrmprints.replace("_", " ")
-                    dragon = remove_brackets(amulets[1])
-                    all_char_dps[internal_name] = {
-                        "internal_name": internal_name,
-                        "rarity": row[2],
-                        "element": row[3],
-                        "weapon": row[4],
-                        "str": row[5],
-                        "wyrmprints": wyrmprints,
-                        "dragon": dragon,
-                        "alt": alt,
-                    }
-                    all_char_dps[internal_name]["parse"] = {}
-                damage = {}
-                damage_list = row[9:]
-                damage["dps"] = row[0]
-                damage["types"] = {}
-                for damage_type in damage_list:
-                    damage_type = damage_type.split(":")
-                    damage_name = damage_type[0].replace("_", " ").title()
-                    damage["types"][damage_name] = damage_type[1]
-                all_char_dps[internal_name]["parse"][parse_value] = {}
-                all_char_dps[internal_name]["parse"][parse_value]["damage"] = damage
-                (all_char_dps[internal_name]["parse"][parse_value]["condition"]) = (
-                    row[7].replace("<", "").replace(">", ""),
-                )
-                all_char_dps[internal_name]["parse"][parse_value]["comment"] = row[8]
+        for coabs in response_dict.keys():
+            for parse_val in coabs.keys():
+                del response_dict[parse_val][0]
+                parse = response_dict[parse_val]
+                for row in parse:
+                    row = row.split(",")
+                    # print(row)
+                    try:
+                        row[1]
+                    except IndexError:
+                        continue
+                    if "_c_" in row[1]:
+                        continue
+                    if "fleur" in row[1]:
+                        del row[9]
+                    if "_" in row[1]:
+                        i_name = row[1].replace("_", "").lower().strip()
+                    else:
+                        i_name = row[1].lower().strip()
+                        alt = False
+                    if parse_val == "180":
+                        amulets = row[6].split("][")
+                        wyrmprints = amulets[0].split("+")
+                        wyrmprints = remove_brackets(" + ".join(wyrmprints))
+                        wyrmprints = wyrmprints.replace("_", " ")
+                        dragon = remove_brackets(amulets[1])
+                        all_char_dps[i_name] = {
+                            "i_name": i_name,
+                            "rarity": row[2],
+                            "element": row[3],
+                            "weapon": row[4],
+                            "str": row[5],
+                            "wyrmprints": wyrmprints,
+                            "dragon": dragon,
+                            "alt": alt,
+                        }
+                        all_char_dps[i_name][coabs] = {}
+                    damage = {}
+                    damage_list = row[9:]
+                    damage["dps"] = row[0]
+                    damage["types"] = {}
+                    for damage_type in damage_list:
+                        damage_type = damage_type.split(":")
+                        damage_name = damage_type[0].replace("_", " ").title()
+                        damage["types"][damage_name] = damage_type[1]
+                    all_char_dps[i_name][parse_val][coabs] = {}
+                    all_char_dps[i_name][parse_val][coabs]["damage"] = damage
+                    (all_char_dps[i_name][parse_val][coabs]["condition"]) = (
+                        row[7].replace("<", "").replace(">", ""),
+                    )
+                    all_char_dps[i_name][parse_val][coabs]["comment"] = row[8]
         return all_char_dps
 
     @classmethod

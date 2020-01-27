@@ -25,7 +25,8 @@ DPS_URL_180 = f"{RAW_REPO_URL}/180/{DATA_FILE}"
 coab_sort = ["k", "r", "d", "b"]
 
 
-def GET_URL(parse=180, coabs=None):
+def GET_URL(parse="180", coabs=None):
+    parse = str(parse)
     if not coabs or coabs.lower() == "none":
         coabs = "_"
     else:
