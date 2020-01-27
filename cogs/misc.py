@@ -2,11 +2,31 @@ from discord import Embed, Colour
 from discord.ext import commands
 import lib.misc_methods as MISC
 
+CREDIT_CAT_URL = (
+    "https://www.nerdwallet.com/blog/credit-cards/"
+    "current-credit-card-bonus-categories/"
+)
+
+
+def scrape_categories():
+    """
+    Parses html from master link for credit card
+    categories, returns dict of category pairs.
+    """
+    return
+
 
 class Misc(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.session = bot.session
+
+    async def generate_categories(self, ctx):
+        """
+        Accesses a list of categories for credit cards, parses, and returns
+        a dict of each credit card's categories.
+        """
+        return
 
     @commands.command(name="chase", aliases=["freedom"])
     async def get_chase_freedom_cats(self, ctx):
