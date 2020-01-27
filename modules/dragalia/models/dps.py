@@ -24,6 +24,21 @@ def add_number_suffix(number):
     return str(number) + "th"
 
 
+def save_parse_csvs(self, path, dps_dict):
+    """
+    Given a DPS dict, the combo, and the parse dic
+    """
+    with open(path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        dps_dict = dps_dict.split("\n")
+        for row in dps_dict:
+            row = row.split(",")
+            try:
+                writer.writerow(row)
+            except IndexError:
+                continue
+
+
 class DPS:
     def __init__(self, adventurer, dps_dict, rank_db):
         if not dps_dict:
@@ -128,53 +143,58 @@ class DPS:
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
         """
-        dps_dict = {"none": {}}
+        dps_dict = {}
         parsed_dict = {}
-        for x in range(0, 4):
-            for combo in combs(MISC.coab_sort, x):
-                dps_dict[combo] = {}
-                dps_dict[combo]["180"] = requests.get(CONST.GET_URL(180, combo)).text
-                dps_dict[combo]["120"] = requests.get(CONST.GET_URL(120, combo)).text
-                dps_dict[combo]["60"] = requests.get(CONST.GET_URL(60, combo)).text
-                for parse in combo.keys():
-                    path_to_file = f"{path}_{combo}_{parse}.csv"
-                    with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                        writer = csv.writer(file)
-                        dps_dict[parse] = dps_dict[parse].split("\n")
-                        for row in dps_dict[parse]:
-                            row = row.split(",")
-                            try:
-                                if "_c_" in row[1]:
-                                    continue
-                                else:
-                                    row[1] = row[1].replace("_", "").lower().strip()
-                                    writer.writerow(row)
-                            except IndexError:
-                                continue
-                parsed_dict[combo] = DPS.build_dps_dict(dps_dict[combo])
+        dps_dict["none"] = {
+            "180": requests.get(CONST.GET_URL(180, "none")).text,
+            "120": requests.get(CONST.GET_URL(120, "none")).text,
+            "60": requests.get(CONST.GET_URL(60, "none")).text,
+        }
+        for x in range(1, len(CONST.coab_sort) + 1):
+            for coabs in combs(CONST.coab_sort, x):
+                dps_dict[coabs] = {}
+                dps_dict[coabs]["180"] = requests.get(CONST.GET_URL(180, coabs)).text
+                dps_dict[coabs]["120"] = requests.get(CONST.GET_URL(120, coabs)).text
+                dps_dict[coabs]["60"] = requests.get(CONST.GET_URL(60, coabs)).text
+                parsed_dict[coabs] = {}
+                for parse, dps_dict in dps_dict[coabs].items():
+                    path_to_file = f"{path}_{coabs}_{parse}.csv"
+                    parsed_dict[coabs][parse] = DPS.build_dps_dict(dps_dict[coabs])
+                    save_parse_csvs(path_to_file, dps_dict)
         return parsed_dict
 
     @staticmethod
-    async def async_get_src_csv(session, path, coabs=None):
+    async def async_get_src_csv(session, path):
+        """
+        Given a path, gets and saves all csvs for all co-ability combinations
+        from source, returning a complete dictionary of all combinations and all parses.
+        ++ASYNC version++
+        """
         dps_dict = {}
-        dps_dict["180"] = MISC.async_fetch_text(session, CONST.GET_URL(180, coabs))
-        dps_dict["120"] = MISC.async_fetch_text(session, CONST.GET_URL(120, coabs))
-        dps_dict["60"] = MISC.async_fetch_text(session, CONST.GET_URL(60, coabs))
-        for parse in dps_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                dps_dict[parse] = dps_dict[parse].split("\n")
-                for row in dps_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        if "_c_" in row[1]:
-                            continue
-                        else:
-                            writer.writerow(row)
-                    except IndexError:
-                        continue
-        return dps_dict
+        parsed_dict = {}
+        dps_dict["none"] = {
+            "180": requests.get(CONST.GET_URL(180, "none")).text,
+            "120": requests.get(CONST.GET_URL(120, "none")).text,
+            "60": requests.get(CONST.GET_URL(60, "none")).text,
+        }
+        for x in range(1, len(CONST.coab_sort) + 1):
+            for coabs in combs(CONST.coab_sort, x):
+                dps_dict[coabs] = {}
+                dps_dict[coabs]["180"] = MISC.async_fetch_text(
+                    session, CONST.GET_URL(180, coabs)
+                )
+                dps_dict[coabs]["120"] = MISC.async_fetch_text(
+                    session, CONST.GET_URL(120, coabs)
+                )
+                dps_dict[coabs]["60"] = MISC.async_fetch_text(
+                    session, CONST.GET_URL(60, coabs)
+                )
+                parsed_dict[coabs] = {}
+                for parse, dps_dict in dps_dict[coabs].items():
+                    path_to_file = f"{path}_{coabs}_{parse}.csv"
+                    parsed_dict[coabs][parse] = DPS.build_dps_dict(dps_dict[coabs])
+                    save_parse_csvs(path_to_file, dps_dict)
+        return parsed_dict
 
     @staticmethod
     def build_dps_dict(response_dict):
