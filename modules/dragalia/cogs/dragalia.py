@@ -401,12 +401,13 @@ class Dragalia(commands.Cog):
             )
 
     async def return_rankings_embed(self, element, parse):
+        rank_amt = 10
         if element:
             for each in dragalia_elements.keys():
                 if element.lower().strip() in each:
                     element = dragalia_elements[each]
                     embed = discord.Embed(
-                        title=(f"**{element.title()} Top 10 Rankings**"),
+                        title=(f"**{element.title()} Top {rank_amt} Rankings**"),
                         description=f"*Parse: {parse} Seconds*",
                         colour=discord.Colour(CONST.elements_colors[element]),
                     )
@@ -414,14 +415,14 @@ class Dragalia(commands.Cog):
         else:
             element = "all"
             embed = discord.Embed(
-                title=f"**All Elements Top 10 Rankings**",
+                title=f"**All Elements Top {rank_amt} Rankings**",
                 description=f"*Parse: {parse} Seconds*",
                 colour=discord.Colour(MISC.rand_color()),
             )
         name_string = ""
         dps_string = ""
         for x, entry in enumerate(self.rank_db[parse][element]):
-            if x == 15:
+            if x == rank_amt:
                 break
             adven = self.adven_db[entry]
             name = f"{x+1}. {adven.name}"
