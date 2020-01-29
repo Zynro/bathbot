@@ -420,7 +420,7 @@ class Dragalia(commands.Cog):
             embed = discord.Embed(
                 title=f"**All Elements Top 10 Rankings**",
                 description=f"*Parse: {parse} Seconds*",
-                colour=discord.Colour(MISC.generate_random_color()),
+                colour=discord.Colour(MISC.rand_color()),
             )
         name_string = ""
         dps_string = ""
