@@ -7,7 +7,7 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
-import modules.dragalia.models.constants as CONSTANTS
+import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 import asyncio
 import traceback
@@ -70,7 +70,7 @@ class Dragalia(commands.Cog):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
     async def dps_update_check(self, ctx):
-        current = MISC.get_master_hash(CONSTANTS.REPO_URL)
+        current = MISC.get_master_hash(CONST.REPO_URL)
         if self.dps_hash != current:
             embed = discord.Embed(
                 title="There are updates available for the the DPS records.",
@@ -224,49 +224,45 @@ class Dragalia(commands.Cog):
         self, embed=None, reaction=None, user=None, parse=None
     ):
         message = reaction.message
-        if reaction.emoji == CONSTANTS.emoji["up_arrow"]:
+        if reaction.emoji == CONST.emoji["up_arrow"]:
             await reaction.remove(user)
             if "60" in embed.description:
                 parse = "120"
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONST.emoji["down_arrow"])
                 return parse
             elif "120" in embed.description:
                 parse = "180"
                 await reaction.remove(self.bot.user)
                 return parse
 
-        elif reaction.emoji == CONSTANTS.emoji["down_arrow"]:
+        elif reaction.emoji == CONST.emoji["down_arrow"]:
             await reaction.remove(user)
             if "180" in embed.description:
                 parse = "120"
-                await message.add_reaction(CONSTANTS.emoji["up_arrow"])
+                await message.add_reaction(CONST.emoji["up_arrow"])
                 return parse
             if "120" in embed.description:
                 parse = "60"
                 await reaction.remove(self.bot.user)
                 return parse
 
-        elif reaction.emoji == CONSTANTS.emoji["star"]:
+        elif reaction.emoji == CONST.emoji["star"]:
             await reaction.remove(user)
             if "parse" in embed.description.lower():
-                await message.remove_reaction(
-                    CONSTANTS.emoji["down_arrow"], self.bot.user
-                )
-                await message.remove_reaction(
-                    CONSTANTS.emoji["up_arrow"], self.bot.user
-                )
+                await message.remove_reaction(CONST.emoji["down_arrow"], self.bot.user)
+                await message.remove_reaction(CONST.emoji["up_arrow"], self.bot.user)
                 return "adv"
             else:
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONST.emoji["down_arrow"])
                 return "180"
 
     async def adven_profile_process(self, ctx, message, adven, parse="180"):
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["star"]
+                    reaction.emoji == CONST.emoji["up_arrow"]
+                    or reaction.emoji == CONST.emoji["down_arrow"]
+                    or reaction.emoji == CONST.emoji["star"]
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
@@ -321,7 +317,7 @@ class Dragalia(commands.Cog):
             else:
                 adven = await self.query_dict(matched_list[0], self.adven_db)
                 message = await ctx.send(embed=adven.embed())
-                await message.add_reaction(CONSTANTS.emoji["star"])
+                await message.add_reaction(CONST.emoji["star"])
                 await self.adven_profile_process(ctx, message, adven)
         else:
             return await ctx.send(
@@ -343,7 +339,7 @@ class Dragalia(commands.Cog):
                 wp = await self.query_dict(matched_list[0], self.wp_db)
                 return await ctx.send(embed=wp.embed())
                 """
-                await message.add_reaction(CONSTANTS.emoji["star"])
+                await message.add_reaction(CONST.emoji["star"])
                 await self.adven_profile_process(ctx, message, adven)
                 """
         else:
@@ -396,8 +392,8 @@ class Dragalia(commands.Cog):
                 message = await ctx.send(embed=adven.dps.embed(parse))
                 if "error" in message.embeds[0].title.lower():
                     return
-                await message.add_reaction(CONSTANTS.emoji["star"])
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONST.emoji["star"])
+                await message.add_reaction(CONST.emoji["down_arrow"])
                 await self.adven_profile_process(ctx, message, adven)
         else:
             return await ctx.send(
@@ -412,7 +408,7 @@ class Dragalia(commands.Cog):
                     embed = discord.Embed(
                         title=(f"**{element.title()} Top 10 Rankings**"),
                         description=f"*Parse: {parse} Seconds*",
-                        colour=discord.Colour(CONSTANTS.elements_colors[element]),
+                        colour=discord.Colour(CONST.elements_colors[element]),
                     )
                     break
         else:
@@ -430,7 +426,13 @@ class Dragalia(commands.Cog):
             adven = self.adven_db[entry]
             name = f"{x+1}. {adven.name}"
             adven = await self.query_dict(adven, self.adven_db)
-            name_string += f"{name}\n"
+            if element == "all":
+                name_string += (
+                    f"{CONST.d_emoji[adven.element.lower()]}"
+                    f"{CONST.d_emoji[adven.weapon.lower()]}{name}\n"
+                )
+            else:
+                name_string += f"{CONST.d_emoji[adven.weapon.lower()]}{name}\n"
             dps_string += f"{adven.dps.parse[parse].dps}\n"
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
@@ -455,13 +457,13 @@ class Dragalia(commands.Cog):
         parse = "180"
         embed = await self.return_rankings_embed(element=element, parse=parse)
         message = await ctx.send(embed=embed)
-        await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+        await message.add_reaction(CONST.emoji["down_arrow"])
 
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                    reaction.emoji == CONST.emoji["up_arrow"]
+                    or reaction.emoji == CONST.emoji["down_arrow"]
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
