@@ -726,12 +726,16 @@ def parse_adventurer(resp):
         ]
         ability_value = each.find_all(class_="tabbertab")
         try:
-            ability_value = ability_value[2].find("p").get_text().split("(")[0]
+            ability_value = ability_value[2].find_all("p")[1].get_text().split("(")[0]
         except IndexError:
             try:
-                ability_value = ability_value[1].find("p").get_text().split("(")[0]
+                ability_value = (
+                    ability_value[1].find_all("p")[1].get_text().split("(")[0]
+                )
             except IndexError:
-                ability_value = ability_value[0].find("p").get_text().split("(")[0]
+                ability_value = (
+                    ability_value[0].find_all("p")[1].get_text().split("(")[0]
+                )
         adven["abilities"][i + 1] = f"{ability_title}: {ability_value}"
 
     return adven
