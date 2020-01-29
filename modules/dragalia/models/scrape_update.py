@@ -221,10 +221,10 @@ def fill_wp_names(conn):
     resp = fetch(WYRMPRINT_LIST_URL)
     soup = BeautifulSoup(resp, "html.parser")
     for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
-        td_list = each.find_all("td")
+        td = each.find("td")
 
-        name = td_list[1].select("a[title]")[0]["title"]
-        thumbnail = td_list[0].select("img[src]")[0]["src"]
+        name = td.select("a[title]")[0]["title"]
+        thumbnail = td.select("img[src]")[0]["src"]
 
         c = conn.cursor()
         c.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
