@@ -500,7 +500,7 @@ class Dragalia(commands.Cog):
             tables = tables.strip()
         if tables:
             tables = tables.split(" ")
-            await ctx.send("Now updating selected entries...")
+            await ctx.send("Beginning update...")
             try:
                 updated = await self.update.update(tables=tables, force=force)
             except Exception as e:
