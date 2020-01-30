@@ -7,10 +7,10 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
-from modules.dragalia.models.ranking import Ranking
+
+# from modules.dragalia.models.ranking import Ranking
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
-import config
 import asyncio
 import traceback
 import json
@@ -40,11 +40,6 @@ async def lev_dist_similar(a, b):
 
 def strip_all(input_str):
     return "".join([x for x in input_str if x.isalpha()])
-
-
-def get_master_hash(repo):
-    versions = str(MISC.git_sub("ls-remote", repo))
-    return versions.split("\\n")[-2].split("\\")[0]
 
 
 class Dragalia(commands.Cog):
@@ -532,17 +527,20 @@ class Dragalia(commands.Cog):
             await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
         if dps:
-            await ctx.send("Updating DPS entries...")
-            try:
-                self.dps_db = DPS.build_dps_db(
-                    await DPS.async_get_src_csvs(self.bot.session, self.dps_db_path)
-                )
-                self.rank_db = Ranking.build_rank_db(self.dps_db)
-                self.dps_hash = DPS.update_master_hash()
-                await ctx.send("__DPS update complete!__")
-            except Exception as e:
-                traceback.print_exc()
-                return await ctx.send(f"Update failed: {e}")
+            if DPS.check_version():
+                await ctx.send("Updating DPS entries...")
+                try:
+                    self.dps_db = DPS.build_dps_db(
+                        await DPS.async_pull_csvs(self.bot.session, self.dps_db_path)
+                    )
+                    self.rank_db = Ranking.build_rank_db(self.dps_db)
+                    self.dps_hash = DPS.update_master_hash()
+                    await ctx.send("__DPS update complete!__")
+                except Exception as e:
+                    traceback.print_exc()
+                    return await ctx.send(f"Update failed: {e}")
+            else:
+                await ctx.send("DPS records are up to date.")
         return
 
     @update_draglia_data.error

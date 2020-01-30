@@ -2,11 +2,14 @@ import requests
 import csv
 import random
 import json
+import os
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 from itertools import combinations as combs
+
+DPS_PATH = "modules/dragalia/ists/dps"
 
 
 def remove_brackets(input_str):
@@ -37,6 +40,32 @@ def save_csv(path, dps_rows):
                 writer.writerow(row)
             except IndexError:
                 continue
+
+
+def check_version():
+    path = f"modules/dragalia/lists/dps_hash.json"
+    with open(path, "r") as file:
+        saved = json.load(file)
+    current = MISC.get_master_hash(CONST.REPO_URL)
+    if current != saved:
+        print("[DRAGALIA]: ++DPS UPDATE REQUIRED++")
+        return True
+    else:
+        return False
+
+
+def load_csvs(path):
+    dps_dict = {}
+    for root, dirs, files in os.walk(DPS_PATH):
+        for filename in files:
+            with open(filename, "r") as f:
+                name = filename.split("optimal_dps_")[1].split("_")
+                parse = str(name[0])
+                coabs = str(name[1])
+                reader = csv.reader(f)
+                dps_dict[parse] = {}
+                dps_dict[parse][coabs] = list(reader)
+    return dps_dict
 
 
 class DPS:
@@ -135,6 +164,7 @@ class DPS:
         with open(f"{path}/dps_hash.json", "w") as file:
             version = MISC.get_master_hash(CONST.REPO_URL)
             json.dump(version, file, indent=4)
+            print(version)
             return version
 
     @staticmethod
@@ -143,25 +173,30 @@ class DPS:
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
         """
-        dps_dict = {
-            "180": {"none": requests.get(CONST.GET_URL(180, "none")).text},
-            "120": {"none": requests.get(CONST.GET_URL(120, "none")).text},
-            "60": {"none": requests.get(CONST.GET_URL(60, "none")).text},
-        }
-        for x in range(1, len(CONST.coab_sort) + 1):
-            for coabs in combs(CONST.coab_sort, x):
-                coabs = "".join(coabs)
-                for parse in dps_dict.keys():
-                    dps_dict[parse][coabs] = requests.get(
-                        CONST.GET_URL(parse, coabs)
-                    ).text
-        MISC.check_dir(path)
-        for parse in dps_dict.keys():
-            for coabs in dps_dict[parse].keys():
-                path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
-                save_csv(path_to_file, dps_dict[parse][coabs])
-        parsed_dict = DPS.build_dps_dict(dps_dict)
-        return parsed_dict
+        if check_version() is True:
+            dps_dict = {
+                "180": {"none": requests.get(CONST.GET_URL(180, "none")).text},
+                "120": {"none": requests.get(CONST.GET_URL(120, "none")).text},
+                "60": {"none": requests.get(CONST.GET_URL(60, "none")).text},
+            }
+            for x in range(1, len(CONST.coab_sort) + 1):
+                for coabs in combs(CONST.coab_sort, x):
+                    coabs = "".join(coabs)
+                    for parse in dps_dict.keys():
+                        dps_dict[parse][coabs] = requests.get(
+                            CONST.GET_URL(parse, coabs)
+                        ).text.split("\n")
+            MISC.check_dir(path)
+            for parse in dps_dict.keys():
+                for coabs in dps_dict[parse].keys():
+                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                    save_csv(path_to_file, dps_dict[parse][coabs])
+            DPS.update_master_hash()
+            parsed_dict = DPS.build_dps_dict(dps_dict)
+            return parsed_dict
+        else:
+            print("Skipping update, version matches...")
+            return load_csvs(path)
 
     @staticmethod
     async def async_pull_csvs(session, path):
@@ -170,21 +205,32 @@ class DPS:
         from source, returning a complete dictionary of all combinations and all parses.
         ++ASYNC version++
         """
-        dps_dict = {
-            "180": {"none": MISC.async_fetch_text(session, CONST.GET_URL(180, "none"))},
-            "120": {"none": MISC.async_fetch_text(session, CONST.GET_URL(120, "none"))},
-            "60": {"none": MISC.async_fetch_text(session, CONST.GET_URL(60, "none"))},
-        }
-        for x in range(1, len(CONST.coab_sort) + 1):
-            for coabs in combs(CONST.coab_sort, x):
-                for parse in dps_dict.keys():
-                    dps_dict[parse][coabs] = MISC.async_fetch_text(
-                        session, CONST.GET_URL(parse, coabs)
-                    )
-                    path_to_file = f"{path}_{parse}_{coabs}.csv"
-                    save_csv(path_to_file, dps_dict[parse][coabs])
-        parsed_dict = DPS.build_dps_dict(dps_dict)
-        return parsed_dict
+        if check_version() is True:
+            dps_dict = {
+                "180": {
+                    "none": MISC.async_fetch_text(session, CONST.GET_URL(180, "none"))
+                },
+                "120": {
+                    "none": MISC.async_fetch_text(session, CONST.GET_URL(120, "none"))
+                },
+                "60": {
+                    "none": MISC.async_fetch_text(session, CONST.GET_URL(60, "none"))
+                },
+            }
+            for x in range(1, len(CONST.coab_sort) + 1):
+                for coabs in combs(CONST.coab_sort, x):
+                    for parse in dps_dict.keys():
+                        dps_dict[parse][coabs] = MISC.async_fetch_text(
+                            session, CONST.GET_URL(parse, coabs)
+                        ).split("\n")
+                        path_to_file = f"{path}_{parse}_{coabs}.csv"
+                        save_csv(path_to_file, dps_dict[parse][coabs])
+            DPS.update_master_hash()
+            parsed_dict = DPS.build_dps_dict(dps_dict)
+            return parsed_dict
+        else:
+            print("Skipping update, version matches...")
+            return load_csvs(path)
 
     @staticmethod
     def build_dps_dict(response_dict):
@@ -196,8 +242,8 @@ class DPS:
         damage = {}
         for parse_val in response_dict.keys():
             for coabs in response_dict[parse_val].keys():
-                del response_dict[parse_val][0]
-                parse = response_dict[parse_val]
+                parse = response_dict[parse_val][coabs]
+                del parse[0]
                 for row in parse:
                     row = row.split(",")
                     # print(row)
