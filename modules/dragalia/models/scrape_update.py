@@ -7,7 +7,7 @@ import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
 ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
-WYRMPRINT_LIST_URL = "https://dragalialost.gamepedia.com/Wyrmprint_List"
+WYRMPRINT_LIST_URL = "https://dragalialost.gamepedia.com/Category:Wyrmprints"
 
 MASTER_DB = "master.db"
 
@@ -151,7 +151,7 @@ WHERE Internal_Name=?
 
 sql_wp_update = """
 UPDATE Wyrmprints
-SET Image=?, Max_HP=?, Max_STR=?, Rarity=?, Ability_1=?,
+SET Thumbnail=?, Image=?, Max_HP=?, Max_STR=?, Rarity=?, Ability_1=?,
     Ability_2=?, Ability_3=?, Obtained=?, Release=?, Availability=?
 WHERE Name=?
 """
@@ -219,34 +219,14 @@ def fill_adv_names(conn):
 def fill_wp_names(conn):
     # this does stuff
     resp = fetch(WYRMPRINT_LIST_URL)
-    soup = BeautifulSoup(resp, "html.parser")
-    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
-        td = each.find("td")
-
-        name = td.select("a[title]")[0]["title"]
-        thumbnail = td.select("img[src]")[0]["src"]
-
+    for name in parse_wp_names(resp):
         c = conn.cursor()
         c.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
         result = c.fetchone()
         if result is None:
             c.execute(
                 sql_wp_insert,
-                (
-                    name,
-                    thumbnail,
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                ),
+                (name, "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"),
             )
     conn.commit()
 
@@ -398,6 +378,7 @@ def update_wyrmprints(conn, force=False):
         cursor.execute(
             sql_wp_update,
             (
+                wp["thumbnail"],
                 wp["image"],
                 wp["max_hp"],
                 wp["max_str"],
@@ -463,205 +444,187 @@ async def async_fill_adv_names(session, db):
 
 async def async_fill_wp_names(session, db):
     resp = await MISC.async_fetch_text(session, WYRMPRINT_LIST_URL)
-    soup = BeautifulSoup(resp, "html.parser")
-    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
-        td_list = each.find_all("td")
-
-        name = td_list[1].select("a[title]")[0]["title"]
-        thumbnail = td_list[0].select("img[src]")[0]["src"]
-
-        cursor = await db.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
-        result = await cursor.fetchone()
-        if result is None:
-            await db.execute(
-                sql_wp_insert,
-                (
-                    name,
-                    thumbnail,
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                ),
-            )
+    for name in parse_wp_names(resp):
+        async with db.execute(
+            "SELECT Name FROM Wyrmprints WHERE name = ?", (name,)
+        ) as cursor:
+            result = await cursor.fetchone()
+            if result is None:
+                await db.execute(
+                    sql_wp_insert,
+                    (name, "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?", "?"),
+                )
     await db.commit()
 
 
 async def aysnc_update_advs(session, db, force=False):
     new = 0
-    full_list = await db.execute("SELECT * FROM Adventurers")
-    full_list = await full_list.fetchall()
-    for row in full_list:
-        adven = {}
-        name = row[0]
-        update = False
-        for entry in row[:-1]:
-            if entry == "?" or not entry:
-                update = True
-            else:
-                pass
-        if not update and not force:
-            continue
-        print(f"=====Updating: {name}=====")
-        resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
-        adven = parse_adventurer(resp)
-        await db.execute(
-            sql_adven_update,
-            (
-                adven["title"],
-                adven["max_hp"],
-                adven["max_str"],
-                adven["defense"],
-                adven["adv_type"],
-                adven["rarity"],
-                adven["element"],
-                adven["weapon"],
-                adven["max_coab"],
-                adven["skill_1"],
-                adven["skill_2"],
-                adven["abilities"][1],
-                adven["abilities"][2],
-                adven["abilities"][3],
-                adven["obtained"],
-                adven["release"],
-                adven["avail"],
-                name,
-            ),
-        )
-        await db.commit()
-        print(f"++++Updated!++++")
-        new += 1
+    async with db.execute("SELECT * FROM Adventurers") as full_list:
+        async for row in full_list:
+            adven = {}
+            name = row[0]
+            update = False
+            for entry in row[:-1]:
+                if entry == "?" or not entry:
+                    update = True
+                else:
+                    pass
+            if not update and not force:
+                continue
+            print(f"=====Updating: {name}=====")
+            resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
+            adven = parse_adventurer(resp)
+            await db.execute(
+                sql_adven_update,
+                (
+                    adven["title"],
+                    adven["max_hp"],
+                    adven["max_str"],
+                    adven["defense"],
+                    adven["adv_type"],
+                    adven["rarity"],
+                    adven["element"],
+                    adven["weapon"],
+                    adven["max_coab"],
+                    adven["skill_1"],
+                    adven["skill_2"],
+                    adven["abilities"][1],
+                    adven["abilities"][2],
+                    adven["abilities"][3],
+                    adven["obtained"],
+                    adven["release"],
+                    adven["avail"],
+                    name,
+                ),
+            )
+            await db.commit()
+            print(f"++++Updated!++++")
+            new += 1
     return new
 
 
 async def async_update_skills(session, db, force=False):
     new = 0
-    full_skill_list = await db.execute("SELECT * FROM Skills")
-    full_skill_list = await full_skill_list.fetchall()
-    full_adven_list = await db.execute("SELECT * FROM Adventurers")
-    full_adven_list = await full_adven_list.fetchall()
     skill_update = {}
-    for row in full_skill_list:
-        name = row[1]
-        if not full_skill_list:
-            force = True
-            break
-        for entry in row[:-1]:
-            if not entry or entry == "?":
-                skill_update[name] = True
+    async with db.execute("SELECT * FROM Skills") as full_skill_list:
+        async for row in full_skill_list:
+            name = row[1]
+            if not full_skill_list:
+                force = True
                 break
-            else:
-                skill_update[name] = False
-
-    for index in range(len(full_adven_list)):
-        skills = {
-            1: {"name": full_adven_list[index][12]},
-            2: {"name": full_adven_list[index][13]},
-        }
-        for x in skills.keys():
-            name = skills[x]["name"]
-            try:
-                update = skill_update[name]
-            except KeyError:
-                update = True
-            if not update and not force:
-                # print(f"    {name} already entered. Passing skill...")
-                continue
-            resp = await MISC.async_fetch_text(
-                session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
-            )
-            skills[x].update(parse_skill(resp, skills[x]))
-            skill = skills[x]
-            for i in skill["levels"].keys():
-                print(
-                    (
-                        f"    Updating: {skill['owner']}'s "
-                        f"{skill['levels'][i]['internal_name']}"
-                    )
-                )
-                cursor = await db.execute(
-                    "SELECT Name FROM Skills WHERE Internal_Name = ?",
-                    (skill["levels"][i]["internal_name"],),
-                )
-                result = await cursor.fetchone()
-                if not result:
-                    await db.execute(
-                        sql_skill_insert,
-                        (
-                            skills[x]["levels"][i]["internal_name"],
-                            skills[x]["name"],
-                            skills[x]["image"],
-                            skills[x]["owner"],
-                            i,
-                            skills[x]["levels"][i]["desc"],
-                            skills[x]["levels"][i]["sp_cost"],
-                            skills[x]["i_frames"],
-                        ),
-                    )
+            for entry in row[:-1]:
+                if not entry or entry == "?":
+                    skill_update[name] = True
+                    break
                 else:
-                    await db.execute(
-                        sql_skill_update,
+                    skill_update[name] = False
+    async with await db.execute("SELECT * FROM Adventurers") as full_adven_list:
+        async for adv in full_adven_list:
+            skills = {1: {"name": adv[12]}, 2: {"name": adv[13]}}
+            for x in skills.keys():
+                name = skills[x]["name"]
+                try:
+                    update = skill_update[name]
+                except KeyError:
+                    update = True
+                if not update and not force:
+                    # print(f"    {name} already entered. Passing skill...")
+                    continue
+                resp = await MISC.async_fetch_text(
+                    session, f"{MAIN_URL}{skills[x]['name'].replace(' ', '_')}"
+                )
+                skills[x].update(parse_skill(resp, skills[x]))
+                skill = skills[x]
+                for i in skill["levels"].keys():
+                    print(
                         (
-                            skills[x]["image"],
-                            skills[x]["owner"],
-                            i,
-                            skills[x]["levels"][i]["desc"],
-                            skills[x]["levels"][i]["sp_cost"],
-                            skills[x]["i_frames"],
-                            skills[x]["levels"][i]["internal_name"],
-                        ),
+                            f"    Updating: {skill['owner']}'s "
+                            f"{skill['levels'][i]['internal_name']}"
+                        )
                     )
-                await db.commit()
-                print("    Updated!")
-                new += 1
+                    cursor = await db.execute(
+                        "SELECT Name FROM Skills WHERE Internal_Name = ?",
+                        (skill["levels"][i]["internal_name"],),
+                    )
+                    result = await cursor.fetchone()
+                    if not result:
+                        await db.execute(
+                            sql_skill_insert,
+                            (
+                                skills[x]["levels"][i]["internal_name"],
+                                skills[x]["name"],
+                                skills[x]["image"],
+                                skills[x]["owner"],
+                                i,
+                                skills[x]["levels"][i]["desc"],
+                                skills[x]["levels"][i]["sp_cost"],
+                                skills[x]["i_frames"],
+                            ),
+                        )
+                    else:
+                        await db.execute(
+                            sql_skill_update,
+                            (
+                                skills[x]["image"],
+                                skills[x]["owner"],
+                                i,
+                                skills[x]["levels"][i]["desc"],
+                                skills[x]["levels"][i]["sp_cost"],
+                                skills[x]["i_frames"],
+                                skills[x]["levels"][i]["internal_name"],
+                            ),
+                        )
+                    await db.commit()
+                    print("    Updated!")
+                    new += 1
     return new
 
 
 async def async_update_wyrmprints(session, db, force=False):
     new = 0
-    full_list = await db.execute("SELECT * FROM Wyrmprints")
-    full_list = await full_list.fetchall()
-    for row in full_list:
-        wp = {}
-        name = row[0]
-        update = False
-        for entry in row[:-1]:
-            if entry == "?" or not entry:
-                update = True
-            else:
-                pass
-        if not update and not force:
-            continue
-        print(f"=====Updating Wyrmprint: {name}=====")
-        resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
-        wp = parse_wyrmprint(resp)
-        await db.execute(
-            sql_wp_update,
-            (
-                wp["image"],
-                wp["max_hp"],
-                wp["max_str"],
-                wp["rarity"],
-                wp["abilities"][1],
-                wp["abilities"][2],
-                wp["abilities"][3],
-                wp["obtained"],
-                wp["availability"],
-                wp["release"],
-                name,
-            ),
-        )
-        await db.commit()
-        print(f"++++Updated!++++")
-        new += 1
+    async with db.execute("SELECT * FROM Wyrmprints") as full_list:
+        async for row in full_list:
+            wp = {}
+            name = row[0]
+            update = False
+            for entry in row[:-1]:
+                if entry == "?" or not entry:
+                    update = True
+                else:
+                    pass
+            if not update and not force:
+                continue
+            print(f"=====Updating Wyrmprint: {name}=====")
+            resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
+            wp = parse_wyrmprint(resp)
+            await db.execute(
+                sql_wp_update,
+                (
+                    wp["thumbnail"],
+                    wp["image"],
+                    wp["max_hp"],
+                    wp["max_str"],
+                    wp["rarity"],
+                    wp["abilities"][1],
+                    wp["abilities"][2],
+                    wp["abilities"][3],
+                    wp["obtained"],
+                    wp["availability"],
+                    wp["release"],
+                    name,
+                ),
+            )
+            await db.commit()
+            print(f"++++Updated!++++")
+            new += 1
     return new
+
+
+def parse_wp_names(resp):
+    soup = BeautifulSoup(resp, "html.parser")
+    soup = soup.find_all(id="mw-pages")[0]
+    name_list = [name.text for name in soup.find_all("li")]
+    return name_list
 
 
 def parse_adventurer(resp):
@@ -715,7 +678,10 @@ def parse_adventurer(resp):
     max_coab = (
         skill_sections[1].find(class_="ability-header").select("a[title]")[0]["title"]
     )
-    value = skill_sections[1].find(title="Lv5").get_text()
+    for p in skill_sections[1].find(title="Lv5").find_all("p"):
+        if "might" in p.get_text().lower():
+            value = p.get_text()
+            break
     adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
 
     adven["abilities"] = {1: None, 2: None, 3: None}
@@ -782,6 +748,7 @@ def parse_wyrmprint(resp):
     wp["max_hp"] = max_hp.split(" ")[-1]
     max_str = soup.find("div", {"id": "adv-str"}).get_text()
     wp["max_str"] = max_str.split(" ")[-1]
+    wp["thumbnail"] = soup.find(class_="gallerybox").find("a").img["src"]
     wp["image"] = (
         soup.find_all(class_="image")[0].select("img[src]")[0]["src"].split("?")[0]
     )
@@ -861,10 +828,13 @@ class Update:
             await db.execute("SELECT * from Skills")
         except sqlite3.OperationalError:
             await db.execute(sql_make_skills_table)
+        # await c.close()
         if force:
+            c = await db.cursor()
             await c.execute("DROP TABLE Adventurers")
             await c.execute("DROP TABLE Skills")
             await db.execute(sql_make_adv_table)
+            await db.execute(sql_make_skills_table)
         await async_fill_adv_names(session, db)
         updated = await aysnc_update_advs(session, db, force)
         await async_update_skills(session, db, force)

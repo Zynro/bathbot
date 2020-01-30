@@ -9,6 +9,7 @@ from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
+import config
 import asyncio
 import traceback
 import json
@@ -494,10 +495,13 @@ class Dragalia(commands.Cog):
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
         force = False
-        if "force" in tables.lower():
-            force = True
-            tables = tables.replace("force", "")
-            tables = tables.strip()
+        try:
+            if "force" in tables.lower() and ctx.author.id == config.owner:
+                force = True
+                tables = tables.replace("force", "")
+                tables = tables.strip()
+        except Exception:
+            pass
         if tables:
             tables = tables.split(" ")
             await ctx.send("Beginning update...")
@@ -507,7 +511,7 @@ class Dragalia(commands.Cog):
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
         else:
-            await ctx.send("Now updating Adventurer, Skill, Wyrmprint entries...")
+            await ctx.send("**Now updating Adventurer, Skill, Wyrmprint entries...**")
             try:
                 updated = await self.update.async_full_update(force=force)
             except Exception as e:
@@ -524,7 +528,7 @@ class Dragalia(commands.Cog):
             await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
         if not tables or "dps" in tables:
-            await ctx.send("Updating DPS entries...")
+            await ctx.send("**Now updating DPS entries...**")
             try:
                 self.dps_db = DPS.build_dps_db(
                     await DPS.async_get_src_csv(self.bot.session, self.dps_db_path)

@@ -59,6 +59,7 @@ alts = [
     "wedding",
     "gala",
     "beautician",
+    "hunter",
 ]
 
 
