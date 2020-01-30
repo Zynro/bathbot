@@ -63,9 +63,8 @@ class Modules(commands.Cog):
                 guild_list.append(self.bot.get_guild(guild).name)
             guild_list = "\n".join(guild_list)
             await ctx.send(
-                f"""__Current list of guilds with access to "
-                "the module '{self.bot.modules[module].name}'__:
-{guild_list}"""
+                f"**Guild Access to** `{self.bot.modules[module].name}`:"
+                f"\n{guild_list}"
             )
 
     @module.command(name="add")
