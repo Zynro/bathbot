@@ -56,8 +56,8 @@ class Dragalia(commands.Cog):
         self.update = ScrapeUpdate(self.bot.session, self.MASTER_DB)
         self.update.full_update()
 
-        self.dps_db_path = f"modules/{self.module.path}/lists/"
-        self.dps_db = DPS.build_csv_dict(self.dps_db_path)
+        self.dps_db_path = f"modules/{self.module.path}/lists/dps"
+        self.dps_db = DPS.pull_csvs(self.dps_db_path)
         try:
             with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
                 self.dps_hash = json.loads(file.read())
@@ -105,20 +105,19 @@ class Dragalia(commands.Cog):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query_string = f"SELECT * FROM {table}"
-            query = await db.execute(query_string)
-            results = await query.fetchall()
+            async with db.execute(query_string) as query:
+                results = await query.fetchall()
         return self.parse_name_results(table, results)
 
     def parse_name_results(self, table, results):
         names = {}
         if table == "Adventurers":
-            for each in results:
-                names[each["internal_name"]] = Adventurer(
-                    each["name"], each["internal_name"]
-                )
+            names = {
+                names[each["name"]]: Adventurer(each["name"], each["internal_name"])
+                for each in results
+            }
         elif table == "Wyrmprints":
-            for each in results:
-                names[each["name"]] = Wyrmprint(each["name"])
+            names = {names[each["name"]]: Wyrmprint(each["name"]) for each in results}
         return names
 
     async def query_dict(self, query, db):
@@ -139,21 +138,23 @@ class Dragalia(commands.Cog):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             if class_type is Adventurer:
-                c = await db.execute(
+                async with db.execute(
                     "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
-                )
-                adven_row = await c.fetchone()
-                internal_name = adven_row["internal_name"]
-                c = await db.execute(
+                ) as c:
+                    adven_row = await c.fetchone()
+                    internal_name = adven_row["internal_name"]
+                async with db.execute(
                     "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
-                )
-                skills = await c.fetchall()
+                ) as c:
+                    skills = await c.fetchall()
                 adven = self.adven_db[internal_name]
                 adven.update(adven_row, skills, self.dps_db, self.rank_db)
                 return adven
             elif class_type is Wyrmprint:
-                c = await db.execute("SELECT * FROM Wyrmprints WHERE Name=?", (name,))
-                wp_row = await c.fetchone()
+                async with db.execute(
+                    "SELECT * FROM Wyrmprints WHERE Name=?", (name,)
+                ) as c:
+                    wp_row = await c.fetchone()
                 wp = self.wp_db[wp_row["name"]]
                 wp.update(wp_row)
                 return wp
@@ -328,7 +329,7 @@ class Dragalia(commands.Cog):
             )
 
     @dragalia.command(name="wp")
-    async def wyrmprint(self, ctx, *, wp):
+    async def wyrmprint_lookup(self, ctx, *, wp):
         if not wp:
             return await ctx.send("An query must be entered to search the database.")
         wp = wp.lower().strip()
@@ -497,16 +498,15 @@ class Dragalia(commands.Cog):
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
         force = dps = False
-        if "force" in tables.lower():
-            force = True
-            tables = tables.replace("force", "")
-            tables = tables.strip()
-        if "dps" in tables.lower():
-            dps = True
-            tables = tables.replace("dps", "")
-            tables = tables.strip()
-
         if tables:
+            if "force" in tables.lower():
+                force = True
+                tables = tables.replace("force", "")
+                tables = tables.strip()
+            if "dps" in tables.lower():
+                dps = True
+                tables = tables.replace("dps", "")
+                tables = tables.strip()
             tables = tables.split(" ")
             await ctx.send("Beginning update...")
             try:

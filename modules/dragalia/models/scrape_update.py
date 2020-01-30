@@ -408,37 +408,37 @@ async def async_fill_adv_names(session, db):
         image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
 
-        cursor = await db.execute(
+        async with db.execute(
             "SELECT Name FROM Adventurers WHERE name = ?", (name,)
-        )
-        result = await cursor.fetchone()
-        if result is None:
-            await db.execute(
-                sql_adven_insert,
-                (
-                    name,
-                    image,
-                    internal_name,
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                ),
-            )
+        ) as cursor:
+            result = await cursor.fetchone()
+            if result is None:
+                await db.execute(
+                    sql_adven_insert,
+                    (
+                        name,
+                        image,
+                        internal_name,
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                    ),
+                )
     await db.commit()
 
 

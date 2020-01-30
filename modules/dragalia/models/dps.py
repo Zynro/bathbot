@@ -4,7 +4,6 @@ import random
 import json
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
-from modules.dragalia.models.ranking import Ranking
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 from itertools import combinations as combs
@@ -25,14 +24,14 @@ def add_number_suffix(number):
     return str(number) + "th"
 
 
-def save_parse_csvs(self, path, dps_dict):
+def save_csv(path, dps_rows):
     """
     Given a DPS dict, the combo, and the parse dic
     """
     with open(path, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
-        dps_dict = dps_dict.split("\n")
-        for row in dps_dict:
+        dps_rows = dps_rows.split("\n")
+        for row in dps_rows:
             row = row.split(",")
             try:
                 writer.writerow(row)
@@ -151,12 +150,16 @@ class DPS:
         }
         for x in range(1, len(CONST.coab_sort) + 1):
             for coabs in combs(CONST.coab_sort, x):
+                coabs = "".join(coabs)
                 for parse in dps_dict.keys():
                     dps_dict[parse][coabs] = requests.get(
                         CONST.GET_URL(parse, coabs)
                     ).text
-                    path_to_file = f"{path}_{parse}_{coabs}.csv"
-                    save_parse_csvs(path_to_file, dps_dict)
+        MISC.check_dir(path)
+        for parse in dps_dict.keys():
+            for coabs in dps_dict[parse].keys():
+                path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                save_csv(path_to_file, dps_dict[parse][coabs])
         parsed_dict = DPS.build_dps_dict(dps_dict)
         return parsed_dict
 
@@ -179,7 +182,7 @@ class DPS:
                         session, CONST.GET_URL(parse, coabs)
                     )
                     path_to_file = f"{path}_{parse}_{coabs}.csv"
-                    save_parse_csvs(path_to_file, dps_dict)
+                    save_csv(path_to_file, dps_dict[parse][coabs])
         parsed_dict = DPS.build_dps_dict(dps_dict)
         return parsed_dict
 
@@ -191,8 +194,8 @@ class DPS:
         """
         all_char_dps = {}
         damage = {}
-        for coabs in response_dict.keys():
-            for parse_val in coabs.keys():
+        for parse_val in response_dict.keys():
+            for coabs in response_dict[parse_val].keys():
                 del response_dict[parse_val][0]
                 parse = response_dict[parse_val]
                 for row in parse:

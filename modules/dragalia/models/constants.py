@@ -1,8 +1,10 @@
 import random
 import re
 
-RAW_REPO_URL = "https://mushymato.github.io/dl-sim"
 REPO_URL = "https://github.com/Mushymato/mushymato.github.io"
+RAW_REPO_URL = (
+    "https://raw.githubusercontent.com/Mushymato/mushymato.github.io/master/dl-sim"
+)
 
 COAB_DICT = {
     "blade": "k",
@@ -32,8 +34,11 @@ def GET_URL(parse="180", coabs=None):
     else:
         if len(coabs) > 4:
             coabs = re.split("[^a-zA-Z]", coabs)
-        coabs = [COAB_DICT[i] for i in COAB_DICT.keys()]
-        coabs = sorted(coabs, key=lambda c_list: [coab_sort.index(c) for c in c_list])
+            coabs = [COAB_DICT[i] for i in coabs]
+
+        coabs = "".join(
+            sorted(coabs, key=lambda c_list: [coab_sort.index(c) for c in c_list])
+        )
     return f"{RAW_REPO_URL}/{parse}/data_{coabs}.csv"
 
 

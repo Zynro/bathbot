@@ -1,6 +1,7 @@
 import random
 import subprocess
 import traceback
+import os
 from bs4 import BeautifulSoup
 
 
@@ -76,3 +77,8 @@ async def async_fetch_text(session, URL):
 
 def bs4_parse_html(resp):
     return BeautifulSoup(resp, "html.parser")
+
+
+def check_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
