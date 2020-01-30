@@ -1,6 +1,7 @@
 import random
 import subprocess
 import traceback
+from bs4 import BeautifulSoup
 
 
 def rand_color():
@@ -71,3 +72,7 @@ async def async_get_json(session, URL):
 async def async_fetch_text(session, URL):
     async with session.get(URL) as response:
         return await response.text()
+
+
+def bs4_parse_html(resp):
+    return BeautifulSoup(resp, "html.parser")
