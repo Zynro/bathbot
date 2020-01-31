@@ -208,7 +208,7 @@ class Dragalia(commands.Cog):
         for each in multiple_results:
             temp = f"{each.name}"
             try:
-                temp = f" / {each.internal_name}"
+                temp = f"{temp} / {each.internal_name}"
             except AttributeError:
                 pass
             char_result_list.append(temp)
