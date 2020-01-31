@@ -376,20 +376,21 @@ class Dragalia(commands.Cog):
                 parse = "180"
                 adven = await self.query_dict(matched_list[0], self.adven_db)
                 try:
-                    adven.dps
+                    adven.dps.parse
                 except AttributeError:
-                    embed = discord.Embed(
-                        title=f"__**Healers do not have DPS records.**__",
-                        description=f"A good wyrmprint combinatio"
-                        " is **Give Me Your Wou"
-                        "nded** and **Pipe Down**.\n\nOther alternatives include"
-                        ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
-                        "United by Vision\n\nKeep in mind healers require "
-                        "**Skill Haste** and **Recovery Potency** as "
-                        "their primary stats.",
-                        colour=MISC.rand_color(),
-                    )
-                    return await ctx.send(embed=embed)
+                    if adven.weapon.lower() == "staff":
+                        embed = discord.Embed(
+                            title=f"__**Healers do not have DPS records.**__",
+                            description=f"A good wyrmprint combinatio"
+                            " is **Give Me Your Wou"
+                            "nded** and **Pipe Down**.\n\nOther alternatives include"
+                            ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
+                            "United by Vision\n\nKeep in mind healers require "
+                            "**Skill Haste** and **Recovery Potency** as "
+                            "their primary stats.",
+                            colour=MISC.rand_color(),
+                        )
+                        return await ctx.send(embed=embed)
                 message = await ctx.send(embed=adven.dps.embed(parse))
                 if "error" in message.embeds[0].title.lower():
                     return

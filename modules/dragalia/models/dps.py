@@ -25,7 +25,7 @@ def add_number_suffix(number):
 
 
 class DPS:
-    def __init__(self, adventurer, dps_dict, rank_db):
+    def __init__(self, adventurer, dps_dict=None, rank_db=None):
         if not dps_dict:
             return
         self.adventurer = adventurer

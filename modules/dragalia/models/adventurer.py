@@ -22,12 +22,11 @@ class Adventurer:
             skill_2 = [x for x in skills if x["name"] == self.skill_2]
             self.skill_1 = Skill(skill_1)
             self.skill_2 = Skill(skill_2)
-        if dps_db:
-            try:
-                adven_dps = dps_db[self.internal_name]
-                self.dps = DPS(self, adven_dps, rank_db)
-            except KeyError:
-                adven_dps = None
+        try:
+            adven_dps = dps_db[self.internal_name]
+        except KeyError:
+            adven_dps = None
+        self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):
         embed = Embed(
