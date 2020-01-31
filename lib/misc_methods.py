@@ -2,6 +2,7 @@ import random
 import subprocess
 import traceback
 import os
+import csv
 from bs4 import BeautifulSoup
 
 
@@ -82,3 +83,17 @@ def bs4_parse_html(resp):
 def check_dir(path):
     if not os.path.exists(path):
         os.mkdir(path)
+
+
+def save_csv(path, rows):
+    """
+    Given a list of comma separated values, saves all to csv at given path.
+    """
+    with open(path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        for row in rows:
+            row = row.split(",")
+            try:
+                writer.writerow(row)
+            except IndexError:
+                continue

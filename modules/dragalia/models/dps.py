@@ -11,6 +11,12 @@ from itertools import combinations as combs
 
 DPS_PATH = "modules/dragalia/ists/dps"
 
+skip_msg = (
+    "===========================================\n"
+    "||Skipping DPS update, version matches...||\n"
+    "==========================================="
+)
+
 
 def remove_brackets(input_str):
     return input_str.replace("[", "").replace("]", "")
@@ -27,25 +33,13 @@ def add_number_suffix(number):
     return str(number) + "th"
 
 
-def save_csv(path, dps_rows):
-    """
-    Given a DPS dict, the combo, and the parse dic
-    """
-    with open(path, "w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        dps_rows = dps_rows.split("\n")
-        for row in dps_rows:
-            row = row.split(",")
-            try:
-                writer.writerow(row)
-            except IndexError:
-                continue
-
-
 def check_version():
-    path = f"modules/dragalia/lists/dps_hash.json"
-    with open(path, "r") as file:
-        saved = json.load(file)
+    try:
+        path = f"modules/dragalia/lists/dps_hash.json"
+        with open(path, "r") as file:
+            saved = json.load(file)
+    except FileNotFoundError:
+        return True
     current = MISC.get_master_hash(CONST.REPO_URL)
     if current != saved:
         print("[DRAGALIA]: ++DPS UPDATE REQUIRED++")
@@ -164,7 +158,6 @@ class DPS:
         with open(f"{path}/dps_hash.json", "w") as file:
             version = MISC.get_master_hash(CONST.REPO_URL)
             json.dump(version, file, indent=4)
-            print(version)
             return version
 
     @staticmethod
@@ -175,10 +168,17 @@ class DPS:
         """
         if check_version() is True:
             dps_dict = {
-                "180": {"none": requests.get(CONST.GET_URL(180, "none")).text},
-                "120": {"none": requests.get(CONST.GET_URL(120, "none")).text},
-                "60": {"none": requests.get(CONST.GET_URL(60, "none")).text},
+                "180": {
+                    "none": requests.get(CONST.GET_URL(180, "none")).text.split("\n")
+                },
+                "120": {
+                    "none": requests.get(CONST.GET_URL(120, "none")).text.split("\n")
+                },
+                "60": {
+                    "none": requests.get(CONST.GET_URL(60, "none")).text.split("\n")
+                },
             }
+            MISC.check_dir(path)
             for x in range(1, len(CONST.coab_sort) + 1):
                 for coabs in combs(CONST.coab_sort, x):
                     coabs = "".join(coabs)
@@ -186,17 +186,13 @@ class DPS:
                         dps_dict[parse][coabs] = requests.get(
                             CONST.GET_URL(parse, coabs)
                         ).text.split("\n")
-            MISC.check_dir(path)
-            for parse in dps_dict.keys():
-                for coabs in dps_dict[parse].keys():
-                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
-                    save_csv(path_to_file, dps_dict[parse][coabs])
+                        path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                        MISC.save_csv(path_to_file, dps_dict[parse][coabs])
             DPS.update_master_hash()
-            parsed_dict = DPS.build_dps_dict(dps_dict)
-            return parsed_dict
+            return DPS.build_dps_dict(dps_dict)
         else:
-            print("Skipping update, version matches...")
-            return load_csvs(path)
+            print(skip_msg)
+            return DPS.build_dps_dict(load_csvs(path))
 
     @staticmethod
     async def async_pull_csvs(session, path):
@@ -208,13 +204,19 @@ class DPS:
         if check_version() is True:
             dps_dict = {
                 "180": {
-                    "none": MISC.async_fetch_text(session, CONST.GET_URL(180, "none"))
+                    "none": MISC.async_fetch_text(
+                        session, CONST.GET_URL(180, "none").split("\n")
+                    )
                 },
                 "120": {
-                    "none": MISC.async_fetch_text(session, CONST.GET_URL(120, "none"))
+                    "none": MISC.async_fetch_text(
+                        session, CONST.GET_URL(120, "none").split("\n")
+                    )
                 },
                 "60": {
-                    "none": MISC.async_fetch_text(session, CONST.GET_URL(60, "none"))
+                    "none": MISC.async_fetch_text(
+                        session, CONST.GET_URL(60, "none").split("\n")
+                    )
                 },
             }
             for x in range(1, len(CONST.coab_sort) + 1):
@@ -223,14 +225,13 @@ class DPS:
                         dps_dict[parse][coabs] = MISC.async_fetch_text(
                             session, CONST.GET_URL(parse, coabs)
                         ).split("\n")
-                        path_to_file = f"{path}_{parse}_{coabs}.csv"
-                        save_csv(path_to_file, dps_dict[parse][coabs])
+                        path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                        MISC.save_csv(path_to_file, dps_dict[parse][coabs])
             DPS.update_master_hash()
-            parsed_dict = DPS.build_dps_dict(dps_dict)
-            return parsed_dict
+            return DPS.build_dps_dict(dps_dict)
         else:
-            print("Skipping update, version matches...")
-            return load_csvs(path)
+            print(skip_msg)
+            return DPS.build_dps_dict(load_csvs(path))
 
     @staticmethod
     def build_dps_dict(response_dict):
@@ -277,6 +278,7 @@ class DPS:
                             "alt": alt,
                         }
                         all_char_dps[i_name][parse_val] = {}
+                    all_char_dps[i_name][parse_val] = {}
                     damage = {}
                     damage_list = row[9:]
                     damage["dps"] = row[0]
