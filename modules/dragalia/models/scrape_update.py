@@ -830,11 +830,11 @@ class Update:
             await db.execute(sql_make_skills_table)
         # await c.close()
         if force:
-            c = await db.cursor()
             await c.execute("DROP TABLE Adventurers")
             await c.execute("DROP TABLE Skills")
             await db.execute(sql_make_adv_table)
             await db.execute(sql_make_skills_table)
+        await c.close()
         await async_fill_adv_names(session, db)
         updated = await aysnc_update_advs(session, db, force)
         await async_update_skills(session, db, force)
@@ -849,5 +849,6 @@ class Update:
         if force:
             await c.execute("DROP TABLE Wyrmprints")
             await db.execute(sql_make_wyrmprints_table)
+        await c.close()
         await async_fill_wp_names(session, db)
         return await async_update_wyrmprints(session, db, force)

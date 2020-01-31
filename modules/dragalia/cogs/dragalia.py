@@ -34,8 +34,12 @@ elements_images = {
 }
 
 
-async def lev_dist_similar(a, b):
+def lev_dist_similar(a, b):
     return fuzz.ratio(a.lower().strip(), b.lower().strip())
+
+
+def lev_dist_partial(a, b):
+    return fuzz.partial_ratio(a.lower().strip(), b.lower().strip())
 
 
 def strip_all(input_str):
@@ -59,7 +63,7 @@ class Dragalia(commands.Cog):
         except FileNotFoundError:
             self.dps_hash = DPS.update_master_hash()
 
-        self.rank_db = self.Ranking.create_rank_db(self.dps_db)
+        self.rank_db = DPS.gen_ranks(self.dps_db)
 
         self.adven_db = self.create_names("Adventurers")
         self.wp_db = self.create_names("Wyrmprints")
@@ -105,14 +109,15 @@ class Dragalia(commands.Cog):
         return self.parse_name_results(table, results)
 
     def parse_name_results(self, table, results):
-        names = {}
         if table == "Adventurers":
             names = {
-                names[each["name"]]: Adventurer(each["name"], each["internal_name"])
+                each["internal_name"].lower(): Adventurer(
+                    each["name"], each["internal_name"]
+                )
                 for each in results
             }
         elif table == "Wyrmprints":
-            names = {names[each["name"]]: Wyrmprint(each["name"]) for each in results}
+            names = {each["name"].lower(): Wyrmprint(each["name"]) for each in results}
         return names
 
     async def query_dict(self, query, db):
@@ -121,18 +126,17 @@ class Dragalia(commands.Cog):
         except AttributeError:
             query = query.name
         try:
-            db.max_hp
+            query.max_hp
         except (KeyError, AttributeError):
             result = await self.generate_queried_class(query, db)
         else:
             return db[query]
         return result
 
-    async def generate_queried_class(self, name, db):
-        class_type = type(next(iter(db.values())))
+    async def generate_queried_class(self, name, db_dict):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            if class_type is Adventurer:
+            if MISC.get_dict_type(db_dict, Adventurer):
                 async with db.execute(
                     "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
                 ) as c:
@@ -145,7 +149,7 @@ class Dragalia(commands.Cog):
                 adven = self.adven_db[internal_name]
                 adven.update(adven_row, skills, self.dps_db, self.rank_db)
                 return adven
-            elif class_type is Wyrmprint:
+            elif MISC.get_dict_type(db_dict, Wyrmprint):
                 async with db.execute(
                     "SELECT * FROM Wyrmprints WHERE Name=?", (name,)
                 ) as c:
@@ -168,13 +172,14 @@ class Dragalia(commands.Cog):
         high_score_i_name = 0
         for term in db.keys():
             term = db[term]
-            temp_score_name = await lev_dist_similar(query, term.name.lower())
+            if MISC.get_dict_type(db, Adventurer):
+                temp_score_name = lev_dist_similar(query, term.name.lower())
+            elif MISC.get_dict_type(db, Wyrmprint):
+                temp_score_name = lev_dist_partial(query, term.name.lower())
             if temp_score_name > high_score_name:
                 high_score_name = temp_score_name
             try:
-                temp_score_i_name = await lev_dist_similar(
-                    query, term.internal_name.lower()
-                )
+                temp_score_i_name = lev_dist_similar(query, term.internal_name.lower())
                 if temp_score_i_name > high_score_i_name:
                     high_score_i_name = temp_score_i_name
             except AttributeError:
@@ -182,9 +187,15 @@ class Dragalia(commands.Cog):
                 pass
         for term in db.keys():
             term = db[term]
-            name_score = await lev_dist_similar(query, term.name.lower())
+            if MISC.get_dict_type(db, Adventurer):
+                name_score = lev_dist_similar(query, term.name.lower())
+            elif MISC.get_dict_type(db, Wyrmprint):
+                name_score = lev_dist_partial(query, term.name.lower())
             try:
-                i_name_score = await lev_dist_similar(query, term.internal_name.lower())
+                if MISC.get_dict_type(db, Adventurer):
+                    i_name_score = lev_dist_similar(query, term.internal_name.lower())
+                elif MISC.get_dict_type(db, Wyrmprint):
+                    i_name_score = lev_dist_partial(query, term.internal_name.lower())
             except AttributeError:
                 # If object has no internal name
                 i_name_score = None
@@ -282,7 +293,7 @@ class Dragalia(commands.Cog):
                 if parse == "adv":
                     await reaction.message.edit(embed=adven.embed())
                 else:
-                    await reaction.message.edit(embed=adven.dps.embed(parse))
+                    await reaction.message.edit(embed=adven.dps.embed(parse, "none"))
 
     @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
@@ -356,6 +367,7 @@ class Dragalia(commands.Cog):
         Usage:
             &[drag/d] dps <character>
         """
+        coabs = "none"
         if not adven:
             return await ctx.send(
                 "An adventurer must be entered to search the database."
@@ -378,17 +390,19 @@ class Dragalia(commands.Cog):
                 except AttributeError:
                     embed = discord.Embed(
                         title=f"__**Healers do not have DPS records.**__",
-                        description=f"A good wyrmprint combinatio"
+                        description=f"A good wyrmprint combination"
                         " is **Give Me Your Wou"
                         "nded** and **Pipe Down**.\n\nOther alternatives include"
-                        ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
+                        ":\nJewels of the Sun, and "
                         "United by Vision\n\nKeep in mind healers require "
                         "**Skill Haste** and **Recovery Potency** as "
-                        "their primary stats.",
+                        "their primary stats.\n\n"
+                        "As a note, Heinwald is the only healer with a DPS profile.",
                         colour=MISC.rand_color(),
                     )
+                    embed.set_footer()
                     return await ctx.send(embed=embed)
-                message = await ctx.send(embed=adven.dps.embed(parse))
+                message = await ctx.send(embed=adven.dps.embed(parse, coabs))
                 if "error" in message.embeds[0].title.lower():
                     return
                 await message.add_reaction(CONST.emoji["star"])
@@ -533,7 +547,7 @@ class Dragalia(commands.Cog):
                     self.dps_db = DPS.build_dps_db(
                         await DPS.async_pull_csvs(self.bot.session, self.dps_db_path)
                     )
-                    self.rank_db = Ranking.build_rank_db(self.dps_db)
+                    self.rank_db = DPS.gen_ranks(self.dps_db)
                     self.dps_hash = DPS.update_master_hash()
                     await ctx.send("__DPS update complete!__")
                 except Exception as e:

@@ -18,6 +18,8 @@ COAB_DICT = {
     "b": "b",
 }
 
+COAB_DICT_REV = {"k": "Blade", "r": "Wand", "d": "Dagger", "b": "Bow"}
+
 DATA_FILE = "data__.csv"
 
 DPS_URL_60 = f"{RAW_REPO_URL}/60/{DATA_FILE}"

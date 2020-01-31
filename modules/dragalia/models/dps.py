@@ -78,24 +78,33 @@ class DPS:
         else:
             self.dragon = dps_dict["dragon"]
         self.parse = {}
-        for parse_value in CONST.parses:
-            self.parse[parse_value] = Parse(dps_dict["parse"][parse_value])
+        for parse_value in dps_dict.keys():
+            for coabs in dps_dict[parse_value].keys():
+                self.parse[parse_value][coabs] = Parse(
+                    dps_dict[parse_value][coabs], coabs
+                )
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
 
-        for parse_value in self.parse.keys():
-            self.parse[parse_value].rank_element = str(
-                rank_db[parse_value][self.element].index(self.owner) + 1
-            )
-            self.parse[parse_value].rank_overall = str(
-                rank_db[parse_value]["all"].index(self.owner) + 1
-            )
+        for parse_value, coabs_dict in self.parse.items():
+            for coabs in coabs_dict.values():
+                self.parse[parse_value][coabs].rank_element = str(
+                    rank_db[parse_value][coabs][self.element].index(self.owner) + 1
+                )
+                self.parse[parse_value][coabs].rank_overall = str(
+                    rank_db[parse_value][coabs]["all"].index(self.owner) + 1
+                )
 
     def embed(self, parse_value="180", coabs="none"):
+        if coabs == "none":
+            coabs_disp = "None"
+        else:
+            coabs_disp = ", ".join([CONST.COAB_DICT_REV[c] for c in coabs])
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
                 description=f"**Parse:** {parse_value} Seconds\n"
+                f"**Co-Abilities:** {coabs_disp}\n"
                 f"**Team DPS:** {CONST.team_damage}",
                 colour=Colour(CONST.elements_colors[self.adventurer.element.lower()]),
             )
@@ -115,11 +124,11 @@ class DPS:
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",
-            value=MISC.num_emoji_gen(self.parse[parse_value].dps),
+            value=MISC.num_emoji_gen(self.parse[parse_value][coabs].dps),
             inline=True,
         )
-        element_rank = add_number_suffix(self.parse[parse_value].rank_element)
-        overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
+        element_rank = add_number_suffix(self.parse[parse_value][coabs].rank_element)
+        overall_rank = add_number_suffix(self.parse[parse_value][coabs].rank_overall)
         embed.add_field(
             name="__Ranks:__",
             value=f"**{self.element.title()}:** {element_rank} "
@@ -129,15 +138,17 @@ class DPS:
         embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
         embed.add_field(
             name="__Damage Breakdown:__",
-            value=self.parse[parse_value].to_dps_string(),
+            value=self.parse[parse_value][coabs].to_dps_string(),
             inline=False,
         )
-        if self.parse[parse_value].condition:
+        if self.parse[parse_value][coabs].condition:
             embed.add_field(
-                name="__Condition:__", value=self.parse[parse_value].condition
+                name="__Condition:__", value=self.parse[parse_value][coabs].condition
             )
-        if self.parse[parse_value].comment:
-            embed.add_field(name="__Comment:__", value=self.parse[parse_value].comment)
+        if self.parse[parse_value][coabs].comment:
+            embed.add_field(
+                name="__Comment:__", value=self.parse[parse_value][coabs].comment
+            )
         embed.set_footer(
             text="Use the up/down arrows to increase or decrease parse time."
         )
@@ -297,8 +308,37 @@ class DPS:
 
     @staticmethod
     def gen_ranks(dps_db):
-        rank_dict = {"none": DPS.build_ranking(dps_db)}
-        for x in range(0, 4):
-            for each in combs(MISC.coab_sort, x):
-                rank_dict[each] = None
-        return rank_dict
+        """
+        Given a dps dict, builds a rankings of overall and each adventurers
+        specific element.
+        """
+        rankings_db = {}
+        for parse, coabs in dps_db.items():
+            for coab in coabs:
+                sorted_list = sorted(
+                    [
+                        (
+                            dps_db[adven]["internal_name"],
+                            int(dps_db[adven][parse][coabs]["damage"]["dps"]),
+                        )
+                        for adven in dps_db.keys()
+                    ],
+                    key=lambda x: x[1],
+                    reverse=True,
+                )
+                rankings_db[parse][coab]["all"] = [i[0] for i in sorted_list]
+                for element in CONST.dragalia_elements:
+                    sorted_list = sorted(
+                        [
+                            (
+                                dps_db[adven]["internal_name"],
+                                int(dps_db[adven][parse][coabs]["damage"]["dps"]),
+                            )
+                            for adven in dps_db.keys()
+                            if dps_db[adven]["element"] == element
+                        ],
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )
+                    rankings_db[parse][coab][element] = [i[0] for i in sorted_list]
+        return rankings_db

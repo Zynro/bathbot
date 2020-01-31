@@ -97,3 +97,7 @@ def save_csv(path, rows):
                 writer.writerow(row)
             except IndexError:
                 continue
+
+
+def get_dict_type(db, check):
+    return str(isinstance(next(iter(db.values())), check))
