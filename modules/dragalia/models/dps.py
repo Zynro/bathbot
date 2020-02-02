@@ -194,18 +194,11 @@ class DPS:
                     del row[9]
                 if "_" in row[1]:
                     internal_name = row[1].replace("_", "").lower().strip()
-                if "mh_" in internal_name:
-                    internal_name = "h_"
-                    """if (
-                        "geuden" in internal_name
-                    ):  # dps has it as geuden, wiki is gala prince
-                        internal_name = "gprince"
-                    if "euden" in internal_name:  # same as above, but normal version
-                        internal_name = "theprince"
-                    alt = True"""
                 else:
                     internal_name = row[1].lower().strip()
                     alt = False
+                if "mh_" in internal_name:
+                    internal_name = "h_"
                 if parse_value == "180":
                     amulets = row[6].split("][")
                     wyrmprints = amulets[0].split("+")
