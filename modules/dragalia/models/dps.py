@@ -193,12 +193,11 @@ class DPS:
                 if "fleur" in row[1]:
                     del row[9]
                 if "_" in row[1]:
-                    internal_name = row[1].replace("_", "").lower().strip()
+                    internal_name = row[1].lower().replace("mh_", "h_")
+                    internal_name = internal_name.replace("_", "").lower().strip()
                 else:
                     internal_name = row[1].lower().strip()
                     alt = False
-                if "mh_" in internal_name:
-                    internal_name = "h_"
                 if parse_value == "180":
                     amulets = row[6].split("][")
                     wyrmprints = amulets[0].split("+")
