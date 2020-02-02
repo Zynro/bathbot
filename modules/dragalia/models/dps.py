@@ -194,6 +194,8 @@ class DPS:
                     del row[9]
                 if "_" in row[1]:
                     internal_name = row[1].replace("_", "").lower().strip()
+                if "mh_" in internal_name:
+                    internal_name = "h_"
                     """if (
                         "geuden" in internal_name
                     ):  # dps has it as geuden, wiki is gala prince
