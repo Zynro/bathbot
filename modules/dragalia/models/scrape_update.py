@@ -830,7 +830,6 @@ class Update:
             await db.execute(sql_make_skills_table)
         # await c.close()
         if force:
-            c = await db.cursor()
             await c.execute("DROP TABLE Adventurers")
             await c.execute("DROP TABLE Skills")
             await db.execute(sql_make_adv_table)
