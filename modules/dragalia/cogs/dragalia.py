@@ -147,6 +147,7 @@ class Dragalia(commands.Cog):
                 ) as c:
                     skills = await c.fetchall()
                 adven = self.adven_db[internal_name]
+                # print(self.dps_db["Marth"]["180"]["krdb"]["damage"]["dps"])
                 adven.update(adven_row, skills, self.dps_db, self.rank_db)
                 return adven
             elif MISC.get_dict_type(db_dict, Wyrmprint):
@@ -385,6 +386,8 @@ class Dragalia(commands.Cog):
             else:
                 parse = "180"
                 adven = await self.query_dict(matched_list[0], self.adven_db)
+                # print(adven.element)
+                # print(adven.dps.parse["180"]["krdb"].dps)
                 try:
                     adven.dps
                 except AttributeError:
@@ -402,7 +405,9 @@ class Dragalia(commands.Cog):
                     )
                     embed.set_footer()
                     return await ctx.send(embed=embed)
-                message = await ctx.send(embed=adven.dps.embed(parse, coabs))
+                message = await ctx.send(
+                    embed=self.adven_db["marth"].dps.embed(parse, coabs)
+                )
                 if "error" in message.embeds[0].title.lower():
                     return
                 await message.add_reaction(CONST.emoji["star"])

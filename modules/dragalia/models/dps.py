@@ -8,14 +8,17 @@ from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 from itertools import combinations as combs
+import pprint
 
-DPS_PATH = "modules/dragalia/ists/dps"
+DPS_PATH = "./modules/dragalia/lists/dps"
 
 skip_msg = (
     "===========================================\n"
     "||Skipping DPS update, version matches...||\n"
     "==========================================="
 )
+
+pp = pprint.PrettyPrinter(indent=1)
 
 
 def remove_brackets(input_str):
@@ -49,15 +52,14 @@ def check_version():
 
 
 def load_csvs(path):
-    dps_dict = {}
+    dps_dict = {"180": {}, "120": {}, "60": {}}
     for root, dirs, files in os.walk(DPS_PATH):
         for filename in files:
-            with open(filename, "r") as f:
+            with open(f"{DPS_PATH}/{filename}", newline="") as f:
                 name = filename.split("optimal_dps_")[1].split("_")
                 parse = str(name[0])
-                coabs = str(name[1])
+                coabs = str(name[1]).replace(".csv", "")
                 reader = csv.reader(f)
-                dps_dict[parse] = {}
                 dps_dict[parse][coabs] = list(reader)
     return dps_dict
 
@@ -81,7 +83,7 @@ class DPS:
         for parse_value in dps_dict.keys():
             for coabs in dps_dict[parse_value].keys():
                 self.parse[parse_value][coabs] = Parse(
-                    dps_dict[parse_value][coabs], coabs
+                    dps_dict["parses"][parse_value][coabs], coabs
                 )
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
@@ -250,15 +252,12 @@ class DPS:
         Given a csv of dps values for a specific combination of
         parse time and co-abilities, returns a parsed dict for all chars in csv.
         """
-        all_char_dps = {}
-        damage = {}
+        dps_db = {}
         for parse_val in response_dict.keys():
             for coabs in response_dict[parse_val].keys():
                 parse = response_dict[parse_val][coabs]
                 del parse[0]
                 for row in parse:
-                    row = row.split(",")
-                    # print(row)
                     try:
                         row[1]
                     except IndexError:
@@ -272,13 +271,15 @@ class DPS:
                     else:
                         i_name = row[1].lower().strip()
                         alt = False
-                    if parse_val == "180":
+                    try:
+                        dps_db[i_name]
+                    except (KeyError, AttributeError):
                         amulets = row[6].split("][")
                         wyrmprints = amulets[0].split("+")
                         wyrmprints = remove_brackets(" + ".join(wyrmprints))
                         wyrmprints = wyrmprints.replace("_", " ")
                         dragon = remove_brackets(amulets[1])
-                        all_char_dps[i_name] = {
+                        dps_db[i_name] = {
                             "i_name": i_name,
                             "rarity": row[2],
                             "element": row[3],
@@ -287,9 +288,8 @@ class DPS:
                             "wyrmprints": wyrmprints,
                             "dragon": dragon,
                             "alt": alt,
+                            "parses": {"180": {}, "120": {}, "60": {}},
                         }
-                        all_char_dps[i_name][parse_val] = {}
-                    all_char_dps[i_name][parse_val] = {}
                     damage = {}
                     damage_list = row[9:]
                     damage["dps"] = row[0]
@@ -298,13 +298,13 @@ class DPS:
                         damage_type = damage_type.split(":")
                         damage_name = damage_type[0].replace("_", " ").title()
                         damage["types"][damage_name] = damage_type[1]
-                    all_char_dps[i_name][parse_val][coabs] = {}
-                    all_char_dps[i_name][parse_val][coabs]["damage"] = damage
-                    (all_char_dps[i_name][parse_val][coabs]["condition"]) = (
+                    dps_db[i_name]["parses"][parse_val][coabs] = {}
+                    dps_db[i_name]["parses"][parse_val][coabs]["damage"] = damage
+                    (dps_db[i_name]["parses"][parse_val][coabs]["condition"]) = (
                         row[7].replace("<", "").replace(">", ""),
                     )
-                    all_char_dps[i_name][parse_val][coabs]["comment"] = row[8]
-        return all_char_dps
+                    dps_db[i_name]["parses"][parse_val][coabs]["comment"] = row[8]
+        return dps_db
 
     @staticmethod
     def gen_ranks(dps_db):
@@ -318,8 +318,8 @@ class DPS:
                 sorted_list = sorted(
                     [
                         (
-                            dps_db[adven]["internal_name"],
-                            int(dps_db[adven][parse][coabs]["damage"]["dps"]),
+                            adven,
+                            int(dps_db[adven]["parses"][parse][coabs]["damage"]["dps"]),
                         )
                         for adven in dps_db.keys()
                     ],
@@ -331,8 +331,12 @@ class DPS:
                     sorted_list = sorted(
                         [
                             (
-                                dps_db[adven]["internal_name"],
-                                int(dps_db[adven][parse][coabs]["damage"]["dps"]),
+                                adven,
+                                int(
+                                    dps_db[adven]["parses"][parse][coabs]["damage"][
+                                        "dps"
+                                    ]
+                                ),
                             )
                             for adven in dps_db.keys()
                             if dps_db[adven]["element"] == element
