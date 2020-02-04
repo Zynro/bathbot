@@ -92,7 +92,8 @@ def save_csv(path, rows):
     with open(path, "w", newline="", encoding="utf-8") as file:
         writer = csv.writer(file)
         for row in rows:
-            row = row.split(",")
+            if "," in row:
+                row = row.split(",")
             try:
                 writer.writerow(row)
             except IndexError:

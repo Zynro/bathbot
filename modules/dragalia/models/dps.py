@@ -7,7 +7,6 @@ from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
-from itertools import combinations as combs
 import pprint
 
 DPS_PATH = "./modules/dragalia/lists/dps"
@@ -52,11 +51,11 @@ def check_version():
 
 
 def load_csvs(path):
-    dps_dict = {"180": {}, "120": {}, "60": {}}
+    dps_dict = CONST.copy_parses()
     for root, dirs, files in os.walk(DPS_PATH):
         for filename in files:
             with open(f"{DPS_PATH}/{filename}", newline="") as f:
-                name = filename.split("optimal_dps_")[1].split("_")
+                name = filename.split("optimal_dps_")[1].split("_", 1)
                 parse = str(name[0])
                 coabs = str(name[1]).replace(".csv", "")
                 reader = csv.reader(f)
@@ -67,6 +66,7 @@ def load_csvs(path):
 class DPS:
     def __init__(self, adventurer, dps_dict, rank_db):
         if not dps_dict:
+            print(f"NO DPS RECORDS FOR {adventurer.name}")
             return
         self.adventurer = adventurer
         self.owner = adventurer.internal_name
@@ -81,7 +81,7 @@ class DPS:
             self.dragon = dps_dict["dragon"]
         self.parse = {}
         for parse_value in dps_dict.keys():
-            for coabs in dps_dict[parse_value].keys():
+            for coabs in dps_dict["parses"][parse_value].keys():
                 self.parse[parse_value][coabs] = Parse(
                     dps_dict["parses"][parse_value][coabs], coabs
                 )
@@ -96,6 +96,7 @@ class DPS:
                 self.parse[parse_value][coabs].rank_overall = str(
                     rank_db[parse_value][coabs]["all"].index(self.owner) + 1
                 )
+        print(self.element)
 
     def embed(self, parse_value="180", coabs="none"):
         if coabs == "none":
@@ -180,27 +181,18 @@ class DPS:
         from source, returning a complete dictionary of all combinations and all parses.
         """
         if check_version() is True:
-            dps_dict = {
-                "180": {
-                    "none": requests.get(CONST.GET_URL(180, "none")).text.split("\n")
-                },
-                "120": {
-                    "none": requests.get(CONST.GET_URL(120, "none")).text.split("\n")
-                },
-                "60": {
-                    "none": requests.get(CONST.GET_URL(60, "none")).text.split("\n")
-                },
-            }
+            dps_dict = CONST.copy_parses()
             MISC.check_dir(path)
-            for x in range(1, len(CONST.coab_sort) + 1):
-                for coabs in combs(CONST.coab_sort, x):
-                    coabs = "".join(coabs)
-                    for parse in dps_dict.keys():
-                        dps_dict[parse][coabs] = requests.get(
-                            CONST.GET_URL(parse, coabs)
-                        ).text.split("\n")
-                        path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
-                        MISC.save_csv(path_to_file, dps_dict[parse][coabs])
+            for coabs in CONST.coab_combos:
+                for parse in CONST.parses:
+                    dps_dict[parse][coabs] = [
+                        i.split(",")
+                        for i in requests.get(CONST.GET_URL(parse, coabs)).text.split(
+                            "\n"
+                        )
+                    ]
+                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                    MISC.save_csv(path_to_file, dps_dict[parse][coabs])
             DPS.update_master_hash()
             return DPS.build_dps_dict(dps_dict)
         else:
@@ -215,31 +207,17 @@ class DPS:
         ++ASYNC version++
         """
         if check_version() is True:
-            dps_dict = {
-                "180": {
-                    "none": MISC.async_fetch_text(
-                        session, CONST.GET_URL(180, "none").split("\n")
-                    )
-                },
-                "120": {
-                    "none": MISC.async_fetch_text(
-                        session, CONST.GET_URL(120, "none").split("\n")
-                    )
-                },
-                "60": {
-                    "none": MISC.async_fetch_text(
-                        session, CONST.GET_URL(60, "none").split("\n")
-                    )
-                },
-            }
-            for x in range(1, len(CONST.coab_sort) + 1):
-                for coabs in combs(CONST.coab_sort, x):
-                    for parse in dps_dict.keys():
-                        dps_dict[parse][coabs] = MISC.async_fetch_text(
+            dps_dict = CONST.copy_parses()
+            for coabs in CONST.coab_combos:
+                for parse in CONST.parses:
+                    dps_dict[parse][coabs] = [
+                        i.split(",")
+                        for i in MISC.async_fetch_text(
                             session, CONST.GET_URL(parse, coabs)
                         ).split("\n")
-                        path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
-                        MISC.save_csv(path_to_file, dps_dict[parse][coabs])
+                    ]
+                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                    MISC.save_csv(path_to_file, dps_dict[parse][coabs])
             DPS.update_master_hash()
             return DPS.build_dps_dict(dps_dict)
         else:
@@ -253,8 +231,8 @@ class DPS:
         parse time and co-abilities, returns a parsed dict for all chars in csv.
         """
         dps_db = {}
-        for parse_val in response_dict.keys():
-            for coabs in response_dict[parse_val].keys():
+        for coabs in CONST.coab_combos:
+            for parse_val in CONST.parses:
                 parse = response_dict[parse_val][coabs]
                 del parse[0]
                 for row in parse:
@@ -262,7 +240,7 @@ class DPS:
                         row[1]
                     except IndexError:
                         continue
-                    if "_c_" in row[1]:
+                    if "_c_" in row[1] or not row[1].strip():
                         continue
                     if "fleur" in row[1]:
                         del row[9]
@@ -274,11 +252,11 @@ class DPS:
                     try:
                         dps_db[i_name]
                     except (KeyError, AttributeError):
-                        amulets = row[6].split("][")
+                        amulets = [remove_brackets(i) for i in row[6].split("][")]
                         wyrmprints = amulets[0].split("+")
-                        wyrmprints = remove_brackets(" + ".join(wyrmprints))
+                        wyrmprints = " + ".join(wyrmprints)
                         wyrmprints = wyrmprints.replace("_", " ")
-                        dragon = remove_brackets(amulets[1])
+                        dragon = amulets[1]
                         dps_db[i_name] = {
                             "i_name": i_name,
                             "rarity": row[2],
@@ -312,9 +290,9 @@ class DPS:
         Given a dps dict, builds a rankings of overall and each adventurers
         specific element.
         """
-        rankings_db = {}
-        for parse, coabs in dps_db.items():
-            for coab in coabs:
+        rankings_db = CONST.copy_parses()
+        for parse in CONST.parses:
+            for coabs in CONST.coab_combos:
                 sorted_list = sorted(
                     [
                         (
@@ -326,7 +304,8 @@ class DPS:
                     key=lambda x: x[1],
                     reverse=True,
                 )
-                rankings_db[parse][coab]["all"] = [i[0] for i in sorted_list]
+                rankings_db[parse][coabs] = {}
+                rankings_db[parse][coabs]["all"] = [i[0] for i in sorted_list]
                 for element in CONST.dragalia_elements:
                     sorted_list = sorted(
                         [
@@ -344,5 +323,5 @@ class DPS:
                         key=lambda x: x[1],
                         reverse=True,
                     )
-                    rankings_db[parse][coab][element] = [i[0] for i in sorted_list]
+                    rankings_db[parse][coabs][element] = [i[0] for i in sorted_list]
         return rankings_db

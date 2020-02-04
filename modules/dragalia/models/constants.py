@@ -1,5 +1,6 @@
 import random
 import re
+from itertools import combinations as combs
 
 REPO_URL = "https://github.com/Mushymato/mushymato.github.io"
 RAW_REPO_URL = (
@@ -31,9 +32,9 @@ coab_sort = ["k", "r", "d", "b"]
 
 def GET_URL(parse="180", coabs=None):
     parse = str(parse)
-    if not coabs or coabs.lower() == "none":
+    if not coabs:
         coabs = "_"
-    else:
+    if coabs != "_":
         if len(coabs) > 4:
             coabs = re.split("[^a-zA-Z]", coabs)
             coabs = [COAB_DICT[i] for i in coabs]
@@ -101,3 +102,13 @@ alts = [
 team_damage = "16,000"
 
 parses = ["180", "120", "60"]
+
+coab_combos = ["_"] + [
+    "".join(coabs)
+    for x in range(1, len(coab_sort) + 1)
+    for coabs in combs(coab_sort, x)
+]
+
+
+def copy_parses():
+    return {"180": {}, "120": {}, "60": {}}.copy()
