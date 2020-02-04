@@ -7,8 +7,6 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
-
-# from modules.dragalia.models.ranking import Ranking
 import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 import asyncio
