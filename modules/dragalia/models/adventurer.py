@@ -23,8 +23,12 @@ class Adventurer:
             self.skill_1 = Skill(skill_1)
             self.skill_2 = Skill(skill_2)
         if dps_db:
-            adven_dps = dps_db[self.internal_name]
-            self.dps = DPS(self, adven_dps, rank_db)
+            try:
+                adven_dps = dps_db[self.internal_name]
+            except Exception:
+                adven_dps = None
+            else:
+                self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):
         embed = Embed(

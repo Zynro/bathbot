@@ -79,8 +79,8 @@ class DPS:
             self.dragon = f"{split[0]}\n*{dps_range}*"
         else:
             self.dragon = dps_dict["dragon"]
-        self.parse = {}
-        for parse_value in dps_dict.keys():
+        self.parse = CONST.copy_parses()
+        for parse_value in dps_dict["parses"].keys():
             for coabs in dps_dict["parses"][parse_value].keys():
                 self.parse[parse_value][coabs] = Parse(
                     dps_dict["parses"][parse_value][coabs], coabs
@@ -88,21 +88,18 @@ class DPS:
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
 
-        for parse_value, coabs_dict in self.parse.items():
-            for coabs in coabs_dict.values():
+        for parse_value, coab_dict in self.parse.items():
+            for coabs in coab_dict.keys():
                 self.parse[parse_value][coabs].rank_element = str(
                     rank_db[parse_value][coabs][self.element].index(self.owner) + 1
                 )
                 self.parse[parse_value][coabs].rank_overall = str(
                     rank_db[parse_value][coabs]["all"].index(self.owner) + 1
                 )
-        print(self.element)
 
     def embed(self, parse_value="180", coabs="none"):
-        if coabs == "none":
-            coabs_disp = "None"
-        else:
-            coabs_disp = ", ".join([CONST.COAB_DICT_REV[c] for c in coabs])
+        coabs = CONST.parse_coabs(coabs)
+        coabs_disp = CONST.parse_coab_disp(coabs)
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
@@ -256,7 +253,7 @@ class DPS:
                         wyrmprints = amulets[0].split("+")
                         wyrmprints = " + ".join(wyrmprints)
                         wyrmprints = wyrmprints.replace("_", " ")
-                        dragon = amulets[1]
+                        dragon = amulets[1].replace("_", " ")
                         dps_db[i_name] = {
                             "i_name": i_name,
                             "rarity": row[2],

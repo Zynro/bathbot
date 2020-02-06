@@ -264,7 +264,13 @@ class Dragalia(commands.Cog):
                 await message.add_reaction(CONST.emoji["down_arrow"])
                 return "180"
 
-    async def adven_profile_process(self, ctx, message, adven, parse="180"):
+    def process_coabs(self, embed=None):
+        if not embed:
+            return None
+
+    async def adven_profile_process(
+        self, ctx, message, adven, parse="180", coabs="none"
+    ):
         def check_response(reaction, user):
             return (
                 (
@@ -288,10 +294,11 @@ class Dragalia(commands.Cog):
                 parse = await self.proccess_parse_change(
                     embed=embed, reaction=reaction, user=user, parse=parse
                 )
+                # coabs = self.process_coabs(embed=embed)
                 if parse == "adv":
                     await reaction.message.edit(embed=adven.embed())
                 else:
-                    await reaction.message.edit(embed=adven.dps.embed(parse, "none"))
+                    await reaction.message.edit(embed=adven.dps.embed(parse, coabs))
 
     @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
@@ -346,10 +353,6 @@ class Dragalia(commands.Cog):
             else:
                 wp = await self.query_dict(matched_list[0], self.wp_db)
                 return await ctx.send(embed=wp.embed())
-                """
-                await message.add_reaction(CONST.emoji["star"])
-                await self.adven_profile_process(ctx, message, adven)
-                """
         else:
             return await ctx.send(
                 f"Either the wyrmprint {wp} was not found, or an error occured."
@@ -357,7 +360,7 @@ class Dragalia(commands.Cog):
         return
 
     @dragalia.command()
-    async def dps(self, ctx, *, adven: str = None):
+    async def dps(self, ctx, *, input_string):
         """
         Retreive DPS Simulator data for a single character for parses of 60,
         120, and 180 seconds.
@@ -366,14 +369,27 @@ class Dragalia(commands.Cog):
             &[drag/d] dps <character>
         """
         coabs = "none"
-        if not adven:
+        if not input_string:
             return await ctx.send(
                 "An adventurer must be entered to search the database."
             )
+        elif "," in input_string:
+            str_ls = input_string.split(",")
+            adven = str_ls[0].lower().strip()
+            coabs = CONST.parse_coabs(str_ls[1].lower().strip())
+        elif len(input_string.split(" ")) > 2:
+            return await ctx.send(
+                "It seems you might have entered a command to see DPS with co-abilities"
+                " specified.\nTo make use of this, a comma is required."
+                "\n\ne.g. `&d dps marth, krdb`\n`&d dps marth, blade wand`"
+            )
+        else:
+            adven = input_string.lower().strip()
+        if not coabs:
+            return await ctx.send("Invalid Co-Abilities specified.")
 
         await self.dps_update_check(ctx)
 
-        adven = adven.lower().strip()
         matched_list = await self.validate_query(adven, self.adven_db)
         if matched_list:
             if len(matched_list) > 1:
@@ -383,8 +399,6 @@ class Dragalia(commands.Cog):
             else:
                 parse = "180"
                 adven = await self.query_dict(matched_list[0], self.adven_db)
-                # print(adven.element)
-                print(adven.dps.parse["180"]["krdb"].dps)
                 try:
                     adven.dps
                 except AttributeError:
@@ -402,20 +416,20 @@ class Dragalia(commands.Cog):
                     )
                     embed.set_footer()
                     return await ctx.send(embed=embed)
-                message = await ctx.send(
-                    embed=self.adven_db["marth"].dps.embed(parse, coabs)
-                )
+                message = await ctx.send(embed=adven.dps.embed(parse, coabs))
                 if "error" in message.embeds[0].title.lower():
                     return
                 await message.add_reaction(CONST.emoji["star"])
                 await message.add_reaction(CONST.emoji["down_arrow"])
-                await self.adven_profile_process(ctx, message, adven)
+                await self.adven_profile_process(ctx, message, adven, parse, coabs)
         else:
             return await ctx.send(
                 f"Either the adventurer {adven} was not found, or an error occured."
             )
 
-    async def return_rankings_embed(self, element, parse):
+    async def return_rankings_embed(self, element, parse, coabs="none"):
+        coabs = CONST.parse_coabs(coabs)
+        coabs_disp = CONST.parse_coab_disp(coabs)
         rank_amt = 10
         if element:
             for each in dragalia_elements.keys():
@@ -423,7 +437,9 @@ class Dragalia(commands.Cog):
                     element = dragalia_elements[each]
                     embed = discord.Embed(
                         title=(f"**{element.title()} Top {rank_amt} Rankings**"),
-                        description=f"*Parse: {parse} Seconds*",
+                        description=f"**Parse:** {parse} Seconds\n"
+                        f"**Co-Abilities:** {coabs_disp}\n"
+                        f"**Team DPS:** {CONST.team_damage}",
                         colour=discord.Colour(CONST.elements_colors[element]),
                     )
                     break
@@ -431,12 +447,14 @@ class Dragalia(commands.Cog):
             element = "all"
             embed = discord.Embed(
                 title=f"**All Elements Top {rank_amt} Rankings**",
-                description=f"*Parse: {parse} Seconds*",
+                description=f"**Parse:** {parse} Seconds\n"
+                f"**Co-Abilities:** {coabs_disp}\n"
+                f"**Team DPS:** {CONST.team_damage}",
                 colour=discord.Colour(MISC.rand_color()),
             )
         name_string = ""
         dps_string = ""
-        for x, entry in enumerate(self.rank_db[parse][element]):
+        for x, entry in enumerate(self.rank_db[parse][coabs][element]):
             if x == rank_amt:
                 break
             adven = self.adven_db[entry]
@@ -449,7 +467,7 @@ class Dragalia(commands.Cog):
                 )
             else:
                 name_string += f"{CONST.d_emoji[adven.weapon.lower()]}{name}\n"
-            dps_string += f"{adven.dps.parse[parse].dps}\n"
+            dps_string += f"{adven.dps.parse[parse][coabs].dps}\n"
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=elements_images[element])
@@ -459,7 +477,7 @@ class Dragalia(commands.Cog):
         return embed
 
     @dragalia.command(name="rankings", aliases=["rank", "ranks", "ranking"])
-    async def rankings(self, ctx, element=None):
+    async def rankings(self, ctx, *, input_string=None):
         """
         Retreive a list of top ten Adventurers based on the DPS Simulator for
         an element, or overall.
@@ -470,8 +488,18 @@ class Dragalia(commands.Cog):
         Element can be any element, or 'all' for overall top 10 list.
         """
         await self.dps_update_check(ctx)
+        coabs = "none"
         parse = "180"
-        embed = await self.return_rankings_embed(element=element, parse=parse)
+        str_ls = input_string.split(" ")
+        if len(str_ls) > 1:
+            coabs = " ".join(str_ls[1:])
+            coabs = CONST.parse_coabs(coabs.lower().strip())
+        element = str_ls[0].lower().strip()
+        if not coabs:
+            return await ctx.send("Invalid Co-Abilities specified.")
+        embed = await self.return_rankings_embed(
+            element=element, parse=parse, coabs=coabs
+        )
         message = await ctx.send(embed=embed)
         await message.add_reaction(CONST.emoji["down_arrow"])
 
@@ -502,7 +530,9 @@ class Dragalia(commands.Cog):
                 if element not in dragalia_elements:
                     element = None
                 await reaction.message.edit(
-                    embed=await self.return_rankings_embed(element=element, parse=parse)
+                    embed=await self.return_rankings_embed(
+                        element=element, parse=parse, coabs=coabs
+                    )
                 )
 
     @dragalia.command(name="update")
