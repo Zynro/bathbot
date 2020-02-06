@@ -294,7 +294,6 @@ class Dragalia(commands.Cog):
                 parse = await self.proccess_parse_change(
                     embed=embed, reaction=reaction, user=user, parse=parse
                 )
-                # coabs = self.process_coabs(embed=embed)
                 if parse == "adv":
                     await reaction.message.edit(embed=adven.embed())
                 else:
@@ -415,7 +414,7 @@ class Dragalia(commands.Cog):
                             colour=MISC.rand_color(),
                         )
                         return await ctx.send(embed=embed)
-                message = await ctx.send(embed=adven.dps.embed(parse))
+                message = await ctx.send(embed=adven.dps.embed(parse, coabs))
                 if "error" in message.embeds[0].title.lower():
                     return
                 await message.add_reaction(CONST.emoji["star"])
@@ -489,7 +488,7 @@ class Dragalia(commands.Cog):
         await self.dps_update_check(ctx)
         coabs = "none"
         parse = "180"
-        str_ls = input_string.split(" ")
+        str_ls = input_string.split(",")
         if len(str_ls) > 1:
             coabs = " ".join(str_ls[1:])
             coabs = CONST.parse_coabs(coabs.lower().strip())
