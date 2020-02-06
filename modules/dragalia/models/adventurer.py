@@ -1,3 +1,4 @@
+import traceback
 from modules.dragalia.models.dps import DPS
 from modules.dragalia.models.skill import Skill
 from discord import Embed, Colour
@@ -26,6 +27,7 @@ class Adventurer:
             try:
                 adven_dps = dps_db[self.internal_name]
             except Exception:
+                traceback.print_exc()
                 adven_dps = None
             else:
                 self.dps = DPS(self, adven_dps, rank_db)

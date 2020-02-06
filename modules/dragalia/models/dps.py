@@ -35,21 +35,6 @@ def add_number_suffix(number):
     return str(number) + "th"
 
 
-def check_version():
-    try:
-        path = f"modules/dragalia/lists/dps_hash.json"
-        with open(path, "r") as file:
-            saved = json.load(file)
-    except FileNotFoundError:
-        return True
-    current = MISC.get_master_hash(CONST.REPO_URL)
-    if current != saved:
-        print("[DRAGALIA]: ++DPS UPDATE REQUIRED++")
-        return True
-    else:
-        return False
-
-
 def load_csvs(path):
     dps_dict = CONST.copy_parses()
     for root, dirs, files in os.walk(DPS_PATH):
@@ -164,6 +149,21 @@ class DPS:
         )
 
     @staticmethod
+    def check_version():
+        try:
+            path = f"modules/dragalia/lists/dps_hash.json"
+            with open(path, "r") as file:
+                saved = json.load(file)
+        except FileNotFoundError:
+            return True
+        current = MISC.get_master_hash(CONST.REPO_URL)
+        if current != saved:
+            print("[DRAGALIA]: ++DPS UPDATE REQUIRED++")
+            return True
+        else:
+            return False
+
+    @staticmethod
     def update_master_hash():
         path = f"modules/dragalia/lists"
         with open(f"{path}/dps_hash.json", "w") as file:
@@ -177,7 +177,7 @@ class DPS:
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
         """
-        if check_version() is True:
+        if DPS.check_version() is True:
             dps_dict = CONST.copy_parses()
             MISC.check_dir(path)
             for coabs in CONST.coab_combos:
@@ -203,7 +203,7 @@ class DPS:
         from source, returning a complete dictionary of all combinations and all parses.
         ++ASYNC version++
         """
-        if check_version() is True:
+        if DPS.check_version() is True:
             dps_dict = CONST.copy_parses()
             for coabs in CONST.coab_combos:
                 for parse in CONST.parses:
@@ -243,7 +243,7 @@ class DPS:
                         del row[9]
                     if "_" in row[1]:
                         internal_name = row[1].lower().replace("mh_", "h_")
-                        internal_name = internal_name.replace("_", "").lower().strip()
+                        i_name = internal_name.replace("_", "").lower().strip()
                     else:
                         i_name = row[1].lower().strip()
                         alt = False

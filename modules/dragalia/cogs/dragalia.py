@@ -536,7 +536,7 @@ class Dragalia(commands.Cog):
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
-        force = dps = False
+        force = dps = dps_only = False
         if tables:
             if "force" in tables.lower():
                 force = True
@@ -546,32 +546,36 @@ class Dragalia(commands.Cog):
                 dps = True
                 tables = tables.replace("dps", "")
                 tables = tables.strip()
-            tables = tables.split(" ")
+                if not tables:
+                    dps_only = True
             await ctx.send("Beginning update...")
-            try:
-                updated = await self.update.update(tables=tables, force=force)
-            except Exception as e:
-                traceback.print_exc()
-                return await ctx.send(f"Update failed: {e}")
+            if not dps_only:
+                tables = tables.split(" ")
+                try:
+                    updated = await self.update.update(tables=tables, force=force)
+                except Exception as e:
+                    traceback.print_exc()
+                    return await ctx.send(f"Update failed: {e}")
         else:
+            dps = True
             await ctx.send("**Now updating Adventurer, Skill, Wyrmprint entries...**")
             try:
                 updated = await self.update.async_full_update(force=force)
             except Exception as e:
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
+        if not dps_only:
+            self.adven_db = await self.async_create_names("Adventurers")
+            self.wp_db = await self.async_create_names("Wyrmprints")
+            if updated:
+                await ctx.send(f"__Updates successful!__")
+            if "adv" in updated:
+                await ctx.send(f"\n{updated['adv']} new Adventurers.")
+            if "wp" in updated:
+                await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
-        self.adven_db = await self.async_create_names("Adventurers")
-        self.wp_db = await self.async_create_names("Wyrmprints")
-        if updated:
-            await ctx.send(f"__Updates successful!__")
-        if "adv" in updated:
-            await ctx.send(f"\n{updated['adv']} new Adventurers.")
-        if "wp" in updated:
-            await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
-
-        if dps:
-            if DPS.check_version():
+        if dps is True:
+            if DPS.check_version() is True:
                 await ctx.send("Updating DPS entries...")
                 try:
                     self.dps_db = DPS.build_dps_db(
