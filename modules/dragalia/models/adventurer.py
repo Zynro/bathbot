@@ -22,11 +22,13 @@ class Adventurer:
             skill_2 = [x for x in skills if x["name"] == self.skill_2]
             self.skill_1 = Skill(skill_1)
             self.skill_2 = Skill(skill_2)
-        try:
-            adven_dps = dps_db[self.internal_name]
-        except KeyError:
-            adven_dps = None
-        self.dps = DPS(self, adven_dps, rank_db)
+        if dps_db:
+            try:
+                adven_dps = dps_db[self.internal_name]
+            except Exception:
+                adven_dps = None
+            else:
+                self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):
         embed = Embed(
@@ -62,6 +64,8 @@ __Max Co-Ab:__""",
         )
         for x in range(1, 4):
             ability = getattr(self, f"ability_{x}").split(":")
+            if "?" in ability:
+                continue
             embed.add_field(
                 name=f"__Ability:__ {ability[0]}", value=ability[1], inline=False
             )

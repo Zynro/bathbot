@@ -1,6 +1,8 @@
 import random
 import subprocess
 import traceback
+import os
+import csv
 from bs4 import BeautifulSoup
 
 
@@ -76,3 +78,27 @@ async def async_fetch_text(session, URL):
 
 def bs4_parse_html(resp):
     return BeautifulSoup(resp, "html.parser")
+
+
+def check_dir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+
+def save_csv(path, rows):
+    """
+    Given a list of comma separated values, saves all to csv at given path.
+    """
+    with open(path, "w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        for row in rows:
+            if "," in row:
+                row = row.split(",")
+            try:
+                writer.writerow(row)
+            except IndexError:
+                continue
+
+
+def get_dict_type(db, check):
+    return str(isinstance(next(iter(db.values())), check))

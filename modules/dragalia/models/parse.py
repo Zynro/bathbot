@@ -1,3 +1,6 @@
+import modules.dragalia.models.constants as CONST
+
+
 def strip_tuple(input_tuple):
     input_tuple = input_tuple.replace("(", "")
     input_tuple = input_tuple.replace(")", "")
@@ -7,8 +10,12 @@ def strip_tuple(input_tuple):
 
 
 class Parse:
-    def __init__(self, parse_dict):
+    def __init__(self, parse_dict, coabs):
         self.dps = strip_tuple(str(parse_dict["damage"]["dps"]))
+        if "none" in coabs.lower():
+            self.coabs = "None"
+        else:
+            self.coabs = ", ".join([CONST.COAB_DICT_REV[i] for i in coabs])
         self.damage_types = parse_dict["damage"]["types"]
         self.condition = strip_tuple(str(parse_dict["condition"]))
         self.condition = self.condition.replace(",", "")

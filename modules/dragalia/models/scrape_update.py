@@ -408,37 +408,37 @@ async def async_fill_adv_names(session, db):
         image = td_list[0].select("img[src]")[0]["src"]
         internal_name = shorten_name(name)
 
-        cursor = await db.execute(
+        async with db.execute(
             "SELECT Name FROM Adventurers WHERE name = ?", (name,)
-        )
-        result = await cursor.fetchone()
-        if result is None:
-            await db.execute(
-                sql_adven_insert,
-                (
-                    name,
-                    image,
-                    internal_name,
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                    "?",
-                ),
-            )
+        ) as cursor:
+            result = await cursor.fetchone()
+            if result is None:
+                await db.execute(
+                    sql_adven_insert,
+                    (
+                        name,
+                        image,
+                        internal_name,
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                        "?",
+                    ),
+                )
     await db.commit()
 
 
@@ -631,49 +631,89 @@ def parse_adventurer(resp):
     adven = {}
     soup = BeautifulSoup(resp, "html.parser")
     p = soup.find(class_="panel-heading")
-    adven["title"] = p.find_all("div")[0].get_text()
-    adven["element"] = elements[p.select("img[alt]")[0]["alt"]]
-    adven["weapon"] = weapons[p.select("img[alt]")[1]["alt"]]
+    try:
+        adven["title"] = p.find_all("div")[0].get_text()
+    except Exception:
+        adven["title"] = "?"
+    try:
+        adven["element"] = elements[p.select("img[alt]")[0]["alt"]]
+    except Exception:
+        adven["element"] = "?"
+    try:
+        adven["weapon"] = weapons[p.select("img[alt]")[1]["alt"]]
+    except Exception:
+        adven["weapon"] = "?"
     divs = soup.find(style="flex-grow:1;text-align:center")
     divs = divs.find_all(style="width:100%")
     for each in divs:
         if each.find("div", {"class": "tooltip"}):
-            if (
-                "total max hp"
-                in each.find("div", {"class": "tooltip"}).get_text().lower()
-            ):
-                adven["max_hp"] = (
-                    each.find("span", {"class": "tooltip"})
-                    .get_text()
-                    .split(")")[1]
-                    .split(" ")[0]
-                )
-            elif (
-                "total max str"
-                in each.find("div", {"class": "tooltip"}).get_text().lower()
-            ):
-                adven["max_str"] = (
-                    each.find("span", {"class": "tooltip"})
-                    .get_text()
-                    .split(")")[1]
-                    .split(" ")[0]
-                )
-        elif each.find("div").get_text().lower() == "defense":
-            adven["defense"] = each.find_all("div")[1].get_text()
-        elif each.find("div").get_text().lower() == "class":
-            adven["adv_type"] = unit_types[each.select("img[alt]")[0]["alt"]]
-        elif each.find("div").get_text().lower() == "base rarity":
-            adven["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+            try:
+                if (
+                    "total max hp"
+                    in each.find("div", {"class": "tooltip"}).get_text().lower()
+                ):
+                    adven["max_hp"] = (
+                        each.find("span", {"class": "tooltip"})
+                        .get_text()
+                        .split(")")[1]
+                        .split(" ")[0]
+                    )
+            except Exception:
+                adven["max_hp"] = "?"
+            try:
+                if (
+                    "total max str"
+                    in each.find("div", {"class": "tooltip"}).get_text().lower()
+                ):
+                    adven["max_str"] = (
+                        each.find("span", {"class": "tooltip"})
+                        .get_text()
+                        .split(")")[1]
+                        .split(" ")[0]
+                    )
+            except Exception:
+                adven["max_str"] = "?"
+            continue
+        try:
+            if each.find("div").get_text().lower() == "defense":
+                adven["defense"] = each.find_all("div")[1].get_text()
+        except Exception:
+            adven["defense"] = "?"
+        try:
+            if each.find("div").get_text().lower() == "class":
+                adven["adv_type"] = unit_types[each.select("img[alt]")[0]["alt"]]
+        except Exception:
+            adven["adv_type"] = "?"
+        try:
+            if each.find("div").get_text().lower() == "base rarity":
+                adven["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+        except Exception:
+            adven["rarity"] = "?"
 
-    adven["obtained"] = divs[-3].find_all("div")[1].get_text()
-    adven["release"] = divs[-2].find_all("div")[1].get_text()
-    adven["avail"] = divs[-1].find_all("div")[1].get_text()
+    try:
+        adven["obtained"] = divs[-3].find_all("div")[1].get_text()
+    except Exception:
+        adven["obtained"] = "?"
+    try:
+        adven["release"] = divs[-2].find_all("div")[1].get_text()
+    except Exception:
+        adven["release"] = "?"
+    try:
+        adven["avail"] = divs[-1].find_all("div")[1].get_text()
+    except Exception:
+        adven["avail"] = "?"
 
     skill_sections = soup.find_all(class_="skill-section")
 
     all_skills = skill_sections[0].find_all(class_="skill-table skill-levels")
-    adven["skill_1"] = all_skills[0].find("th").select("a[title]")[0]["title"]
-    adven["skill_2"] = all_skills[1].find("th").select("a[title]")[0]["title"]
+    try:
+        adven["skill_1"] = all_skills[0].find("th").select("a[title]")[0]["title"]
+    except Exception:
+        adven["skill_1"] = "?"
+    try:
+        adven["skill_2"] = all_skills[1].find("th").select("a[title]")[0]["title"]
+    except Exception:
+        adven["skill_2"] = "?"
 
     max_coab = (
         skill_sections[1].find(class_="ability-header").select("a[title]")[0]["title"]
@@ -682,9 +722,12 @@ def parse_adventurer(resp):
         if "might" in p.get_text().lower():
             value = p.get_text()
             break
-    adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
+    try:
+        adven["max_coab"] = f"{max_coab}: {value.split('(')[0]}"
+    except Exception:
+        adven["max_coab"] = "?"
 
-    adven["abilities"] = {1: None, 2: None, 3: None}
+    adven["abilities"] = {1: "?", 2: "?", 3: "?"}
     all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
     for i, each in enumerate(all_abilities):
         ability_title = each.find(class_="ability-header").select("a[title]")[0][
@@ -709,7 +752,10 @@ def parse_adventurer(resp):
 
 def parse_skill(resp, skill):
     s_soup = BeautifulSoup(resp, "html.parser")
-    skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
+    try:
+        skill["image"] = s_soup.find(class_="tabbertab").select("img[src]")[0]["src"]
+    except Exception:
+        skill["image"] = "?"
     temp = s_soup.find(class_="skill-levels skill-details")
     divs = temp.find_all(style="width:100%")
     for each in divs:
@@ -719,25 +765,29 @@ def parse_skill(resp, skill):
                 in each.find("div", {"class": "tooltip"}).get_text().lower()
             ):
                 skill["i_frames"] = each.find_all("div")[-1].get_text()
-    skill["owner"] = (
-        s_soup.find(style="padding:1em;").find("li").select("a[title]")[0]["title"]
-    )
-    if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
-        skill["owner"] = exceptions[skill["owner"].lower()]
+    try:
+        skill["owner"] = s_soup.find(style="padding:1em;").find("a")["title"]
+        if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
+            skill["owner"] = exceptions[skill["owner"].lower()]
+    except Exception:
+        skill["owner"] = "?"
     all_levels = s_soup.find(class_="skill-levels skill-details")
     all_levels = all_levels.find_all(class_="tabbertab")
     skill["levels"] = {}
     for i in range(1, len(all_levels) + 1):
-        skill_div = all_levels[i - 1]
-        skill["levels"][i] = {"internal_name": "", "desc": "", "sp_cost": ""}
-        for br in skill_div.find_all("br"):
-            br.replace_with("\n")
-        skill["levels"][i]["desc"] = (
-            skill_div.find_all("div")[1].get_text().replace("\\'", "'")
-        )
-        sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
-        skill["levels"][i]["sp_cost"] = sp_cost[-1].get_text()
-        skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
+        skill["levels"][i] = {"internal_name": "?", "desc": "?", "sp_cost": "?"}
+        try:
+            skill_div = all_levels[i - 1]
+            for br in skill_div.find_all("br"):
+                br.replace_with("\n")
+            skill["levels"][i]["desc"] = (
+                skill_div.find_all("div")[1].get_text().replace("\\'", "'")
+            )
+            sp_cost = skill_div.find_all(style="width:100%")[0].find_all("div")
+            skill["levels"][i]["sp_cost"] = sp_cost[-1].get_text()
+            skill["levels"][i]["internal_name"] = f"{skill['name']}_{i}"
+        except Exception:
+            pass
     return skill
 
 
@@ -745,35 +795,62 @@ def parse_wyrmprint(resp):
     wp = {}
     soup = BeautifulSoup(resp, "html.parser")
     max_hp = soup.find("div", {"id": "adv-hp"}).get_text()
-    wp["max_hp"] = max_hp.split(" ")[-1]
-    max_str = soup.find("div", {"id": "adv-str"}).get_text()
-    wp["max_str"] = max_str.split(" ")[-1]
-    wp["thumbnail"] = soup.find(class_="gallerybox").find("a").img["src"]
-    wp["image"] = (
-        soup.find_all(class_="image")[0].select("img[src]")[0]["src"].split("?")[0]
-    )
+    try:
+        wp["max_hp"] = max_hp.split(" ")[-1]
+    except Exception:
+        wp["max_hp"] = "?"
+    try:
+        max_str = soup.find("div", {"id": "adv-str"}).get_text()
+        wp["max_str"] = max_str.split(" ")[-1]
+    except Exception:
+        wp["max_str"] = "?"
+    try:
+        wp["thumbnail"] = soup.find(class_="gallerybox").find("a").img["src"]
+    except Exception:
+        wp["thumbnail"] = "?"
+    try:
+        wp["image"] = (
+            soup.find_all(class_="image")[0].select("img[src]")[0]["src"].split("?")[0]
+        )
+    except Exception:
+        wp["image"] = "?"
     divs = soup.find_all(style="width:100%")
-    for each in divs:
-        if each.find("div").get_text().lower() == "rarity":
-            wp["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+    try:
+        for each in divs:
+            if each.find("div").get_text().lower() == "rarity":
+                wp["rarity"] = rarities[each.select("img[alt]")[0]["alt"]]
+    except Exception:
+        wp["rarity"] = "?"
 
-    wp["abilities"] = {1: None, 2: "N/A", 3: "N/A"}
+    wp["abilities"] = {1: "?", 2: "?", 3: "?"}
     all_abilities = soup.find_all(class_="skill-table skill-levels")
     for i, each in enumerate(all_abilities):
-        ability_title = each.find("th").select("a[title]")[0]["title"]
-        ability_value = each.find_all(class_="tabbertab")
         try:
-            ability_value = ability_value[2].find("p").get_text().split("(")[0]
-        except IndexError:
+            ability_title = each.find("th").select("a[title]")[0]["title"]
+            ability_value = each.find_all(class_="tabbertab")
             try:
-                ability_value = ability_value[1].find("p").get_text().split("(")[0]
+                ability_value = ability_value[2].find("p").get_text().split("(")[0]
             except IndexError:
-                ability_value = ability_value[0].find("p").get_text().split("(")[0]
-        wp["abilities"][i + 1] = f"{ability_title}: {ability_value}"
+                try:
+                    ability_value = ability_value[1].find("p").get_text().split("(")[0]
+                except IndexError:
+                    ability_value = ability_value[0].find("p").get_text().split("(")[0]
+            wp["abilities"][i + 1] = f"{ability_title}: {ability_value}"
+        except Exception:
+            pass
 
-    wp["obtained"] = divs[-3].find_all("div")[1].get_text()
-    wp["release"] = divs[-2].find_all("div")[1].get_text()
-    wp["availability"] = divs[-1].find_all("div")[1].get_text()
+    try:
+        wp["obtained"] = divs[-3].find_all("div")[1].get_text()
+    except Exception:
+        wp["obtained"] = "?"
+    try:
+        wp["release"] = divs[-2].find_all("div")[1].get_text()
+    except Exception:
+        wp["release"] = "?"
+    try:
+        wp["availability"] = divs[-1].find_all("div")[1].get_text()
+    except Exception:
+        wp["availability"] = "?"
     return wp
 
 
