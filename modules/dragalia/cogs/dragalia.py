@@ -540,9 +540,10 @@ class Dragalia(commands.Cog):
         force = dps = dps_only = False
         if tables:
             if "force" in tables.lower():
-                if ctx.author.id in config.owner_list:
+                if ctx.author.id not in config.owner_list:
+                    return await ctx.send("DB purge unauthorized.")
+                else:
                     force = True
-
                 tables = tables.replace("force", "")
                 tables = tables.strip()
                 if tables == "":
@@ -582,7 +583,7 @@ class Dragalia(commands.Cog):
 
         if dps is True:
             if DPS.check_version() is True or force is True:
-                await ctx.send("Updating DPS entries...")
+                await ctx.send("**Updating DPS entries...**")
                 try:
                     self.dps_db = await DPS.async_pull_csvs(
                         self.bot.session, self.dps_db_path
@@ -595,7 +596,7 @@ class Dragalia(commands.Cog):
                     traceback.print_exc()
                     return await ctx.send(f"Update failed: {e}")
             else:
-                await ctx.send("DPS records are up to date.")
+                await ctx.send("**DPS records are already up to date.**")
         return
 
     @update_draglia_data.error
