@@ -489,13 +489,16 @@ class Dragalia(commands.Cog):
         await self.dps_update_check(ctx)
         coabs = "none"
         parse = "180"
-        str_ls = input_string.split(",")
-        if len(str_ls) > 1:
-            coabs = " ".join(str_ls[1:])
-            coabs = CONST.parse_coabs(coabs.lower().strip())
-        element = str_ls[0].lower().strip()
-        if not coabs:
-            return await ctx.send("Invalid Co-Abilities specified.")
+        if input_string:
+            str_ls = input_string.split(",")
+            if len(str_ls) > 1:
+                coabs = " ".join(str_ls[1:])
+                coabs = CONST.parse_coabs(coabs.lower().strip())
+            element = str_ls[0].lower().strip()
+            if not coabs:
+                return await ctx.send("Invalid Co-Abilities specified.")
+        else:
+            element = None
         embed = await self.return_rankings_embed(
             element=element, parse=parse, coabs=coabs
         )
