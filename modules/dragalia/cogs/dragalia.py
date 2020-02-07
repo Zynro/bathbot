@@ -503,6 +503,8 @@ class Dragalia(commands.Cog):
                     element = str_ls[0].lower().strip()
                 if not coabs:
                     return await ctx.send("Invalid Co-Abilities specified.")
+            else:
+                element = input_string
         embed = await self.return_rankings_embed(
             element=element, parse=parse, coabs=coabs
         )
