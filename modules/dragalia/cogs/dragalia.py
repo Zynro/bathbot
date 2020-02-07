@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import config
 import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
@@ -426,6 +427,8 @@ class Dragalia(commands.Cog):
             )
 
     async def return_rankings_embed(self, element, parse, coabs="none"):
+        if not coabs:
+            coabs = "none"
         coabs = CONST.parse_coabs(coabs)
         coabs_disp = CONST.parse_coab_disp(coabs)
         rank_amt = 10
@@ -486,15 +489,20 @@ class Dragalia(commands.Cog):
         Element can be any element, or 'all' for overall top 10 list.
         """
         await self.dps_update_check(ctx)
-        coabs = "none"
+        coabs = element = parse = None
         parse = "180"
-        str_ls = input_string.split(",")
-        if len(str_ls) > 1:
-            coabs = " ".join(str_ls[1:])
-            coabs = CONST.parse_coabs(coabs.lower().strip())
-        element = str_ls[0].lower().strip()
-        if not coabs:
-            return await ctx.send("Invalid Co-Abilities specified.")
+        if input_string:
+            if "," in input_string:
+                str_ls = input_string.split(",")
+                if len(str_ls) > 1:
+                    coabs = " ".join(str_ls[1:])
+                    coabs = CONST.parse_coabs(coabs.lower().strip())
+                if "all" in input_string:
+                    element = None
+                else:
+                    element = str_ls[0].lower().strip()
+                if not coabs:
+                    return await ctx.send("Invalid Co-Abilities specified.")
         embed = await self.return_rankings_embed(
             element=element, parse=parse, coabs=coabs
         )
@@ -539,9 +547,15 @@ class Dragalia(commands.Cog):
         force = dps = dps_only = False
         if tables:
             if "force" in tables.lower():
-                force = True
+                if ctx.author.id not in config.owner_list:
+                    return await ctx.send("DB purge unauthorized.")
+                else:
+                    force = True
                 tables = tables.replace("force", "")
                 tables = tables.strip()
+                if tables == "":
+                    tables = None
+        if tables:
             if "dps" in tables.lower():
                 dps = True
                 tables = tables.replace("dps", "")
@@ -575,12 +589,13 @@ class Dragalia(commands.Cog):
                 await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
         if dps is True:
-            if DPS.check_version() is True:
-                await ctx.send("Updating DPS entries...")
+            if DPS.check_version() is True or force is True:
+                await ctx.send("**Updating DPS entries...**")
                 try:
-                    self.dps_db = DPS.build_dps_db(
-                        await DPS.async_pull_csvs(self.bot.session, self.dps_db_path)
+                    self.dps_db = await DPS.async_pull_csvs(
+                        self.bot.session, self.dps_db_path
                     )
+
                     self.rank_db = DPS.gen_ranks(self.dps_db)
                     self.dps_hash = DPS.update_master_hash()
                     await ctx.send("__DPS update complete!__")
@@ -588,7 +603,7 @@ class Dragalia(commands.Cog):
                     traceback.print_exc()
                     return await ctx.send(f"Update failed: {e}")
             else:
-                await ctx.send("DPS records are up to date.")
+                await ctx.send("**DPS records are already up to date.**")
         return
 
     @update_draglia_data.error

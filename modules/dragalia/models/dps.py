@@ -197,19 +197,20 @@ class DPS:
             return DPS.build_dps_dict(load_csvs(path))
 
     @staticmethod
-    async def async_pull_csvs(session, path):
+    async def async_pull_csvs(session, path, force=False):
         """
         Given a path, gets and saves all csvs for all co-ability combinations
         from source, returning a complete dictionary of all combinations and all parses.
         ++ASYNC version++
         """
-        if DPS.check_version() is True:
+        if DPS.check_version() is True or force is True:
             dps_dict = CONST.copy_parses()
+            MISC.check_dir(path)
             for coabs in CONST.coab_combos:
                 for parse in CONST.parses:
                     dps_dict[parse][coabs] = [
                         i.split(",")
-                        for i in MISC.async_fetch_text(
+                        async for i in MISC.async_fetch_text(
                             session, CONST.GET_URL(parse, coabs)
                         ).split("\n")
                     ]

@@ -274,7 +274,7 @@ def update_advs(conn, force=False):
             ),
         )
         conn.commit()
-        print(f"++++Updated!++++")
+        print(f"    SUCCESS!")
 
 
 def update_skills(conn, force=False):
@@ -353,7 +353,7 @@ def update_skills(conn, force=False):
                             skills[x]["levels"][i]["internal_name"],
                         ),
                     )
-                    print("    Skill updated!")
+                    print("    SUCCESS!")
                 conn.commit()
 
 
@@ -393,7 +393,7 @@ def update_wyrmprints(conn, force=False):
             ),
         )
         conn.commit()
-        print(f"++++Updated!++++")
+        print(f"    SUCCESS!")
 
 
 async def async_fill_adv_names(session, db):
@@ -498,7 +498,7 @@ async def aysnc_update_advs(session, db, force=False):
                 ),
             )
             await db.commit()
-            print(f"++++Updated!++++")
+            print(f"    SUCCESS!")
             new += 1
     return new
 
@@ -575,7 +575,7 @@ async def async_update_skills(session, db, force=False):
                             ),
                         )
                     await db.commit()
-                    print("    Updated!")
+                    print("    SUCCESS!")
                     new += 1
     return new
 
@@ -615,7 +615,7 @@ async def async_update_wyrmprints(session, db, force=False):
                 ),
             )
             await db.commit()
-            print(f"++++Updated!++++")
+            print(f"    SUCCESS!")
             new += 1
     return new
 
@@ -822,7 +822,7 @@ def parse_wyrmprint(resp):
     except Exception:
         wp["rarity"] = "?"
 
-    wp["abilities"] = {1: "?", 2: "?", 3: "?"}
+    wp["abilities"] = {1: "?", 2: "N/A", 3: "N/A"}
     all_abilities = soup.find_all(class_="skill-table skill-levels")
     for i, each in enumerate(all_abilities):
         try:
@@ -881,6 +881,7 @@ class Update:
 
             fill_wp_names(conn)
             update_wyrmprints(conn, force)
+        conn.close()
 
     async def async_full_update(self, force=False):
         tables = ["adv", "wp"]
@@ -898,19 +899,21 @@ class Update:
     async def adventurer_update(self, force, session, db):
         async with db.cursor() as c:
             try:
-                await db.execute("SELECT * from Adventurers")
+                await c.execute("SELECT * from Adventurers")
             except sqlite3.OperationalError:
-                await db.execute(sql_make_adv_table)
+                await c.execute(sql_make_adv_table)
+        async with db.cursor() as c:
             try:
-                await db.execute("SELECT * from Skills")
+                await c.execute("SELECT * from Skills")
             except sqlite3.OperationalError:
-                await db.execute(sql_make_skills_table)
-            # await c.close()
-            if force:
+                await c.execute(sql_make_skills_table)
+        # await c.close()
+        if force:
+            async with db.cursor() as c:
                 await c.execute("DROP TABLE Adventurers")
                 await c.execute("DROP TABLE Skills")
-                await db.execute(sql_make_adv_table)
-                await db.execute(sql_make_skills_table)
+                await c.execute(sql_make_adv_table)
+                await c.execute(sql_make_skills_table)
         await async_fill_adv_names(session, db)
         updated = await aysnc_update_advs(session, db, force)
         await async_update_skills(session, db, force)
@@ -922,6 +925,7 @@ class Update:
                 await db.execute("SELECT * from Wyrmprints")
             except sqlite3.OperationalError:
                 await db.execute(sql_make_wyrmprints_table)
+        async with db.cursor() as c:
             if force:
                 await c.execute("DROP TABLE Wyrmprints")
                 await db.execute(sql_make_wyrmprints_table)
