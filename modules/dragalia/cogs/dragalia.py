@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import config
 import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
@@ -539,9 +540,14 @@ class Dragalia(commands.Cog):
         force = dps = dps_only = False
         if tables:
             if "force" in tables.lower():
-                force = True
+                if ctx.author.id in config.owner_list:
+                    force = True
+
                 tables = tables.replace("force", "")
                 tables = tables.strip()
+                if tables == "":
+                    tables = None
+        if tables:
             if "dps" in tables.lower():
                 dps = True
                 tables = tables.replace("dps", "")
@@ -575,12 +581,13 @@ class Dragalia(commands.Cog):
                 await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
         if dps is True:
-            if DPS.check_version() is True:
+            if DPS.check_version() is True or force is True:
                 await ctx.send("Updating DPS entries...")
                 try:
-                    self.dps_db = DPS.build_dps_db(
-                        await DPS.async_pull_csvs(self.bot.session, self.dps_db_path)
+                    self.dps_db = await DPS.async_pull_csvs(
+                        self.bot.session, self.dps_db_path
                     )
+
                     self.rank_db = DPS.gen_ranks(self.dps_db)
                     self.dps_hash = DPS.update_master_hash()
                     await ctx.send("__DPS update complete!__")
