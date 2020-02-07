@@ -427,6 +427,8 @@ class Dragalia(commands.Cog):
             )
 
     async def return_rankings_embed(self, element, parse, coabs="none"):
+        if not coabs:
+            coabs = "none"
         coabs = CONST.parse_coabs(coabs)
         coabs_disp = CONST.parse_coab_disp(coabs)
         rank_amt = 10
@@ -487,18 +489,20 @@ class Dragalia(commands.Cog):
         Element can be any element, or 'all' for overall top 10 list.
         """
         await self.dps_update_check(ctx)
-        coabs = "none"
+        coabs = element = parse = None
         parse = "180"
         if input_string:
-            str_ls = input_string.split(",")
-            if len(str_ls) > 1:
-                coabs = " ".join(str_ls[1:])
-                coabs = CONST.parse_coabs(coabs.lower().strip())
-            element = str_ls[0].lower().strip()
-            if not coabs:
-                return await ctx.send("Invalid Co-Abilities specified.")
-        else:
-            element = None
+            if "," in input_string:
+                str_ls = input_string.split(",")
+                if len(str_ls) > 1:
+                    coabs = " ".join(str_ls[1:])
+                    coabs = CONST.parse_coabs(coabs.lower().strip())
+                if "all" in input_string:
+                    element = None
+                else:
+                    element = str_ls[0].lower().strip()
+                if not coabs:
+                    return await ctx.send("Invalid Co-Abilities specified.")
         embed = await self.return_rankings_embed(
             element=element, parse=parse, coabs=coabs
         )
