@@ -497,7 +497,7 @@ class Dragalia(commands.Cog):
                 if len(str_ls) > 1:
                     coabs = " ".join(str_ls[1:])
                     coabs = CONST.parse_coabs(coabs.lower().strip())
-                if "all" in input_string:
+                if not str_ls[0]:
                     element = None
                 else:
                     element = str_ls[0].lower().strip()
@@ -527,6 +527,7 @@ class Dragalia(commands.Cog):
                     "reaction_add", timeout=120.0, check=check_response
                 )
             except asyncio.TimeoutError:
+                await message.clear_reactions()
                 return
             else:
                 embed = reaction.message.embeds[0]
