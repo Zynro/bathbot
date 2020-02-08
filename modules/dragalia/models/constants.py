@@ -133,7 +133,9 @@ def GET_URL(parse="180", coabs=None):
     return f"{RAW_REPO_URL}/{parse}/data_{coabs}.csv"
 
 
-def parse_coabs(coab_input):
+def parse_coabs(coab_input=None):
+    if not coab_input:
+        return "_"
     coab_input = coab_input.lower()
     if "none" in coab_input:
         return "_"

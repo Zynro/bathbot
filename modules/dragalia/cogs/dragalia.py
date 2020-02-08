@@ -467,7 +467,6 @@ class Dragalia(commands.Cog):
     async def return_rankings_embed(self, element, parse, coabs="none"):
         if not coabs:
             coabs = "none"
-        coabs = CONST.parse_coabs(coabs)
         coabs_disp = CONST.parse_coab_disp(coabs)
         rank_amt = 10
         if element:
@@ -541,18 +540,20 @@ class Dragalia(commands.Cog):
                     element = str_ls[0].lower().strip()
                 if not coabs:
                     return await ctx.send("Invalid Co-Abilities specified.")
+        coabs = CONST.parse_coabs(coabs)
         embed = await self.return_rankings_embed(
             element=element, parse=parse, coabs=coabs
         )
         message = await ctx.send(embed=embed)
-        await message.add_reaction(CONST.emoji["down_arrow"])
+        self.module.add_msg(message, parse=parse, coabs=coabs)
+        await message.add_reaction(CONST.react_emoji["down_arrow"])
+        await self.mng_coab_emoji(message, "add")
 
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONST.emoji["up_arrow"]
-                    or reaction.emoji == CONST.emoji["down_arrow"]
-                    or reaction.emoji in CONST.react_coab_emoji
+                    reaction.emoji in CONST.react_emoji.values()
+                    or str(reaction.emoji) in CONST.react_coab_emoji.values()
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
@@ -567,18 +568,26 @@ class Dragalia(commands.Cog):
                 return
             else:
                 embed = reaction.message.embeds[0]
-                parse = await self.proccess_parse_change(
-                    embed=embed, reaction=reaction, user=user, parse=parse
-                )
-                element = reaction.message.embeds[0].title.split(" ")[0]
-                element = strip_all(element.lower().strip())
-                if element not in dragalia_elements:
-                    element = None
-                await reaction.message.edit(
-                    embed=await self.return_rankings_embed(
-                        element=element, parse=parse, coabs=coabs
+                if reaction.emoji in CONST.react_emoji.values():
+                    parse = await self.proccess_parse_change(
+                        embed=embed, reaction=reaction, user=user, parse=parse
                     )
-                )
+                    element = reaction.message.embeds[0].title.split(" ")[0]
+                    element = strip_all(element.lower().strip())
+                    if element not in dragalia_elements:
+                        element = None
+                    await reaction.message.edit(
+                        embed=await self.return_rankings_embed(
+                            element=element, parse=parse, coabs=coabs
+                        )
+                    )
+                elif str(reaction.emoji) in CONST.react_coab_emoji.values():
+                    coabs = await self.process_coab_change(reaction, user)
+                    await reaction.message.edit(
+                        embed=await self.return_rankings_embed(
+                            element=element, parse=parse, coabs=coabs
+                        )
+                    )
 
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
