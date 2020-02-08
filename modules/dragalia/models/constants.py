@@ -26,7 +26,14 @@ d_emoji = {
     "5*": "<:5_star:641018624991166497>",
 }
 
-emoji = {"up_arrow": "⬆", "down_arrow": "⬇", "star": "⭐"}
+react_emoji = {"star": "⭐", "up_arrow": "⬆", "down_arrow": "⬇"}
+
+react_coab_emoji = {
+    "blade": d_emoji["blade"],
+    "wand": d_emoji["wand"],
+    "dagger": d_emoji["dagger"],
+    "bow": d_emoji["bow"],
+}
 
 COAB_DICT = {
     "blade": "k",
@@ -128,7 +135,7 @@ def GET_URL(parse="180", coabs=None):
 
 def parse_coabs(coab_input):
     coab_input = coab_input.lower()
-    if coab_input == "none":
+    if "none" in coab_input:
         return "_"
     else:
         try:

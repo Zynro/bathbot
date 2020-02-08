@@ -83,7 +83,6 @@ class DPS:
                 )
 
     def embed(self, parse_value="180", coabs="none"):
-        coabs = CONST.parse_coabs(coabs)
         coabs_disp = CONST.parse_coab_disp(coabs)
         try:
             embed = Embed(
