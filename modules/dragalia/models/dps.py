@@ -207,12 +207,10 @@ class DPS:
             MISC.check_dir(path)
             for coabs in CONST.coab_combos:
                 for parse in CONST.parses:
-                    dps_dict[parse][coabs] = [
-                        i.split(",")
-                        async for i in MISC.async_fetch_text(
-                            session, CONST.GET_URL(parse, coabs)
-                        ).split("\n")
-                    ]
+                    request = await MISC.async_fetch_text(
+                        session, CONST.GET_URL(parse, coabs)
+                    )
+                    dps_dict[parse][coabs] = [i.split(",") for i in request.split("\n")]
                     path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
                     MISC.save_csv(path_to_file, dps_dict[parse][coabs])
             DPS.update_master_hash()

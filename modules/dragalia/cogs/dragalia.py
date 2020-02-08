@@ -272,7 +272,8 @@ class Dragalia(commands.Cog):
                 await message.remove_reaction(
                     CONST.react_emoji["up_arrow"], self.bot.user
                 )
-                self.mng_coab_emoji(message, "del")
+                await message.clear_reactions()
+                await message.add_reaction(CONST.react_emoji["star"])
                 return "adv"
             else:
                 await message.add_reaction(CONST.react_emoji["down_arrow"])
@@ -644,7 +645,7 @@ class Dragalia(commands.Cog):
                 await ctx.send("**Updating DPS entries...**")
                 try:
                     self.dps_db = await DPS.async_pull_csvs(
-                        self.bot.session, self.dps_db_path
+                        self.bot.session, self.dps_db_path, force
                     )
 
                     self.rank_db = DPS.gen_ranks(self.dps_db)
