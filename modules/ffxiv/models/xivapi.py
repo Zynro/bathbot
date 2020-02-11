@@ -30,13 +30,14 @@ class XIVChar:
         self.thumbnail = thumbnail
         split = server.split("(")
         self.server = str.title(split[0].strip())
-        self.region = CONST["".join([c for c in split[1] if c.isalpha()])]
+        self.region = CONST.data_regions["".join([c for c in split[1] if c.isalpha()])]
         return
 
     @classmethod
     def parse_chars(cls, json_resp, name, server):
         char_results = []
         for char in json_resp:
+            print(char)
             char_results.append(
                 cls(char["Name"], char["ID"], char["Server"], char["Avatar"])
             )
@@ -63,9 +64,9 @@ class XIVAPI:
                 json_resp["Results"].append(next_page)
         return json_resp["Results"]
 
-    def xiv_get_chars(self, name, server=None, page=None):
+    async def xiv_get_chars(self, name, server=None, page=None):
         url = xiv_url_gen(name, server, page)
-        json_resp = MISC.async_get_json(self.session, url)
+        json_resp = await self.api_get_results(url)
         results = XIVChar.parse_chars(json_resp, name, server)
         return results
 

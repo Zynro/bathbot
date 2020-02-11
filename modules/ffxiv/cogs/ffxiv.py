@@ -1,8 +1,6 @@
-import discord
 from discord.ext import commands
 import random
 import requests
-import aiohttp
 import json
 from modules.ffxiv.models.xivapi import XIVAPI
 from tokens.fflogs_credentials import public_key as FFLOGS_PUBLIC_KEY
@@ -43,14 +41,14 @@ class FFXIV(commands.Cog):
 
     def load_char_json(self):
         try:
-            with open("modules/ffxiv/lists/ff_chars.json", "r") as file:
+            with open(f"{self.module.path}/lists/ff_chars.json", "r") as file:
                 self.FF_CHARS = json.load(file)
         except FileNotFoundError:
             self.FF_CHARS = {}
             self.char_set_writeout()
 
     def char_set_writeout(self):
-        with open("modules/ffxiv/lists/ff_chars.json", "w") as file:
+        with open(f"{self.module.path}/lists/ff_chars.json", "w") as file:
             json.dump(self.FF_CHARS, file, indent=2)
 
     @commands.group(name="ffxiv", aliases=["ff", "xiv"])
@@ -74,18 +72,33 @@ class FFXIV(commands.Cog):
         character = f"{first_name} {last_name}".strip()
         if not first_name and not last_name:
             return await ctx.send("A name must be provided.")
-        if world.lower() not in self.worlds:
+        elif world.lower() not in self.worlds:
             return await ctx.send(f"World {world} was not found.")
-        results = self.xivapi.find_char(character)
-        embed = await self.fflogs.embed(character, world, metric)
+        results = await self.xivapi.xiv_get_chars(character)
+        if len(results) == 1:
+            character = results[0]
+            embed = await self.fflogs.embed(character, world, metric)
+        else:
+            embed = await self.mult_result_embed(results)
         return await ctx.send(embed=embed)
 
-    @ffxiv.command(name="me")
+    @ffxiv.group(name="me")
+    async def me(self, ctx, metric=None):
+        if not ctx.invoked_subcommand:
+            return
+        elif ctx.author.id in self.FF_CHARS.keys():
+            player = self.FF_CHARS[ctx.author.id]
+            embed = await self.fflogs.embed(player["name"], player["world"], metric)
+            return await ctx.send(embed=embed)
+
+    @me.command(name="set")
     async def set_self_character(
         self, ctx, first_name=None, last_name=None, world=None
     ):
         if not first_name or not last_name or not world:
             return await ctx.send("Both a name and world must be provided.")
+        elif world.lower() not in self.worlds:
+            return await ctx.send(f"World {world} was not found.")
 
 
 def setup(bot):

@@ -50,14 +50,14 @@ class Dragalia(commands.Cog):
         self.bot = bot
         self.module = self.bot.modules["dragalia"]
 
-        self.MASTER_DB = f"modules/{self.module.path}/lists/master.db"
+        self.MASTER_DB = f"{self.module.path}/lists/master.db"
         self.update = ScrapeUpdate(self.bot.session, self.MASTER_DB)
         self.update.full_update()
 
-        self.dps_db_path = f"modules/{self.module.path}/lists/dps"
+        self.dps_db_path = f"{self.module.path}/lists/dps"
         self.dps_db = DPS.pull_csvs(self.dps_db_path)
         try:
-            with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
+            with open(f"{self.module.path}/lists/dps_hash.json") as file:
                 self.dps_hash = json.loads(file.read())
         except FileNotFoundError:
             self.dps_hash = DPS.update_master_hash()

@@ -65,7 +65,10 @@ for extension in ext_dict.keys():
     if extension == "base":
         continue
     bot.modules[extension] = Module(
-        extension, extension, ext_dict[extension], bot.module_access[extension]
+        name=extension,
+        path=f"modules/{extension}",
+        cog_list=ext_dict[extension],
+        guild_access=bot.module_access[extension],
     )
 bot.modules["bathmemes"] = Module(
     "bathmemes", config.memes_module_path, config.memes_extensions, config.memes_access
@@ -120,6 +123,7 @@ async def on_ready():
                 if module.name == "bathmemes":
                     continue
                 path = f"guilds/{guild.id}/{module.path}"
+                path = path.replace("/modules", "")
                 if not os.path.exists(path):
                     os.mkdir(path)
                 for path_dir in required_dir_list:
