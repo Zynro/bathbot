@@ -13,16 +13,15 @@ class Wyrmprint:
             k = k.lower()
             if k.lower().startswith("ability") and "N/A" not in wp_dict[k]:
                 name = wp_dict[k].split(":")[0].strip()
-                desc = wp_dict[k].split(":")[1].strip()
+                desc = ":".join(wp_dict[k].split(":")[1:])
+                desc = desc.strip()
                 self.abilities[name] = desc
             setattr(self, k, wp_dict[k])
 
     def embed(self):
         rarity = CONSTANTS.d_emoji[str(self.rarity) + "*"] * int(self.rarity)
         embed = Embed(
-            title=self.name,
-            description=rarity,
-            colour=Colour(MISC.generate_random_color()),
+            title=self.name, description=rarity, colour=Colour(MISC.rand_color())
         )
         embed.set_thumbnail(url=self.thumbnail)
 

@@ -1,4 +1,5 @@
 from discord.ext import commands
+from discord import Embed
 import config
 import json
 
@@ -11,7 +12,7 @@ class Modules(commands.Cog):
         self.bot = bot
 
     async def check_cog(self, ctx):
-        return ctx.author.id in owner_list
+        return ctx.author.id in owner_list or ctx.author.id == ctx.guild.owner.id
 
     def module_access_writeout(self):
         module_access_dict = {}
@@ -28,21 +29,32 @@ class Modules(commands.Cog):
     async def module(self, ctx):
         if not ctx.invoked_subcommand:
             if ctx.author.id == config.owner:
-                return await ctx.send(
-                    """Current Commands:
-```&module check - Checks accesses in current guild.
-&module add <module>
-    Adds current guild to specified module.
-&module remove <module>
-    Removes current guild from specified module.
-&module gcheck
-    Returns a list of modules current guild has access to.```"""
+                mod_list = ", ".join(
+                    [i for i in self.bot.modules.keys() if "meme" not in i]
                 )
+                embed = Embed(
+                    title="**Welcome to Bathbot's Modules**",
+                    description=f"__The currently available modules are:__\n{mod_list}",
+                )
+                embed.add_field(
+                    name="**__Current Commands__**:",
+                    value="""
+`&module check`
+ ▫️ Checks accesses in current guild.
+`&module add <module>`
+ ▫️ Adds current guild to specified module.
+`&module remove <module>`
+ ▫️ Removes current guild from specified module.
+`&module gcheck`
+ ▫️ Returns a list of modules current guild has access to.""",
+                )
+                return await ctx.send(embed=embed)
             return
 
     @module.command(name="check")
+    @commands.is_owner()
     async def check_access_to_module(self, ctx, module=None):
-        """Checks what modules the current guild has access to."""
+        """Checks what guilds have access to the given module."""
         if not module:
             return await ctx.send("A module name is required.")
         else:
@@ -51,9 +63,8 @@ class Modules(commands.Cog):
                 guild_list.append(self.bot.get_guild(guild).name)
             guild_list = "\n".join(guild_list)
             await ctx.send(
-                f"""__Current list of guilds with access to "
-                "the module '{self.bot.modules[module].name}'__:
-{guild_list}"""
+                f"**Guild Access to** `{self.bot.modules[module].name}`:"
+                f"\n{guild_list}"
             )
 
     @module.command(name="add")
@@ -95,7 +106,7 @@ class Modules(commands.Cog):
         )
 
     @module.command(name="gcheck")
-    async def check_guilds_acces(self, ctx):
+    async def check_guilds_access(self, ctx):
         """Returns a list of modules the current guild has access to."""
         origin_guild = ctx.guild.id
         access_list = []

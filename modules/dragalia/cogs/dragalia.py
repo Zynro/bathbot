@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import config
 import aiosqlite
 import sqlite3
 from fuzzywuzzy import fuzz
@@ -7,7 +8,7 @@ from modules.dragalia.models.adventurer import Adventurer
 from modules.dragalia.models.wyrmprint import Wyrmprint
 from modules.dragalia.models.scrape_update import Update as ScrapeUpdate
 from modules.dragalia.models.dps import DPS
-import modules.dragalia.models.constants as CONSTANTS
+import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
 import asyncio
 import traceback
@@ -32,17 +33,16 @@ elements_images = {
 }
 
 
-async def lev_dist_similar(a, b):
+def lev_dist_similar(a, b):
     return fuzz.ratio(a.lower().strip(), b.lower().strip())
+
+
+def lev_dist_partial(a, b):
+    return fuzz.partial_ratio(a.lower().strip(), b.lower().strip())
 
 
 def strip_all(input_str):
     return "".join([x for x in input_str if x.isalpha()])
-
-
-def get_master_hash(repo):
-    versions = str(MISC.git_sub("ls-remote", repo))
-    return versions.split("\\n")[-2].split("\\")[0]
 
 
 class Dragalia(commands.Cog):
@@ -53,16 +53,17 @@ class Dragalia(commands.Cog):
         self.MASTER_DB = f"modules/{self.module.path}/lists/master.db"
         self.update = ScrapeUpdate(self.bot.session, self.MASTER_DB)
         self.update.full_update()
-        self.dps_db_path = f"modules/{self.module.path}/lists/optimal_dps_data"
-        self.dps_csv = DPS.get_src_csv(self.dps_db_path)
-        self.dps_db = DPS.build_dps_db(self.dps_csv)
+
+        self.dps_db_path = f"modules/{self.module.path}/lists/dps"
+        self.dps_db = DPS.pull_csvs(self.dps_db_path)
         try:
             with open(f"modules/{self.module.path}/lists/dps_hash.json") as file:
                 self.dps_hash = json.loads(file.read())
         except FileNotFoundError:
             self.dps_hash = DPS.update_master_hash()
 
-        self.rank_db = DPS.build_rank_db(self.dps_db)
+        self.rank_db = DPS.gen_ranks(self.dps_db)
+
         self.adven_db = self.create_names("Adventurers")
         self.wp_db = self.create_names("Wyrmprints")
 
@@ -70,7 +71,7 @@ class Dragalia(commands.Cog):
         return ctx.guild.id in self.bot.module_access["dragalia"]
 
     async def dps_update_check(self, ctx):
-        current = MISC.get_master_hash(CONSTANTS.REPO_URL)
+        current = MISC.get_master_hash(CONST.REPO_URL)
         if self.dps_hash != current:
             embed = discord.Embed(
                 title="There are updates available for the the DPS records.",
@@ -102,20 +103,20 @@ class Dragalia(commands.Cog):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
             query_string = f"SELECT * FROM {table}"
-            query = await db.execute(query_string)
-            results = await query.fetchall()
+            async with db.execute(query_string) as query:
+                results = await query.fetchall()
         return self.parse_name_results(table, results)
 
     def parse_name_results(self, table, results):
-        names = {}
         if table == "Adventurers":
-            for each in results:
-                names[each["internal_name"]] = Adventurer(
+            names = {
+                each["internal_name"].lower(): Adventurer(
                     each["name"], each["internal_name"]
                 )
+                for each in results
+            }
         elif table == "Wyrmprints":
-            for each in results:
-                names[each["name"]] = Wyrmprint(each["name"])
+            names = {each["name"].lower(): Wyrmprint(each["name"]) for each in results}
         return names
 
     async def query_dict(self, query, db):
@@ -124,33 +125,34 @@ class Dragalia(commands.Cog):
         except AttributeError:
             query = query.name
         try:
-            temp = db.max_hp
-            temp = temp
-            return db[query]
+            query.max_hp
         except (KeyError, AttributeError):
             result = await self.generate_queried_class(query, db)
+        else:
+            return db[query]
         return result
 
-    async def generate_queried_class(self, name, db):
-        class_type = type(next(iter(db.values())))
+    async def generate_queried_class(self, name, db_dict):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            if class_type is Adventurer:
-                c = await db.execute(
+            if MISC.get_dict_type(db_dict, Adventurer):
+                async with db.execute(
                     "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
-                )
-                adven_row = await c.fetchone()
-                internal_name = adven_row["internal_name"]
-                c = await db.execute(
+                ) as c:
+                    adven_row = await c.fetchone()
+                    internal_name = adven_row["internal_name"]
+                async with db.execute(
                     "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
-                )
-                skills = await c.fetchall()
+                ) as c:
+                    skills = await c.fetchall()
                 adven = self.adven_db[internal_name]
                 adven.update(adven_row, skills, self.dps_db, self.rank_db)
                 return adven
-            elif class_type is Wyrmprint:
-                c = await db.execute("SELECT * FROM Wyrmprints WHERE Name=?", (name,))
-                wp_row = await c.fetchone()
+            elif MISC.get_dict_type(db_dict, Wyrmprint):
+                async with db.execute(
+                    "SELECT * FROM Wyrmprints WHERE Name=?", (name,)
+                ) as c:
+                    wp_row = await c.fetchone()
                 wp = self.wp_db[wp_row["name"]]
                 wp.update(wp_row)
                 return wp
@@ -169,13 +171,14 @@ class Dragalia(commands.Cog):
         high_score_i_name = 0
         for term in db.keys():
             term = db[term]
-            temp_score_name = await lev_dist_similar(query, term.name.lower())
+            if MISC.get_dict_type(db, Adventurer):
+                temp_score_name = lev_dist_similar(query, term.name.lower())
+            elif MISC.get_dict_type(db, Wyrmprint):
+                temp_score_name = lev_dist_partial(query, term.name.lower())
             if temp_score_name > high_score_name:
                 high_score_name = temp_score_name
             try:
-                temp_score_i_name = await lev_dist_similar(
-                    query, term.internal_name.lower()
-                )
+                temp_score_i_name = lev_dist_similar(query, term.internal_name.lower())
                 if temp_score_i_name > high_score_i_name:
                     high_score_i_name = temp_score_i_name
             except AttributeError:
@@ -183,9 +186,15 @@ class Dragalia(commands.Cog):
                 pass
         for term in db.keys():
             term = db[term]
-            name_score = await lev_dist_similar(query, term.name.lower())
+            if MISC.get_dict_type(db, Adventurer):
+                name_score = lev_dist_similar(query, term.name.lower())
+            elif MISC.get_dict_type(db, Wyrmprint):
+                name_score = lev_dist_partial(query, term.name.lower())
             try:
-                i_name_score = await lev_dist_similar(query, term.internal_name.lower())
+                if MISC.get_dict_type(db, Adventurer):
+                    i_name_score = lev_dist_similar(query, term.internal_name.lower())
+                elif MISC.get_dict_type(db, Wyrmprint):
+                    i_name_score = lev_dist_partial(query, term.internal_name.lower())
             except AttributeError:
                 # If object has no internal name
                 i_name_score = None
@@ -207,66 +216,98 @@ class Dragalia(commands.Cog):
         for each in multiple_results:
             temp = f"{each.name}"
             try:
-                temp = f" / {each.internal_name}"
+                temp = f"{temp} / {each.internal_name}"
             except AttributeError:
                 pass
             char_result_list.append(temp)
         char_result_list = "\n".join(char_result_list)
         embed = discord.Embed(
             title="I found multiple results for your search:",
-            colour=discord.Colour(MISC.generate_random_color()),
+            colour=discord.Colour(MISC.rand_color()),
             description=char_result_list,
         )
         embed.set_footer(text="Try your search again with a more exact name.")
         return embed
 
+    async def mng_coab_emoji(self, message, proccess):
+        if proccess == "add":
+            for emoji in CONST.react_coab_emoji.values():
+                await message.add_reaction(emoji)
+        elif proccess == "del":
+            for emoji in CONST.react_coab_emoji.values():
+                await message.remove_reaction(emoji, self.bot.user)
+
     async def proccess_parse_change(
         self, embed=None, reaction=None, user=None, parse=None
     ):
         message = reaction.message
-        if reaction.emoji == CONSTANTS.emoji["up_arrow"]:
+        if reaction.emoji == CONST.react_emoji["up_arrow"]:
             await reaction.remove(user)
             if "60" in embed.description:
                 parse = "120"
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONST.react_emoji["down_arrow"])
                 return parse
             elif "120" in embed.description:
                 parse = "180"
                 await reaction.remove(self.bot.user)
                 return parse
 
-        elif reaction.emoji == CONSTANTS.emoji["down_arrow"]:
+        elif reaction.emoji == CONST.react_emoji["down_arrow"]:
             await reaction.remove(user)
             if "180" in embed.description:
                 parse = "120"
-                await message.add_reaction(CONSTANTS.emoji["up_arrow"])
+                await message.add_reaction(CONST.react_emoji["up_arrow"])
                 return parse
             if "120" in embed.description:
                 parse = "60"
                 await reaction.remove(self.bot.user)
                 return parse
 
-        elif reaction.emoji == CONSTANTS.emoji["star"]:
+        elif reaction.emoji == CONST.react_emoji["star"]:
             await reaction.remove(user)
             if "parse" in embed.description.lower():
                 await message.remove_reaction(
-                    CONSTANTS.emoji["down_arrow"], self.bot.user
+                    CONST.react_emoji["down_arrow"], self.bot.user
                 )
                 await message.remove_reaction(
-                    CONSTANTS.emoji["up_arrow"], self.bot.user
+                    CONST.react_emoji["up_arrow"], self.bot.user
                 )
+                await message.clear_reactions()
+                await message.add_reaction(CONST.react_emoji["star"])
                 return "adv"
             else:
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+                await message.add_reaction(CONST.react_emoji["down_arrow"])
+                self.mng_coab_emoji(message, "add")
                 return "180"
 
-    async def adven_profile_process(self, ctx, message, adven, parse="180"):
+    async def process_coab_change(self, reaction, user):
+        try:
+            msg_id = reaction.message.id
+        except Exception:
+            msg_id = reaction.message
+        await reaction.remove(user)
+        changed_coab = "".join(
+            [k for k, v in CONST.COAB_DICT_REV.items() if v == str(reaction.emoji)]
+        )
+        old_coabs = self.module.msg_lib[msg_id]["coabs"]
+        if changed_coab in old_coabs:
+            coabs = old_coabs.replace(changed_coab, "").strip()
+            if not coabs:
+                coabs = "_"
+        elif "_" in old_coabs or "none" in old_coabs:
+            coabs = changed_coab
+        else:
+            coabs = CONST.parse_coabs(old_coabs + changed_coab)
+        return self.module.set_msg_val(reaction.message, "coabs", coabs)
+
+    async def adven_profile_process(
+        self, ctx, message, adven, parse="180", coabs="none"
+    ):
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["star"]
+                    reaction.emoji in CONST.react_emoji.values()
+                    or str(reaction.emoji) in CONST.react_coab_emoji.values()
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
@@ -278,16 +319,21 @@ class Dragalia(commands.Cog):
                     "reaction_add", timeout=120.0, check=check_response
                 )
             except asyncio.TimeoutError:
-                return
+                self.module.del_msg(message)
+                return await message.clear_reactions()
             else:
                 embed = reaction.message.embeds[0]
-                parse = await self.proccess_parse_change(
-                    embed=embed, reaction=reaction, user=user, parse=parse
-                )
-                if parse == "adv":
-                    await reaction.message.edit(embed=adven.embed())
-                else:
-                    await reaction.message.edit(embed=adven.dps.embed(parse))
+                if reaction.emoji in CONST.react_emoji.values():
+                    parse = await self.proccess_parse_change(
+                        embed=embed, reaction=reaction, user=user, parse=parse
+                    )
+                    if parse == "adv":
+                        await reaction.message.edit(embed=adven.embed())
+                    else:
+                        await reaction.message.edit(embed=adven.dps.embed(parse, coabs))
+                elif str(reaction.emoji) in CONST.react_coab_emoji.values():
+                    coabs = await self.process_coab_change(reaction, user)
+                    await reaction.message.edit(embed=adven.dps.embed(parse, coabs))
 
     @commands.group(name="dragalia", aliases=["drag", "d"])
     async def dragalia(self, ctx):
@@ -321,7 +367,7 @@ class Dragalia(commands.Cog):
             else:
                 adven = await self.query_dict(matched_list[0], self.adven_db)
                 message = await ctx.send(embed=adven.embed())
-                await message.add_reaction(CONSTANTS.emoji["star"])
+                await message.add_reaction(CONST.react_emoji["star"])
                 await self.adven_profile_process(ctx, message, adven)
         else:
             return await ctx.send(
@@ -329,7 +375,7 @@ class Dragalia(commands.Cog):
             )
 
     @dragalia.command(name="wp")
-    async def wyrmprint(self, ctx, *, wp):
+    async def wyrmprint_lookup(self, ctx, *, wp):
         if not wp:
             return await ctx.send("An query must be entered to search the database.")
         wp = wp.lower().strip()
@@ -342,10 +388,6 @@ class Dragalia(commands.Cog):
             else:
                 wp = await self.query_dict(matched_list[0], self.wp_db)
                 return await ctx.send(embed=wp.embed())
-                """
-                await message.add_reaction(CONSTANTS.emoji["star"])
-                await self.adven_profile_process(ctx, message, adven)
-                """
         else:
             return await ctx.send(
                 f"Either the wyrmprint {wp} was not found, or an error occured."
@@ -353,7 +395,7 @@ class Dragalia(commands.Cog):
         return
 
     @dragalia.command()
-    async def dps(self, ctx, *, adven: str = None):
+    async def dps(self, ctx, *, input_string):
         """
         Retreive DPS Simulator data for a single character for parses of 60,
         120, and 180 seconds.
@@ -361,14 +403,28 @@ class Dragalia(commands.Cog):
         Usage:
             &[drag/d] dps <character>
         """
-        if not adven:
+        coabs = "none"
+        if not input_string:
             return await ctx.send(
                 "An adventurer must be entered to search the database."
             )
+        elif "," in input_string:
+            str_ls = input_string.split(",")
+            adven = str_ls[0].lower().strip()
+            coabs = CONST.parse_coabs(str_ls[1].lower().strip())
+        elif len(input_string.split(" ")) > 2:
+            return await ctx.send(
+                "It seems you might have entered a command to see DPS with co-abilities"
+                " specified.\nTo make use of this, a comma is required."
+                "\n\ne.g. `&d dps marth, krdb`\n`&d dps marth, blade wand`"
+            )
+        else:
+            adven = input_string.lower().strip()
+        if not coabs:
+            return await ctx.send("Invalid Co-Abilities specified.")
 
         await self.dps_update_check(ctx)
 
-        adven = adven.lower().strip()
         matched_list = await self.validate_query(adven, self.adven_db)
         if matched_list:
             if len(matched_list) > 1:
@@ -378,59 +434,79 @@ class Dragalia(commands.Cog):
             else:
                 parse = "180"
                 adven = await self.query_dict(matched_list[0], self.adven_db)
-                if adven.weapon == "Staff":
-                    embed = discord.Embed(
-                        title=f"__**Healers do not have DPS records.**__",
-                        description=f"A good wyrmprint combinatio"
-                        " is **Give Me Your Wou"
-                        "nded** and **Pipe Down**.\n\nOther alternatives include"
-                        ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
-                        "United by Vision\n\nKeep in mind healers require "
-                        "**Skill Haste** and **Recovery Potency** as "
-                        "their primary stats.",
-                        colour=MISC.generate_random_color(),
-                    )
-                    return await ctx.send(embed=embed)
-                message = await ctx.send(embed=adven.dps.embed(parse))
+                try:
+                    adven.dps.parse
+                except AttributeError:
+                    if adven.weapon.lower() == "staff":
+                        embed = discord.Embed(
+                            title=f"__**Healers do not have DPS records.**__",
+                            description=f"A good wyrmprint combinatio"
+                            " is **Give Me Your Wou"
+                            "nded** and **Pipe Down**.\n\nOther alternatives include"
+                            ":\nGive Me Your Wounded, Pipe Down, Jewels of the Sun, "
+                            "United by Vision\n\nKeep in mind healers require "
+                            "**Skill Haste** and **Recovery Potency** as "
+                            "their primary stats.",
+                            colour=MISC.rand_color(),
+                        )
+                        return await ctx.send(embed=embed)
+                coabs = CONST.parse_coabs(coabs)
+                message = await ctx.send(embed=adven.dps.embed(parse, coabs))
+                self.module.add_msg(message, parse=parse, coabs=coabs)
                 if "error" in message.embeds[0].title.lower():
                     return
-                await message.add_reaction(CONSTANTS.emoji["star"])
-                await message.add_reaction(CONSTANTS.emoji["down_arrow"])
-                await self.adven_profile_process(ctx, message, adven)
+                for emoji in CONST.react_emoji.values():
+                    await message.add_reaction(emoji)
+                for emoji in CONST.react_coab_emoji.values():
+                    await message.add_reaction(emoji)
+                await self.adven_profile_process(ctx, message, adven, parse, coabs)
         else:
             return await ctx.send(
                 f"Either the adventurer {adven} was not found, or an error occured."
             )
 
-    async def return_rankings_embed(self, element, parse):
+    async def return_rankings_embed(self, element, parse, coabs="none"):
+        if not coabs:
+            coabs = "none"
+        coabs_disp = CONST.parse_coab_disp(coabs)
+        rank_amt = 10
         if element:
             for each in dragalia_elements.keys():
                 if element.lower().strip() in each:
                     element = dragalia_elements[each]
                     embed = discord.Embed(
-                        title=(f"**{element.title()} Top 10 Rankings**"),
-                        description=f"*Parse: {parse} Seconds*",
-                        colour=discord.Colour(CONSTANTS.elements_colors[element]),
+                        title=(f"**{element.title()} Top {rank_amt} Rankings**"),
+                        description=f"**Parse:** {parse} Seconds\n"
+                        f"**Co-Abilities:** {coabs_disp}\n"
+                        f"**Team DPS:** {CONST.team_damage}",
+                        colour=discord.Colour(CONST.elements_colors[element]),
                     )
                     break
         else:
             element = "all"
             embed = discord.Embed(
-                title=f"**All Elements Top 10 Rankings**",
-                description=f"*Parse: {parse} Seconds*",
-                colour=discord.Colour(MISC.generate_random_color()),
+                title=f"**All Elements Top {rank_amt} Rankings**",
+                description=f"**Parse:** {parse} Seconds\n"
+                f"**Co-Abilities:** {coabs_disp}\n"
+                f"**Team DPS:** {CONST.team_damage}",
+                colour=discord.Colour(MISC.rand_color()),
             )
         name_string = ""
         dps_string = ""
-        for x, entry in enumerate(self.rank_db[parse][element]):
-            if x == 16:
+        for x, entry in enumerate(self.rank_db[parse][coabs][element]):
+            if x == rank_amt:
                 break
             adven = self.adven_db[entry]
-            name = f"{x}. {adven.name}"
+            name = f"{x+1}. {adven.name}"
             adven = await self.query_dict(adven, self.adven_db)
-            name_string += f"{name}\n"
-            dps_string += f"{adven.dps.parse[parse].dps}\n"
-            x += 1
+            if element == "all":
+                name_string += (
+                    f"{CONST.d_emoji[adven.element.lower()]}"
+                    f"{CONST.d_emoji[adven.weapon.lower()]}{name}\n"
+                )
+            else:
+                name_string += f"{CONST.d_emoji[adven.weapon.lower()]}{name}\n"
+            dps_string += f"{adven.dps.parse[parse][coabs].dps}\n"
         embed.add_field(name=f"**Adventurer**", value=name_string, inline=True)
         embed.add_field(name=f"**DPS**", value=dps_string, inline=True)
         embed.set_thumbnail(url=elements_images[element])
@@ -440,7 +516,7 @@ class Dragalia(commands.Cog):
         return embed
 
     @dragalia.command(name="rankings", aliases=["rank", "ranks", "ranking"])
-    async def rankings(self, ctx, element=None):
+    async def rankings(self, ctx, *, input_string=None):
         """
         Retreive a list of top ten Adventurers based on the DPS Simulator for
         an element, or overall.
@@ -451,16 +527,36 @@ class Dragalia(commands.Cog):
         Element can be any element, or 'all' for overall top 10 list.
         """
         await self.dps_update_check(ctx)
+        coabs = element = parse = None
         parse = "180"
-        embed = await self.return_rankings_embed(element=element, parse=parse)
+        if input_string:
+            if "," in input_string:
+                str_ls = input_string.split(",")
+                if len(str_ls) > 1:
+                    coabs = " ".join(str_ls[1:])
+                    coabs = CONST.parse_coabs(coabs.lower().strip())
+                if not str_ls[0]:
+                    element = None
+                else:
+                    element = str_ls[0].lower().strip()
+                if not coabs:
+                    return await ctx.send("Invalid Co-Abilities specified.")
+            else:
+                element = input_string
+        coabs = CONST.parse_coabs(coabs)
+        embed = await self.return_rankings_embed(
+            element=element, parse=parse, coabs=coabs
+        )
         message = await ctx.send(embed=embed)
-        await message.add_reaction(CONSTANTS.emoji["down_arrow"])
+        self.module.add_msg(message, parse=parse, coabs=coabs)
+        await message.add_reaction(CONST.react_emoji["down_arrow"])
+        await self.mng_coab_emoji(message, "add")
 
         def check_response(reaction, user):
             return (
                 (
-                    reaction.emoji == CONSTANTS.emoji["up_arrow"]
-                    or reaction.emoji == CONSTANTS.emoji["down_arrow"]
+                    reaction.emoji in CONST.react_emoji.values()
+                    or str(reaction.emoji) in CONST.react_coab_emoji.values()
                 )
                 and user != self.bot.user
                 and message.id == reaction.message.id
@@ -472,71 +568,100 @@ class Dragalia(commands.Cog):
                     "reaction_add", timeout=120.0, check=check_response
                 )
             except asyncio.TimeoutError:
+                await message.clear_reactions()
                 return
             else:
                 embed = reaction.message.embeds[0]
-                parse = await self.proccess_parse_change(
-                    embed=embed, reaction=reaction, user=user, parse=parse
-                )
-                element = reaction.message.embeds[0].title.split(" ")[0]
-                element = strip_all(element.lower().strip())
-                if element not in dragalia_elements:
-                    element = None
-                await reaction.message.edit(
-                    embed=await self.return_rankings_embed(element=element, parse=parse)
-                )
+                if reaction.emoji in CONST.react_emoji.values():
+                    parse = await self.proccess_parse_change(
+                        embed=embed, reaction=reaction, user=user, parse=parse
+                    )
+                    element = reaction.message.embeds[0].title.split(" ")[0]
+                    element = strip_all(element.lower().strip())
+                    if element not in dragalia_elements:
+                        element = None
+                    await reaction.message.edit(
+                        embed=await self.return_rankings_embed(
+                            element=element, parse=parse, coabs=coabs
+                        )
+                    )
+                elif str(reaction.emoji) in CONST.react_coab_emoji.values():
+                    coabs = await self.process_coab_change(reaction, user)
+                    await reaction.message.edit(
+                        embed=await self.return_rankings_embed(
+                            element=element, parse=parse, coabs=coabs
+                        )
+                    )
 
     @dragalia.command(name="update")
     @commands.cooldown(rate=1, per=30.00, type=commands.BucketType.default)
     async def update_draglia_data(self, ctx, *, tables=None):
-        force = False
+        force = dps = dps_only = False
         if tables:
             if "force" in tables.lower():
-                force = True
-            tables = tables.split(" ")
-            await ctx.send("Now updating selected entries...")
-            try:
-                updated = await self.update.update(tables=tables, force=force)
-            except Exception as e:
-                traceback.print_exc()
-                return await ctx.send(f"Update failed: {e}")
+                if ctx.author.id not in config.owner_list:
+                    return await ctx.send("DB purge unauthorized.")
+                else:
+                    force = True
+                tables = tables.replace("force", "")
+                tables = tables.strip()
+                if tables == "":
+                    tables = None
+        if tables:
+            if "dps" in tables.lower():
+                dps = True
+                tables = tables.replace("dps", "")
+                tables = tables.strip()
+                if not tables:
+                    dps_only = True
+            await ctx.send("Beginning update...")
+            if not dps_only:
+                tables = tables.split(" ")
+                try:
+                    updated = await self.update.update(tables=tables, force=force)
+                except Exception as e:
+                    traceback.print_exc()
+                    return await ctx.send(f"Update failed: {e}")
         else:
-            await ctx.send("Now updating Adventurer, Skill, Wyrmprint entries...")
+            dps = True
+            await ctx.send("**Now updating Adventurer, Skill, Wyrmprint entries...**")
             try:
                 updated = await self.update.async_full_update(force=force)
             except Exception as e:
                 traceback.print_exc()
                 return await ctx.send(f"Update failed: {e}")
+        if not dps_only:
+            self.adven_db = await self.async_create_names("Adventurers")
+            self.wp_db = await self.async_create_names("Wyrmprints")
+            if updated:
+                await ctx.send(f"__Updates successful!__")
+            if "adv" in updated:
+                await ctx.send(f"\n{updated['adv']} new Adventurers.")
+            if "wp" in updated:
+                await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
 
-        self.adven_db = await self.async_create_names("Adventurers")
-        self.wp_db = await self.async_create_names("Wyrmprints")
-        if updated:
-            await ctx.send(f"__Updates successful!__")
-        if "adv" in updated:
-            await ctx.send(f"\n{updated['adv']} new Adventurers.")
-        if "wp" in updated:
-            await ctx.send(f"\n{updated['wp']} new Wyrmprints.")
+        if dps is True:
+            if DPS.check_version() is True or force is True:
+                await ctx.send("**Updating DPS entries...**")
+                try:
+                    self.dps_db = await DPS.async_pull_csvs(
+                        self.bot.session, self.dps_db_path, force
+                    )
 
-        if not tables or "dps" in tables:
-            await ctx.send("Updating DPS entries...")
-            try:
-                self.dps_db = DPS.build_dps_db(
-                    await DPS.async_get_src_csv(self.bot.session, self.dps_db_path)
-                )
-                self.rank_db = DPS.build_rank_db(self.dps_db)
-                self.dps_hash = DPS.update_master_hash()
-                await ctx.send("__DPS update complete!__")
-            except Exception as e:
-                traceback.print_exc()
-                return await ctx.send(f"Update failed: {e}")
+                    self.rank_db = DPS.gen_ranks(self.dps_db)
+                    self.dps_hash = DPS.update_master_hash()
+                    await ctx.send("__DPS update complete!__")
+                except Exception as e:
+                    traceback.print_exc()
+                    return await ctx.send(f"Update failed: {e}")
+            else:
+                await ctx.send("**DPS records are already up to date.**")
         return
 
     @update_draglia_data.error
-    async def update_draglia_data_error(ctx, error):
+    async def update_draglia_data_error(self, ctx, error):
         if isinstance(error, commands.CommandOnCooldown):
-            await ctx.send(
-                "This command is currently on cooldown, please try again later."
-            )
+            await ctx.send("This command is currently on cooldown.")
 
 
 def setup(bot):

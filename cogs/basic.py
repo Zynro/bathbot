@@ -1,10 +1,9 @@
 import discord
 from discord.ext import commands
 import config
-from howlongtobeatpy import HowLongToBeat
+from howlongtobeatpy import HowLongToBeat as htlb
 import lib.misc_methods as MISC
 
-hltb = HowLongToBeat
 owner_list = config.owner_list
 
 

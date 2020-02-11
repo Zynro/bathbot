@@ -41,9 +41,12 @@ async def scrape_char(session, url):
     info["thumbnail"] = soup.find(class_="character-name-link").select("img[src]")[0][
         "src"
     ]
-    ilevel = soup.find("div", {"id": "gear-box-ilvl-text"}).get_text()
-    ilevel = ilevel.split(" ")[-1]
-    info["ilevel"] = ilevel
+    try:
+        ilevel = soup.find("div", {"id": "gear-box-ilvl-text"}).get_text()
+        ilevel = ilevel.split(" ")[-1]
+        info["ilevel"] = ilevel
+    except AttributeError:
+        info["ilevel"] = "N/A"
     return info
 
 
@@ -124,7 +127,7 @@ class FFLogs:
             fight = f"__{fight_name}__"
             job = f"{CONST.ff_job_emoji[encounter.job.lower()]}"
             parse = f"**{MISC.num_emoji_gen(f'{encounter.percentile}%')}**"
-            dps = round(encounter.total, 2)
+            dps = round(encounter.total)
             rank = f"{encounter.rank}/{encounter.outof}"
             report_url = (
                 f"https://www.fflogs.com/reports/{encounter.reportid}"

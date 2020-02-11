@@ -1,12 +1,23 @@
 import requests
-import aiohttp
 import csv
 import random
 import json
+import os
 from discord import Embed, Colour
 from modules.dragalia.models.parse import Parse
-import modules.dragalia.models.constants as CONSTANTS
+import modules.dragalia.models.constants as CONST
 import lib.misc_methods as MISC
+import pprint
+
+DPS_PATH = "./modules/dragalia/lists/dps"
+
+skip_msg = (
+    "===========================================\n"
+    "||Skipping DPS update, version matches...||\n"
+    "==========================================="
+)
+
+pp = pprint.PrettyPrinter(indent=1)
 
 
 def remove_brackets(input_str):
@@ -24,9 +35,23 @@ def add_number_suffix(number):
     return str(number) + "th"
 
 
+def load_csvs(path):
+    dps_dict = CONST.copy_parses()
+    for root, dirs, files in os.walk(DPS_PATH):
+        for filename in files:
+            with open(f"{DPS_PATH}/{filename}", newline="") as f:
+                name = filename.split("optimal_dps_")[1].split("_", 1)
+                parse = str(name[0])
+                coabs = str(name[1]).replace(".csv", "")
+                reader = csv.reader(f)
+                dps_dict[parse][coabs] = list(reader)
+    return dps_dict
+
+
 class DPS:
-    def __init__(self, adventurer, dps_dict, rank_db):
+    def __init__(self, adventurer, dps_dict=None, rank_db=None):
         if not dps_dict:
+            print(f"NO DPS RECORDS FOR {adventurer.name}")
             return
         self.adventurer = adventurer
         self.owner = adventurer.internal_name
@@ -39,29 +64,33 @@ class DPS:
             self.dragon = f"{split[0]}\n*{dps_range}*"
         else:
             self.dragon = dps_dict["dragon"]
-        self.parse = {}
-        for parse_value in ["180", "120", "60"]:
-            self.parse[parse_value] = Parse(dps_dict["parse"][parse_value])
+        self.parse = CONST.copy_parses()
+        for parse_value in dps_dict["parses"].keys():
+            for coabs in dps_dict["parses"][parse_value].keys():
+                self.parse[parse_value][coabs] = Parse(
+                    dps_dict["parses"][parse_value][coabs], coabs
+                )
         self.image = adventurer.image
         self.alt = dps_dict["alt"]
 
-        for parse_value in self.parse.keys():
-            self.parse[parse_value].rank_element = str(
-                rank_db[parse_value][self.element].index(self.owner) + 1
-            )
-            self.parse[parse_value].rank_overall = str(
-                rank_db[parse_value]["all"].index(self.owner) + 1
-            )
+        for parse_value, coab_dict in self.parse.items():
+            for coabs in coab_dict.keys():
+                self.parse[parse_value][coabs].rank_element = str(
+                    rank_db[parse_value][coabs][self.element].index(self.owner) + 1
+                )
+                self.parse[parse_value][coabs].rank_overall = str(
+                    rank_db[parse_value][coabs]["all"].index(self.owner) + 1
+                )
 
-    def embed(self, parse_value="180"):
+    def embed(self, parse_value="180", coabs="none"):
+        coabs_disp = CONST.parse_coab_disp(coabs)
         try:
             embed = Embed(
                 title=f"__**{self.adventurer.name}**__",
                 description=f"**Parse:** {parse_value} Seconds\n"
-                f"**Team DPS:** {CONSTANTS.team_damage}",
-                colour=Colour(
-                    CONSTANTS.elements_colors[self.adventurer.element.lower()]
-                ),
+                f"**Co-Abilities:** {coabs_disp}\n"
+                f"**Team DPS:** {CONST.team_damage}",
+                colour=Colour(CONST.elements_colors[self.adventurer.element.lower()]),
             )
         except (AttributeError, IndexError):
             embed = Embed(
@@ -79,11 +108,11 @@ class DPS:
         embed.set_thumbnail(url=self.image)
         embed.add_field(
             name="__DPS:__",
-            value=MISC.num_emoji_gen(self.parse[parse_value].dps),
+            value=MISC.num_emoji_gen(self.parse[parse_value][coabs].dps),
             inline=True,
         )
-        element_rank = add_number_suffix(self.parse[parse_value].rank_element)
-        overall_rank = add_number_suffix(self.parse[parse_value].rank_overall)
+        element_rank = add_number_suffix(self.parse[parse_value][coabs].rank_element)
+        overall_rank = add_number_suffix(self.parse[parse_value][coabs].rank_overall)
         embed.add_field(
             name="__Ranks:__",
             value=f"**{self.element.title()}:** {element_rank} "
@@ -93,15 +122,17 @@ class DPS:
         embed.add_field(name="__Wyrmprints:__", value=self.wyrmprints, inline=True)
         embed.add_field(
             name="__Damage Breakdown:__",
-            value=self.parse[parse_value].to_dps_string(),
+            value=self.parse[parse_value][coabs].to_dps_string(),
             inline=False,
         )
-        if self.parse[parse_value].condition:
+        if self.parse[parse_value][coabs].condition:
             embed.add_field(
-                name="__Condition:__", value=self.parse[parse_value].condition
+                name="__Condition:__", value=self.parse[parse_value][coabs].condition
             )
-        if self.parse[parse_value].comment:
-            embed.add_field(name="__Comment:__", value=self.parse[parse_value].comment)
+        if self.parse[parse_value][coabs].comment:
+            embed.add_field(
+                name="__Comment:__", value=self.parse[parse_value][coabs].comment
+            )
         embed.set_footer(
             text="Use the up/down arrows to increase or decrease parse time."
         )
@@ -117,157 +148,176 @@ class DPS:
         )
 
     @staticmethod
+    def check_version():
+        try:
+            path = f"modules/dragalia/lists/dps_hash.json"
+            with open(path, "r") as file:
+                saved = json.load(file)
+        except FileNotFoundError:
+            return True
+        current = MISC.get_master_hash(CONST.REPO_URL)
+        if current != saved:
+            print("[DRAGALIA]: ++DPS UPDATE REQUIRED++")
+            return True
+        else:
+            return False
+
+    @staticmethod
     def update_master_hash():
         path = f"modules/dragalia/lists"
         with open(f"{path}/dps_hash.json", "w") as file:
-            version = MISC.get_master_hash(CONSTANTS.REPO_URL)
+            version = MISC.get_master_hash(CONST.REPO_URL)
             json.dump(version, file, indent=4)
             return version
 
     @staticmethod
-    def get_src_csv(path):
-        # DPS.update_master_hash()
-        dps_dict = {}
-        dps_dict["180"] = requests.get(CONSTANTS.DPS_URL_180).text
-        dps_dict["120"] = requests.get(CONSTANTS.DPS_URL_120).text
-        dps_dict["60"] = requests.get(CONSTANTS.DPS_URL_60).text
-        for parse in dps_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                dps_dict[parse] = dps_dict[parse].split("\n")
-                for row in dps_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        if "_c_" in row[1]:
-                            continue
-                        else:
-                            row[1] = row[1].replace("_", "").lower().strip()
-                            writer.writerow(row)
-                    except IndexError:
-                        continue
-        return dps_dict
+    def pull_csvs(path):
+        """
+        Given a path, gets and saves all csvs for all co-ability combinations
+        from source, returning a complete dictionary of all combinations and all parses.
+        """
+        if DPS.check_version() is True:
+            dps_dict = CONST.copy_parses()
+            MISC.check_dir(path)
+            for coabs in CONST.coab_combos:
+                for parse in CONST.parses:
+                    dps_dict[parse][coabs] = [
+                        i.split(",")
+                        for i in requests.get(CONST.GET_URL(parse, coabs)).text.split(
+                            "\n"
+                        )
+                    ]
+                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                    MISC.save_csv(path_to_file, dps_dict[parse][coabs])
+            DPS.update_master_hash()
+            return DPS.build_dps_dict(dps_dict)
+        else:
+            print(skip_msg)
+            return DPS.build_dps_dict(load_csvs(path))
 
     @staticmethod
-    async def async_get_src_csv(session, path):
-        dps_dict = {}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(CONSTANTS.DPS_URL_180) as response:
-                dps_dict["180"] = await response.text()
-            async with session.get(CONSTANTS.DPS_URL_120) as response:
-                dps_dict["120"] = await response.text()
-            async with session.get(CONSTANTS.DPS_URL_60) as response:
-                dps_dict["60"] = await response.text()
-        for parse in dps_dict.keys():
-            path_to_file = f"{path}_{parse}.csv"
-            with open(path_to_file, "w", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                dps_dict[parse] = dps_dict[parse].split("\n")
-                for row in dps_dict[parse]:
-                    row = row.split(",")
-                    try:
-                        if "_c_" in row[1]:
-                            continue
-                        else:
-                            writer.writerow(row)
-                    except IndexError:
-                        continue
-        return dps_dict
-
-    @staticmethod
-    def build_dps_db(response_dict):
-        all_char_dps = {}
-        damage = {}
-        for parse_value in response_dict.keys():
-            del response_dict[parse_value][0]
-            parse = response_dict[parse_value]
-            for row in parse:
-                row = row.split(",")
-                # print(row)
-                try:
-                    row[1]
-                except IndexError:
-                    continue
-                if "_c_" in row[1]:
-                    continue
-                if "fleur" in row[1]:
-                    del row[9]
-                if "_" in row[1]:
-                    internal_name = row[1].replace("_", "").lower().strip()
-                    """if (
-                        "geuden" in internal_name
-                    ):  # dps has it as geuden, wiki is gala prince
-                        internal_name = "gprince"
-                    if "euden" in internal_name:  # same as above, but normal version
-                        internal_name = "theprince"
-                    alt = True"""
-                else:
-                    internal_name = row[1].lower().strip()
-                    alt = False
-                if parse_value == "180":
-                    amulets = row[6].split("][")
-                    wyrmprints = amulets[0].split("+")
-                    wyrmprints = remove_brackets(" + ".join(wyrmprints))
-                    wyrmprints = wyrmprints.replace("_", " ")
-                    dragon = remove_brackets(amulets[1])
-                    all_char_dps[internal_name] = {
-                        "internal_name": internal_name,
-                        "rarity": row[2],
-                        "element": row[3],
-                        "weapon": row[4],
-                        "str": row[5],
-                        "wyrmprints": wyrmprints,
-                        "dragon": dragon,
-                        "alt": alt,
-                    }
-                    all_char_dps[internal_name]["parse"] = {}
-                damage = {}
-                damage_list = row[9:]
-                damage["dps"] = row[0]
-                damage["types"] = {}
-                for damage_type in damage_list:
-                    damage_type = damage_type.split(":")
-                    damage_name = damage_type[0].replace("_", " ").title()
-                    damage["types"][damage_name] = damage_type[1]
-                all_char_dps[internal_name]["parse"][parse_value] = {}
-                all_char_dps[internal_name]["parse"][parse_value]["damage"] = damage
-                (all_char_dps[internal_name]["parse"][parse_value]["condition"]) = (
-                    row[7].replace("<", "").replace(">", ""),
-                )
-                all_char_dps[internal_name]["parse"][parse_value]["comment"] = row[8]
-        return all_char_dps
-
-    @staticmethod
-    def build_rank_db(dps_db):
-        rankings_db = {}
-        parses = ["180", "120", "60"]
-
-        for parse in parses:
-            rankings_db[parse] = {}
-            sorted_list = sorted(
-                [
-                    (
-                        dps_db[adven]["internal_name"],
-                        int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
+    async def async_pull_csvs(session, path, force=False):
+        """
+        Given a path, gets and saves all csvs for all co-ability combinations
+        from source, returning a complete dictionary of all combinations and all parses.
+        ++ASYNC version++
+        """
+        if DPS.check_version() is True or force is True:
+            dps_dict = CONST.copy_parses()
+            MISC.check_dir(path)
+            for coabs in CONST.coab_combos:
+                for parse in CONST.parses:
+                    request = await MISC.async_fetch_text(
+                        session, CONST.GET_URL(parse, coabs)
                     )
-                    for adven in dps_db.keys()
-                ],
-                key=lambda x: x[1],
-                reverse=True,
-            )
-            rankings_db[parse]["all"] = [i[0] for i in sorted_list]
-            for element in CONSTANTS.dragalia_elements:
+                    dps_dict[parse][coabs] = [i.split(",") for i in request.split("\n")]
+                    path_to_file = f"{path}/optimal_dps_{parse}_{coabs}.csv"
+                    MISC.save_csv(path_to_file, dps_dict[parse][coabs])
+            DPS.update_master_hash()
+            return DPS.build_dps_dict(dps_dict)
+        else:
+            print(skip_msg)
+            return DPS.build_dps_dict(load_csvs(path))
+
+    @staticmethod
+    def build_dps_dict(response_dict):
+        """
+        Given a csv of dps values for a specific combination of
+        parse time and co-abilities, returns a parsed dict for all chars in csv.
+        """
+        dps_db = {}
+        for coabs in CONST.coab_combos:
+            for parse_val in CONST.parses:
+                parse = response_dict[parse_val][coabs]
+                del parse[0]
+                for row in parse:
+                    try:
+                        row[1]
+                    except IndexError:
+                        continue
+                    if "_c_" in row[1] or not row[1].strip():
+                        continue
+                    if "fleur" in row[1]:
+                        del row[9]
+                    if "_" in row[1]:
+                        internal_name = row[1].lower().replace("mh_", "h_")
+                        i_name = internal_name.replace("_", "").lower().strip()
+                    else:
+                        i_name = row[1].lower().strip()
+                        alt = False
+                    try:
+                        dps_db[i_name]
+                    except (KeyError, AttributeError):
+                        amulets = [remove_brackets(i) for i in row[6].split("][")]
+                        wyrmprints = amulets[0].split("+")
+                        wyrmprints = " + ".join(wyrmprints)
+                        wyrmprints = wyrmprints.replace("_", " ")
+                        dragon = amulets[1].replace("_", " ")
+                        dps_db[i_name] = {
+                            "i_name": i_name,
+                            "rarity": row[2],
+                            "element": row[3],
+                            "weapon": row[4],
+                            "str": row[5],
+                            "wyrmprints": wyrmprints,
+                            "dragon": dragon,
+                            "alt": alt,
+                            "parses": {"180": {}, "120": {}, "60": {}},
+                        }
+                    damage = {}
+                    damage_list = row[9:]
+                    damage["dps"] = row[0]
+                    damage["types"] = {}
+                    for damage_type in damage_list:
+                        damage_type = damage_type.split(":")
+                        damage_name = damage_type[0].replace("_", " ").title()
+                        damage["types"][damage_name] = damage_type[1]
+                    dps_db[i_name]["parses"][parse_val][coabs] = {}
+                    dps_db[i_name]["parses"][parse_val][coabs]["damage"] = damage
+                    (dps_db[i_name]["parses"][parse_val][coabs]["condition"]) = (
+                        row[7].replace("<", "").replace(">", ""),
+                    )
+                    dps_db[i_name]["parses"][parse_val][coabs]["comment"] = row[8]
+        return dps_db
+
+    @staticmethod
+    def gen_ranks(dps_db):
+        """
+        Given a dps dict, builds a rankings of overall and each adventurers
+        specific element.
+        """
+        rankings_db = CONST.copy_parses()
+        for parse in CONST.parses:
+            for coabs in CONST.coab_combos:
                 sorted_list = sorted(
                     [
                         (
-                            dps_db[adven]["internal_name"],
-                            int(dps_db[adven]["parse"][parse]["damage"]["dps"]),
+                            adven,
+                            int(dps_db[adven]["parses"][parse][coabs]["damage"]["dps"]),
                         )
                         for adven in dps_db.keys()
-                        if dps_db[adven]["element"] == element
                     ],
                     key=lambda x: x[1],
                     reverse=True,
                 )
-                rankings_db[parse][element] = [i[0] for i in sorted_list]
+                rankings_db[parse][coabs] = {}
+                rankings_db[parse][coabs]["all"] = [i[0] for i in sorted_list]
+                for element in CONST.dragalia_elements:
+                    sorted_list = sorted(
+                        [
+                            (
+                                adven,
+                                int(
+                                    dps_db[adven]["parses"][parse][coabs]["damage"][
+                                        "dps"
+                                    ]
+                                ),
+                            )
+                            for adven in dps_db.keys()
+                            if dps_db[adven]["element"] == element
+                        ],
+                        key=lambda x: x[1],
+                        reverse=True,
+                    )
+                    rankings_db[parse][coabs][element] = [i[0] for i in sorted_list]
         return rankings_db
