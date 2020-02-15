@@ -135,7 +135,7 @@ class Dragalia(commands.Cog):
     async def generate_queried_class(self, name, db_dict):
         async with aiosqlite.connect(self.MASTER_DB) as db:
             db.row_factory = aiosqlite.Row
-            if MISC.get_dict_type(db_dict, Adventurer):
+            if MISC.get_dict_type(db_dict, Adventurer) is True:
                 async with db.execute(
                     "SELECT * FROM Adventurers WHERE Internal_Name=?", (name,)
                 ) as c:
@@ -145,15 +145,15 @@ class Dragalia(commands.Cog):
                     "SELECT * FROM Skills WHERE Owner=?", (adven_row["name"],)
                 ) as c:
                     skills = await c.fetchall()
-                adven = self.adven_db[internal_name]
+                adven = self.adven_db[internal_name.lower()]
                 adven.update(adven_row, skills, self.dps_db, self.rank_db)
                 return adven
-            elif MISC.get_dict_type(db_dict, Wyrmprint):
+            elif MISC.get_dict_type(db_dict, Wyrmprint) is True:
                 async with db.execute(
                     "SELECT * FROM Wyrmprints WHERE Name=?", (name,)
                 ) as c:
                     wp_row = await c.fetchone()
-                wp = self.wp_db[wp_row["name"]]
+                wp = self.wp_db[wp_row["name"].lower()]
                 wp.update(wp_row)
                 return wp
 

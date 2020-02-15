@@ -101,4 +101,4 @@ def save_csv(path, rows):
 
 
 def get_dict_type(db, check):
-    return str(isinstance(next(iter(db.values())), check))
+    return bool(isinstance(next(iter(db.values())), check))

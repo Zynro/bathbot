@@ -25,10 +25,7 @@ class Module:
             self.msg_lib[msg_id][key] = val
 
     def del_msg(self, message):
-        try:
-            msg = int(message.id)
-        except AttributeError:
-            msg = int(message)
+        msg = get_id(message)
         del self.msg_lib[msg]
 
     async def fetch_msg(self, message):

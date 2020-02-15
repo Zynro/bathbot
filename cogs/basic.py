@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import config
-from howlongtobeatpy import HowLongToBeat as htlb
+from howlongtobeatpy import HowLongToBeat
 import lib.misc_methods as MISC
 
 owner_list = config.owner_list
@@ -49,7 +49,7 @@ class Basic(commands.Cog):
                 game_result = max(results, key=lambda element: element.similarity)
                 embed = discord.Embed(
                     title=f"HLTB: {game_result.game_name}",
-                    colour=discord.Colour(MISC.generate_random_color()),
+                    colour=discord.Colour(MISC.rand_color()),
                     description=game_result.game_web_link,
                 )
                 embed.set_thumbnail(url=game_result.game_image_url)
