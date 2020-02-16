@@ -241,6 +241,7 @@ class DPS:
                         del row[9]
                     if "_" in row[1]:
                         internal_name = row[1].lower().replace("mh_", "h_")
+                        internal_name = row[1].lower().replace("valentines_", "v_")
                         i_name = internal_name.replace("_", "").lower().strip()
                     else:
                         i_name = row[1].lower().strip()
