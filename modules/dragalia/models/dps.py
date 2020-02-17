@@ -242,7 +242,10 @@ class DPS:
                     if "_" in row[1]:
                         internal_name = row[1].lower().replace("mh_", "h_")
                         internal_name = row[1].lower().replace("valentines_", "v_")
-                        i_name = internal_name.replace("_", "").lower().strip()
+                        i_name = internal_name.split("_")
+                        i_name = (
+                            i_name[0][0].lower().strip() + i_name[1].lower().strip()
+                        )
                     else:
                         i_name = row[1].lower().strip()
                         alt = False
