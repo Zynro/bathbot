@@ -1,4 +1,3 @@
-import traceback
 from modules.dragalia.models.dps import DPS
 from modules.dragalia.models.skill import Skill
 from discord import Embed, Colour
@@ -24,12 +23,15 @@ class Adventurer:
             self.skill_1 = Skill(skill_1)
             self.skill_2 = Skill(skill_2)
         if dps_db:
-            try:
-                adven_dps = dps_db[self.internal_name]
-            except Exception:
-                traceback.print_exc()
-                adven_dps = None
-            else:
+            adven_dps = None
+            for i_name in dps_db.keys():
+                if self.internal_name == i_name:
+                    adven_dps = dps_db[i_name]
+                    break
+                elif i_name in self.shortcuts:
+                    adven_dps = dps_db[i_name]
+                    break
+            if adven_dps:
                 self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):

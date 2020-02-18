@@ -48,13 +48,26 @@ def load_csvs(path):
     return dps_dict
 
 
+def name_split(name):
+    if "_" in name:
+        i = "_"
+    else:
+        i = " "
+    i_split = name.lower().strip().split(i)
+    if len(i_split) == 2:
+        i_name = i_split[0][0] + i_split[1]
+    else:
+        i_name = i_split[0]
+    return i_name
+
+
 class DPS:
     def __init__(self, adventurer, dps_dict=None, rank_db=None):
         if not dps_dict:
             print(f"NO DPS RECORDS FOR {adventurer.name}")
             return
         self.adventurer = adventurer
-        self.owner = adventurer.internal_name
+        self.owner = name_split(adventurer.name)
         self.wyrmprints = dps_dict["wyrmprints"]
         self.element = adventurer.element.lower()
         if "dps" in dps_dict["dragon"]:
@@ -240,12 +253,7 @@ class DPS:
                     if "fleur" in row[1]:
                         del row[9]
                     if "_" in row[1]:
-                        internal_name = row[1].lower().replace("mh_", "h_")
-                        internal_name = row[1].lower().replace("valentines_", "v_")
-                        i_name = internal_name.split("_")
-                        i_name = (
-                            i_name[0][0].lower().strip() + i_name[1].lower().strip()
-                        )
+                        i_name = name_split(row[1])
                     else:
                         i_name = row[1].lower().strip()
                         alt = False
@@ -296,8 +304,12 @@ class DPS:
                 sorted_list = sorted(
                     [
                         (
-                            adven,
-                            int(dps_db[adven]["parses"][parse][coabs]["damage"]["dps"]),
+                            adven.lower(),
+                            int(
+                                dps_db[adven.lower()]["parses"][parse][coabs]["damage"][
+                                    "dps"
+                                ]
+                            ),
                         )
                         for adven in dps_db.keys()
                     ],
@@ -310,15 +322,15 @@ class DPS:
                     sorted_list = sorted(
                         [
                             (
-                                adven,
+                                adven.lower(),
                                 int(
-                                    dps_db[adven]["parses"][parse][coabs]["damage"][
-                                        "dps"
-                                    ]
+                                    dps_db[adven.lower()]["parses"][parse][coabs][
+                                        "damage"
+                                    ]["dps"]
                                 ),
                             )
                             for adven in dps_db.keys()
-                            if dps_db[adven]["element"] == element
+                            if dps_db[adven.lower()]["element"] == element
                         ],
                         key=lambda x: x[1],
                         reverse=True,

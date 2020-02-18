@@ -181,7 +181,12 @@ def fill_adv_names(conn):
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
-        internal_name = shorten_name(name)
+        internal_name = "".join([i for i in name if i.isalpha()])
+        i_split = name.lower().strip().split(" ")
+        if len(i_split) == 2:
+            shortcut = i_split[0][0] + i_split[1]
+        else:
+            shortcut = i_split[0]
 
         c = conn.cursor()
         c.execute("SELECT Name FROM Adventurers WHERE name = ?", (name,))
@@ -210,7 +215,7 @@ def fill_adv_names(conn):
                     "?",
                     "?",
                     "?",
-                    "?",
+                    shortcut,
                 ),
             )
     conn.commit()
@@ -406,7 +411,12 @@ async def async_fill_adv_names(session, db):
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
-        internal_name = shorten_name(name)
+        internal_name = "".join([i for i in name if i.isalpha()])
+        i_split = name.lower().strip().split(" ")
+        if len(i_split) == 2:
+            shortcut = i_split[0][0] + i_split[1]
+        else:
+            shortcut = i_split[0]
 
         async with db.execute(
             "SELECT Name FROM Adventurers WHERE name = ?", (name,)
@@ -436,7 +446,7 @@ async def async_fill_adv_names(session, db):
                         "?",
                         "?",
                         "?",
-                        "?",
+                        shortcut,
                     ),
                 )
     await db.commit()
