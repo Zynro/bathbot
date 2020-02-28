@@ -53,7 +53,7 @@ class Roleplay(commands.Cog):
             with open(path, "r") as file:
                 return json.load(file)
 
-    @commands.command(name="roll")
+    @commands.command(name="roll", aliases=["r"])
     async def roll(self, ctx, *, string):
         embed, roll_dict = self.campaign.dice(string, ctx.author)
         message = await ctx.send(ctx.author.mention, embed=embed)

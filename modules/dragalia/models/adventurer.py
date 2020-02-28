@@ -28,11 +28,10 @@ class Adventurer:
                 if self.internal_name == i_name:
                     adven_dps = dps_db[i_name]
                     break
-                elif i_name in self.shortcuts:
+                elif self.internal_name in self.shortcuts:
                     adven_dps = dps_db[i_name]
                     break
-            if adven_dps:
-                self.dps = DPS(self, adven_dps, rank_db)
+            self.dps = DPS(self, adven_dps, rank_db)
 
     def embed(self):
         embed = Embed(
@@ -40,7 +39,15 @@ class Adventurer:
             description=f"*{self.title}*",
             colour=Colour(CONSTANTS.elements_colors[self.element.lower()]),
         )
-        embed.set_thumbnail(url=self.image)
+        if self.image == "?":
+            embed.set_thumbnail(
+                url="https://lh3.googleusercontent.com/proxy/"
+                "8segRO0VV4XFNH3CcIyBTp1xB5ITih6En--B3fJm8JjDTFCgvXzWfuMEMQXa_"
+                "qa8xf0C9w0abOue4FZMOqlOF0_"
+                "vFkhNOefb1WyxDS41boDOhAwgebkWc_yq-dWJcu_LA03Hq9s"
+            )
+        else:
+            embed.set_thumbnail(url=self.image)
         rarity = CONSTANTS.d_emoji[str(self.rarity) + "*"] * int(self.rarity)
         embed.add_field(
             name=f"{rarity}\n__Max Stats:__",

@@ -6,7 +6,7 @@ import lib.misc_methods as MISC
 import modules.dragalia.models.constants as CONSTANTS
 
 MAIN_URL = "https://dragalialost.gamepedia.com/"
-ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Adventurer_List"
+ADVEN_LIST_URL = "https://dragalialost.gamepedia.com/Category:Adventurers"
 WYRMPRINT_LIST_URL = "https://dragalialost.gamepedia.com/Category:Wyrmprints"
 
 MASTER_DB = "master.db"
@@ -137,7 +137,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
 sql_adven_update = """
 UPDATE Adventurers
-SET Title=?, Max_HP=?, Max_STR=?, Defense=?, Type=?, Rarity=?, Element=?,
+SET Image=?, Title=?, Max_HP=?, Max_STR=?, Defense=?, Type=?, Rarity=?, Element=?,
     Weapon=?, Max_CoAb=?, Skill_1=?, Skill_2=?,
     Ability_1=?, Ability_2=?, Ability_3=?, Obtained=?, Release=?, Availability=?
 WHERE Name=?
@@ -173,11 +173,9 @@ def fetch(URL):
 
 def fill_adv_names(conn):
     resp = fetch(ADVEN_LIST_URL)
-    soup = BeautifulSoup(resp, "html.parser")
-    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
-        td_list = each.find_all("td")
-
-        name = td_list[1].select("a[title]")[0]["title"]
+    for name in parse_fill_names(resp):
+        if "user" in name.lower():
+            continue
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
@@ -196,7 +194,7 @@ def fill_adv_names(conn):
                 sql_adven_insert,
                 (
                     name,
-                    image,
+                    "?",
                     internal_name,
                     "?",
                     "?",
@@ -224,7 +222,7 @@ def fill_adv_names(conn):
 def fill_wp_names(conn):
     # this does stuff
     resp = fetch(WYRMPRINT_LIST_URL)
-    for name in parse_wp_names(resp):
+    for name in parse_fill_names(resp):
         c = conn.cursor()
         c.execute("SELECT Name FROM Wyrmprints WHERE name = ?", (name,))
         result = c.fetchone()
@@ -254,10 +252,20 @@ def update_advs(conn, force=False):
             continue
         print(f"=====Updating: {name}=====")
         resp = fetch(f"{MAIN_URL}{name}")
-        adven = parse_adventurer(resp)
+        misc = None
+        if name.lower() == "euden":
+            misc_name = "The Prince"
+        if name.lower() == "gala euden":
+            misc_name = "Gala Prince"
+        else:
+            misc_name = None
+        if misc_name:
+            misc = resp = fetch(f"{MAIN_URL}{misc_name}")
+        adven = parse_adventurer(resp, misc)
         cursor.execute(
             sql_adven_update,
             (
+                adven["image"],
                 adven["title"],
                 adven["max_hp"],
                 adven["max_str"],
@@ -403,11 +411,9 @@ def update_wyrmprints(conn, force=False):
 
 async def async_fill_adv_names(session, db):
     resp = await MISC.async_fetch_text(session, ADVEN_LIST_URL)
-    soup = BeautifulSoup(resp, "html.parser")
-    for each in soup.find_all("tr", class_="character-grid-entry grid-entry"):
-        td_list = each.find_all("td")
-
-        name = td_list[1].select("a[title]")[0]["title"]
+    for name in parse_fill_names(resp):
+        if "user" in name.lower():
+            continue
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
         image = td_list[0].select("img[src]")[0]["src"]
@@ -427,7 +433,7 @@ async def async_fill_adv_names(session, db):
                     sql_adven_insert,
                     (
                         name,
-                        image,
+                        "?",
                         internal_name,
                         "?",
                         "?",
@@ -454,7 +460,7 @@ async def async_fill_adv_names(session, db):
 
 async def async_fill_wp_names(session, db):
     resp = await MISC.async_fetch_text(session, WYRMPRINT_LIST_URL)
-    for name in parse_wp_names(resp):
+    for name in parse_fill_names(resp):
         async with db.execute(
             "SELECT Name FROM Wyrmprints WHERE name = ?", (name,)
         ) as cursor:
@@ -483,10 +489,22 @@ async def aysnc_update_advs(session, db, force=False):
                 continue
             print(f"=====Updating: {name}=====")
             resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
-            adven = parse_adventurer(resp)
+            misc = None
+            if name.lower() == "euden":
+                misc_name = "The Prince"
+            if name.lower() == "gala euden":
+                misc_name = "Gala Prince"
+            else:
+                misc_name = None
+            if misc_name:
+                misc = await MISC.async_fetch_text(
+                    session, f"{MAIN_URL}{misc_name}/Misc"
+                )
+            adven = parse_adventurer(resp, misc)
             await db.execute(
                 sql_adven_update,
                 (
+                    adven["image"],
                     adven["title"],
                     adven["max_hp"],
                     adven["max_str"],
@@ -630,17 +648,25 @@ async def async_update_wyrmprints(session, db, force=False):
     return new
 
 
-def parse_wp_names(resp):
+def parse_fill_names(resp):
     soup = BeautifulSoup(resp, "html.parser")
     soup = soup.find_all(id="mw-pages")[0]
     name_list = [name.text for name in soup.find_all("li")]
     return name_list
 
 
-def parse_adventurer(resp):
+def parse_adventurer(resp, misc):
     adven = {}
     soup = BeautifulSoup(resp, "html.parser")
     p = soup.find(class_="panel-heading")
+    if misc:
+        m_soup = BeautifulSoup(misc, "html.parser")
+        try:
+            adven["image"] = m_soup.find_all(class_="thumb")[0].find("a").img["src"]
+        except Exception:
+            adven["image"] = "?"
+    else:
+        adven["image"] = "?"
     try:
         adven["title"] = p.find_all("div")[0].get_text()
     except Exception:
@@ -738,11 +764,11 @@ def parse_adventurer(resp):
         adven["max_coab"] = "?"
 
     adven["abilities"] = {1: "?", 2: "?", 3: "?"}
-    all_abilities = skill_sections[2].find_all(class_="skill-table skill-levels")
+    all_abilities = skill_sections[2].find_all(
+        class_="skill-table skill-levels ability-table"
+    )
     for i, each in enumerate(all_abilities):
-        ability_title = each.find(class_="ability-header").select("a[title]")[0][
-            "title"
-        ]
+        ability_title = each.find(class_="ability-header").find("a").text
         ability_value = each.find_all(class_="tabbertab")
         try:
             ability_value = ability_value[2].find_all("p")[1].get_text().split("(")[0]
@@ -774,7 +800,7 @@ def parse_skill(resp, skill):
                 "camera duration"
                 in each.find("div", {"class": "tooltip"}).get_text().lower()
             ):
-                skill["i_frames"] = each.find_all("div")[-1].get_text()
+                skill["i_frames"] = each.find_all("div")[-1].get_text().strip()
     try:
         skill["owner"] = s_soup.find(style="padding:1em;").find("a")["title"]
         if skill["owner"].lower() in [x.lower() for x in exceptions.keys()]:
