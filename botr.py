@@ -255,8 +255,11 @@ async def reload_cog(ctx, *, arg=None):
         await ctx.send("**Success:** " + cog + " has been reloaded!")
 
 
-@bot.command()
-async def help(ctx):
+bot.help_command = None
+
+
+@bot.command(name="help")
+async def help_(ctx):
     return await ctx.send(
         "Help is currently under complete re-construction for all modules."
     )
