@@ -252,15 +252,15 @@ def update_advs(conn, force=False):
             continue
         print(f"=====Updating: {name}=====")
         resp = fetch(f"{MAIN_URL}{name}")
-        misc = None
+        misc_name = None
         if name.lower() == "euden":
             misc_name = "The Prince"
-        if name.lower() == "gala euden":
+        elif name.lower() == "gala euden":
             misc_name = "Gala Prince"
-        else:
-            misc_name = None
         if misc_name:
-            misc = resp = fetch(f"{MAIN_URL}{misc_name}")
+            misc = fetch(f"{MAIN_URL}{misc_name}/Misc")
+        else:
+            misc = fetch(f"{MAIN_URL}{name}/Misc")
         adven = parse_adventurer(resp, misc)
         cursor.execute(
             sql_adven_update,
@@ -489,17 +489,17 @@ async def aysnc_update_advs(session, db, force=False):
                 continue
             print(f"=====Updating: {name}=====")
             resp = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}")
-            misc = None
+            misc_name = None
             if name.lower() == "euden":
                 misc_name = "The Prince"
-            if name.lower() == "gala euden":
+            elif name.lower() == "gala euden":
                 misc_name = "Gala Prince"
-            else:
-                misc_name = None
             if misc_name:
                 misc = await MISC.async_fetch_text(
                     session, f"{MAIN_URL}{misc_name}/Misc"
                 )
+            else:
+                misc = await MISC.async_fetch_text(session, f"{MAIN_URL}{name}/Misc")
             adven = parse_adventurer(resp, misc)
             await db.execute(
                 sql_adven_update,
