@@ -111,7 +111,7 @@ class Dragalia(commands.Cog):
         if table == "Adventurers":
             names = {
                 each["internal_name"].lower(): Adventurer(
-                    each["name"], each["internal_name"]
+                    each["name"], each["internal_name"], each["shortcuts"]
                 )
                 for each in results
             }

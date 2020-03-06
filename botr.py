@@ -38,7 +38,7 @@ extensions = [item for sublist in ext_dict.values() for item in sublist]
 
 
 def get_prefix(bot, message):
-    prefixes = ["&", "/"]
+    prefixes = ["["]
     return commands.when_mentioned_or(*prefixes)(bot, message)
 
 

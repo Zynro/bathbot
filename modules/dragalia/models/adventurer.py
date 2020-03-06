@@ -5,9 +5,10 @@ import modules.dragalia.models.constants as CONSTANTS
 
 
 class Adventurer:
-    def __init__(self, name, internal_name):
+    def __init__(self, name, internal_name, shortcuts):
         self.name = name
-        self.internal_name = internal_name
+        self.internal_name = internal_name.lower()
+        self.shortcuts = [x.lower().strip() for x in shortcuts.split(",")]
 
     def update(self, adven_dict, skills=None, dps_db=None, rank_db=None):
         for k in adven_dict.keys():
@@ -25,7 +26,7 @@ class Adventurer:
         if dps_db:
             adven_dps = None
             for i_name in dps_db.keys():
-                if self.internal_name == i_name:
+                if self.internal_name.lower() == i_name.lower():
                     adven_dps = dps_db[i_name]
                     break
                 elif self.internal_name in self.shortcuts:

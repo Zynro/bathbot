@@ -178,7 +178,6 @@ def fill_adv_names(conn):
             continue
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
-        image = td_list[0].select("img[src]")[0]["src"]
         internal_name = "".join([i for i in name if i.isalpha()])
         i_split = name.lower().strip().split(" ")
         if len(i_split) == 2:
@@ -416,7 +415,6 @@ async def async_fill_adv_names(session, db):
             continue
         if name.lower() in [x.lower() for x in exceptions.keys()]:
             name = exceptions[name.lower()]
-        image = td_list[0].select("img[src]")[0]["src"]
         internal_name = "".join([i for i in name if i.isalpha()])
         i_split = name.lower().strip().split(" ")
         if len(i_split) == 2:
