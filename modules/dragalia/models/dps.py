@@ -243,9 +243,12 @@ class DPS:
                         internal_name = row[1].lower().replace("mh_", "h_")
                         internal_name = row[1].lower().replace("valentines_", "v_")
                         i_name = internal_name.split("_")
-                        i_name = (
-                            i_name[0][0].lower().strip() + i_name[1].lower().strip()
-                        )
+                        if i_name[0] in CONST.alts:
+                            i_name = (
+                                i_name[0][0].lower().strip() + i_name[1].lower().strip()
+                            )
+                        else:
+                            i_name = "".join(i_name).lower().strip()
                     else:
                         i_name = row[1].lower().strip()
                         alt = False
