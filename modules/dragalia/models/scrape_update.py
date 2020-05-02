@@ -250,6 +250,8 @@ def update_advs(conn, force=False):
             misc_name = "The Prince"
         elif name.lower() == "gala euden":
             misc_name = "Gala Prince"
+        elif name.lower() == "puppy":
+            misc_name = "Doggo"
         if misc_name:
             misc = fetch(f"{MAIN_URL}{misc_name}/Misc")
         else:
