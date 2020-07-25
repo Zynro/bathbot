@@ -33,6 +33,9 @@ ext_dict["onmyoji"] = [
     "modules.onmyoji.cogs.shard",
 ]
 
+del ext_dict["dragalia"]
+# disabled dragalia until rewrite
+
 
 extensions = [item for sublist in ext_dict.values() for item in sublist]
 
