@@ -2,7 +2,7 @@
 
 RUN apt-get update && apt-get install -y git
 
-ADD botr.py /
+ADD /opt/bathbot
 
 COPY requirements.txt /tmp
 WORKDIR /tmp
