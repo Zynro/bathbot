@@ -6,9 +6,10 @@ COPY requirements.txt /tmp
 WORKDIR /tmp
 RUN pip install -r requirements.txt
 
-COPY . /app/bathbot
+RUN mkdir -p /app/bathbot
 WORKDIR /app/bathbot
+COPY . /app/bathbot
 ENV PATH=$PATH:/app/bathbot
-ENV PYTHONPATH /app/bathbot
+ENV PYTHONPATH="/app/bathbot"
 
 CMD ["python", "./botr.py"]
