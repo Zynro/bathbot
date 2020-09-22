@@ -8,6 +8,7 @@ RUN pip install -r requirements.txt
 
 COPY . /app/bathbot
 WORKDIR /app/bathbot
+ENV PATH=$PATH:/app/bathbot
 ENV PYTHONPATH /app/bathbot
 
 CMD ["python", "./botr.py"]
