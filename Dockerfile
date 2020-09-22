@@ -2,6 +2,6 @@
 
 ADD botr.py /
 
-RUN pip install pip install -r ./requirements.txt
+RUN pip install -r ./requirements.txt
 
 CMD ["python", "./botr.py"]
