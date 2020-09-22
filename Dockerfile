@@ -12,4 +12,4 @@ COPY . /app/bathbot
 ENV PATH=$PATH:/app/bathbot
 ENV PYTHONPATH="/app/bathbot"
 
-CMD ["python", "./botr.py"]
+CMD ["python3.7", "./botr.py"]
