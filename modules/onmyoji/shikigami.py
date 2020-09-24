@@ -13,6 +13,7 @@ import re
 import pyexcel as pye
 import random
 from fuzzywuzzy import fuzz
+from tokens import onmyoji_gdrive
 
 permission = "You do not have permission to use this command."
 owner_list = config.owner_list
@@ -20,9 +21,10 @@ editor_list = config.editor_list
 
 recommend = re.compile(r"recommend", re.IGNORECASE)
 
-bbt_xlsx_file = f"modules/onmyoji/lists/onmyoji_bbt_database.xlsx"
-bbt_csv_db_file = f"modules/onmyoji/lists/bbt_shikigami_database.csv"
-bbt_csv_shikigami_list_file = f"modules/onmyoji/lists/bbt_shikigami_list.csv"
+bbt_xlsx_file = f"modules/onmyoji/bbt/onmyoji_bbt_database.xlsx"
+bbt_csv_db_file = f"modules/onmyoji/bbt/bbt_shikigami_database.csv"
+bbt_csv_shikigami_list_file = f"modules/onmyoji/bbt/bbt_shikigami_list.csv"
+onmyoguide_csv_db_file = f"modules/onmyoji/bbt/onmyoguide_bounty_database.csv"
 shikigami_icon_location = f"modules/onmyoji/images/shikigami icons"
 unknown_icon_file_name = "unknown.png"
 images_path = "images"
@@ -46,6 +48,9 @@ number_dict = {
     6: "Sixth",
     7: "Seventh",
 }
+
+if not os.path.exists(f"modules/onmyoji/bbt"):
+    os.mkdir(f"modules/onmyoji/bbt")
 
 
 def bold(text):
@@ -85,13 +90,13 @@ class DriveAPI:
 
     SERVICE_ACCOUNT_FILE = "tokens/bbt_credentials.json"
     credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=config.SCOPES_DRIVE_READONLY
+        SERVICE_ACCOUNT_FILE, scopes=onmyoji_gdrive.SCOPES_DRIVE_READONLY
     )
     drive_service = build("drive", "v3", credentials=credentials)
 
     @classmethod
     def get_gdrive_sheet_database(cls):
-        file_id = config.bounty_file_id
+        file_id = onmyoji_gdrive.bounty_file_id
         request = cls.drive_service.files().export_media(
             fileId=file_id,
             mimeType="application/vnd.openxmlformats-officedocument."
@@ -103,7 +108,7 @@ class DriveAPI:
         while done is False:
             status, done = downloader.next_chunk()
             print("Download %d%%." % int(status.progress() * 100))
-        with open(config.bbt_xlsx_file, "wb") as f:
+        with open(bbt_xlsx_file, "wb") as f:
             f.write(buffer_file.getvalue())
 
     @classmethod
@@ -112,27 +117,29 @@ class DriveAPI:
         # book = pye.get_book(file_name=config.bbt_xlsx_file)
         # Convert Onmyoguide DB
         pye.save_as(
-            file_name=config.bbt_xlsx_file,
+            file_name=bbt_xlsx_file,
             sheet_name="Bounty List",
-            dest_file_name=config.onmyoguide_csv_db_file,
+            dest_file_name=onmyoguide_csv_db_file,
         )
         # Convert BBT DB
         pye.save_as(
-            file_name=config.bbt_xlsx_file,
+            file_name=bbt_xlsx_file,
             sheet_name="Data Logging",
-            dest_file_name=config.bbt_csv_db_file,
+            dest_file_name=bbt_csv_db_file,
         )
         # Convert Shikigami Full List
         pye.save_as(
-            file_name=config.bbt_xlsx_file,
+            file_name=bbt_xlsx_file,
             sheet_name="Shikigami List",
-            dest_file_name=config.bbt_csv_shikigami_list_file,
+            dest_file_name=bbt_csv_shikigami_list_file,
         )
 
 
 class DatabaseGeneration:
+    DriveAPI.get_gdrive_sheet_database()
+    DriveAPI.generate_csv_databases()
     # Opens and creates the onmyoguide bounty db
-    with open(config.onmyoguide_csv_db_file, newline="") as bounties:
+    with open(onmyoguide_csv_db_file, newline="") as bounties:
         bounty_reader = csv.reader(bounties)
         for n in range(0, 3):
             next(
@@ -140,7 +147,7 @@ class DatabaseGeneration:
             )  # skips the first 3 rows because its headers + message + example
         onmyoguide_database = [row for row in bounty_reader]
     # Opens the BBT-made database for all stages with all their contents.
-    with open(config.bbt_csv_db_file, newline="") as bbt_db:
+    with open(bbt_csv_db_file, newline="") as bbt_db:
         user_db_reader = csv.reader(bbt_db)
         for i in range(0, 6):
             next(user_db_reader)
@@ -232,10 +239,10 @@ class ShikigamiClass:
         self.name = input_name
         self.alias = self.hints = self.locations = self.icon_name = self.icon = None
         self.icon_name = f"{lower_and_underscore(self.name)}.png"
-        self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
+        self.icon = f"{shikigami_icon_location}/{self.icon_name}"
         if not os.path.isfile(self.icon):
-            self.icon_name = config.unknown_icon_file_name
-            self.icon = f"{config.shikigami_icon_location}/{self.icon_name}"
+            self.icon_name = unknown_icon_file_name
+            self.icon = f"{shikigami_icon_location}/{self.icon_name}"
         for row in DatabaseGeneration.onmyoguide_database:
             # need to re-do, uses only shiki from onmyoguide
             shiki_name, alias, hints, locations = row[0], row[1], row[2], row[3]
@@ -347,7 +354,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         """Creates all the Shikigami classes with each of their vairables
         in a dictionary."""
         # Opens and creates the shikigami list from the full list of shikigami
-        with open(config.bbt_csv_shikigami_list_file, newline="") as shiki_list_csv:
+        with open(bbt_csv_shikigami_list_file, newline="") as shiki_list_csv:
             shiki_list_reader = csv.reader(shiki_list_csv)
             next(shiki_list_reader)  # skips header
             self.shikigami_full_list = [
@@ -402,7 +409,7 @@ class Shikigami(commands.Cog, Embeds, ShikigamiClass):
         else:
             await ctx.send(
                 f"Here is the link for the Onmyoji database"
-                f":\n{config.database_google_link}"
+                f":\n{onmyoji_gdrive.database_google_link}"
             )
 
     @get_shared_doc_link.error
