@@ -20,7 +20,14 @@ editor_list = config.editor_list
 
 recommend = re.compile(r"recommend", re.IGNORECASE)
 
-with open(f"{config.list_path}/stats.json") as file:
+bbt_xlsx_file = f"modules/onmyoji/lists/onmyoji_bbt_database.xlsx"
+bbt_csv_db_file = f"modules/onmyoji/lists/bbt_shikigami_database.csv"
+bbt_csv_shikigami_list_file = f"modules/onmyoji/lists/bbt_shikigami_list.csv"
+shikigami_icon_location = f"modules/onmyoji/images/shikigami icons"
+unknown_icon_file_name = "unknown.png"
+images_path = "images"
+
+with open(f"modules/onmyoji/lists/stats.json") as file:
     stats_json = json.loads(file.read())
 
 number_dict = {

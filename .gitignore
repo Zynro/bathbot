@@ -23,3 +23,4 @@ print_db.json
 old_code.py
 *_backup.py
 master.db
+/archive

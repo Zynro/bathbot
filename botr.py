@@ -18,19 +18,16 @@ ext_dict = {}
 bot_directory_modules = [name for name in os.listdir("./modules")]
 for module in bot_directory_modules:
     ext_dict[module] = [
-        f"modules.{module}.cogs.{x.replace('.py','')}"
-        for x in os.listdir(f"./modules/{module}/cogs")
+        f"modules.{module}.{x.replace('.py','')}"
+        for x in os.listdir(f"./modules/{module}")
         if ext_checks(x)
     ]
-ext_dict["base"] = [
-    f'cogs.{x.replace(".py", "")}' for x in os.listdir("./cogs") if ".py" in x
-]
 
 # temporary stopgap until more refined solution for ordering cog loads
 ext_dict["onmyoji"] = [
-    "modules.onmyoji.cogs.guildcmd",
-    "modules.onmyoji.cogs.shikigami",
-    "modules.onmyoji.cogs.shard",
+    "modules.onmyoji.guildcmd",
+    "modules.onmyoji.shikigami",
+    "modules.onmyoji.shard",
 ]
 
 del ext_dict["dragalia"]
