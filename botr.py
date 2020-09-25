@@ -14,6 +14,11 @@ def ext_checks(x):
     return (".py" in x) and ("except" not in x)
 
 
+def get_prefix(bot, message):
+    prefixes = ["&", "/"]
+    return commands.when_mentioned_or(*prefixes)(bot, message)
+
+
 ext_dict = {}
 bot_directory_modules = [name for name in os.listdir("./modules")]
 for module in bot_directory_modules:
@@ -37,19 +42,19 @@ del ext_dict["dragalia"]
 extensions = [item for sublist in ext_dict.values() for item in sublist]
 
 
-def get_prefix(bot, message):
-    prefixes = ["&", "/"]
-    return commands.when_mentioned_or(*prefixes)(bot, message)
-
-
+# Load commands prefix listener
 bot = commands.Bot(command_prefix=get_prefix, description="Bathbot")
 
+# Open and load all access ids for each discord Guild into a dict
 with open(f"tokens/module_access.json") as file:
     bot.module_access = json.loads(file.read())
-    bot.module_access["bathmemes"] = config.memes_access
 
+# Load personal Dev file, not found in Git due to explicit commands for testing
 bot.cog_list = extensions + ["cogs.dev"]
 
+# Create prerequisite directories, for each and every module.
+# Check using differences if each guild has an acess entry, if not, append an empty
+# list there.
 bot_directory_modules = [name for name in os.listdir("./modules")]
 bot_access_modules = [name for name in bot.module_access.keys()]
 diff_list = list(set(bot_directory_modules).difference(bot_access_modules))
@@ -60,6 +65,8 @@ if len(diff_list) > 0:
 else:
     writeout = False
 
+# Create module objects for each module and its corresponding cogs
+# Module format is Name, Path, Cog List, Accesses
 bot.modules = {}
 for extension in ext_dict.keys():
     if extension == "base":
@@ -67,9 +74,6 @@ for extension in ext_dict.keys():
     bot.modules[extension] = Module(
         extension, extension, ext_dict[extension], bot.module_access[extension]
     )
-bot.modules["bathmemes"] = Module(
-    "bathmemes", config.memes_module_path, config.memes_extensions, config.memes_access
-)
 
 if writeout is True:
     module_access_dict = {}
