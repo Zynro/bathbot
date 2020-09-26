@@ -1,7 +1,6 @@
 from discord.ext import commands
 from discord import Embed
 import config
-import json
 
 permission = "You do not have permission to use this command."
 owner_list = config.owner_list
@@ -13,17 +12,6 @@ class Modules(commands.Cog):
 
     async def check_cog(self, ctx):
         return ctx.author.id in owner_list or ctx.author.id == ctx.guild.owner.id
-
-    def module_access_writeout(self):
-        module_access_dict = {}
-        for module in self.bot.modules.values():
-            module_access_dict[module.name] = []
-            for guild_id in module.access:
-                module_access_dict[module.name].append(guild_id)
-        path_to_file = f"tokens/module_access.json"
-        with open(path_to_file, "w+") as file:
-            json.dump(module_access_dict, file, indent=4)
-        return
 
     @commands.group()
     async def module(self, ctx):
@@ -69,15 +57,14 @@ class Modules(commands.Cog):
 
     @module.command(name="add")
     async def add_access_to_module(self, ctx, module):
-        """Allows thisg guild to access <module>."""
+        """Allows this guild to access <module>."""
         if module not in self.bot.modules:
             return await ctx.send(f"Module '{module}' does not exist.")
         if ctx.guild.id in self.bot.modules[module].access:
             return await ctx.send(
                 f"Guild '{ctx.guild.name}' already has access to the module '{module}.'"
             )
-        self.bot.modules[module].access.append(ctx.guild.id)
-        self.module_access_writeout()
+        self.bot.modules[module].add_access(ctx.guild.id)
         await ctx.send(
             f"Guild *{ctx.guild.name}* with ID '{ctx.guild.id}'"
             f" has been added to the access list for module '{module}'."
@@ -94,12 +81,9 @@ class Modules(commands.Cog):
                 f"access to the module '{module}.'"
             )
         try:
-            self.bot.modules[module].access.remove(ctx.guild.id)
-        except KeyError:
-            return await ctx.send(
-                "Although the guild has access, I could not remove it from the dict."
-            )
-        self.module_access_writeout()
+            self.bot.modules[module].remove_access(ctx.guild.id)
+        except Exception:
+            return await ctx.send("Error.")
         await ctx.send(
             f"Guild *{ctx.guild.name}* with ID '{ctx.guild.id}' has"
             f" been removed from the access list for module '{module}'."

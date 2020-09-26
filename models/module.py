@@ -1,3 +1,6 @@
+import json
+
+
 def get_id(message):
     try:
         return int(message.id)
@@ -5,13 +8,43 @@ def get_id(message):
         return int(message)
 
 
+def load_access(module):
+    try:
+        with open(f"tokens/module_access.json") as file:
+            access = json.loads(file.read())
+        return access[module]
+    except (FileNotFoundError, IndexError):
+        return None
+
+
+def module_access_writeout(module, access_list):
+    path_to_file = f"tokens/module_access.json"
+    with open(f"tokens/module_access.json") as file:
+        access_dict = json.loads(file.read())
+    access_dict[module] = access_list
+    with open(path_to_file, "w+") as file:
+        json.dump(access_dict, file, indent=4)
+    return
+
+
 class Module:
-    def __init__(self, name, path=None, cog_list=None, guild_access=None):
-        self.name = name
+    def __init__(self, name, path=None, cog_list=None):
+        self.name = name.lower()
         self.path = path
         self.cog_list = cog_list
-        self.access = guild_access
+        self.access = load_access(self.name)
         self.msg_lib = {}
+
+    def add_access(self, guild_id):
+        if not self.access:
+            self.access = [guild_id]
+        else:
+            self.access.append(guild_id)
+        module_access_writeout(self.name, self.access)
+
+    def remove_access(self, guild_id):
+        self.access.remove(guild_id)
+        module_access_writeout(self.name, self.access)
 
     def add_msg(self, message, **kwargs):
         msg_id = get_id(message)

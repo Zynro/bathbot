@@ -71,9 +71,7 @@ bot.modules = {}
 for extension in ext_dict.keys():
     if extension == "base":
         continue
-    bot.modules[extension] = Module(
-        extension, extension, ext_dict[extension], bot.module_access[extension]
-    )
+    bot.modules[extension] = Module(extension, extension, ext_dict[extension])
 
 if writeout is True:
     module_access_dict = {}
