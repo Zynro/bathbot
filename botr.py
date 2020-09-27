@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import config
 import bot_token
 import json
 import os
@@ -50,7 +49,7 @@ with open(f"tokens/module_access.json") as file:
     bot.module_access = json.loads(file.read())
 
 # Load personal Dev file, not found in Git due to explicit commands for testing
-bot.cog_list = extensions + ["cogs.dev"]
+bot.cog_list = extensions + ["modules.base.dev"]
 
 # Create prerequisite directories, for each and every module.
 # Check using differences if each guild has an acess entry, if not, append an empty
@@ -159,10 +158,6 @@ async def guild_only_commands(ctx):
     return ctx.guild is not None
 
 
-async def permission_check(ctx):
-    return ctx.author.id in config.owner_list
-
-
 async def cog_locator(arg):
     found_cog = None
     for cog in bot.cog_list:
@@ -174,7 +169,7 @@ async def cog_locator(arg):
 
 # Hidden means it won't show up on the default help.
 @bot.command(name="load", hidden=True)
-@commands.check(permission_check)
+@commands.is_owner()
 async def load_cog(ctx, *, arg=None):
     """Command which Loads a cog."""
     if not arg and bot.last_loaded_cog:
@@ -204,7 +199,7 @@ async def load_cog(ctx, *, arg=None):
 
 
 @bot.command(name="unload", hidden=True)
-@commands.check(permission_check)
+@commands.is_owner()
 async def unload_cog(ctx, *, arg: str):
     """Command which Unloads a cog."""
     try:
@@ -222,7 +217,7 @@ async def unload_cog(ctx, *, arg: str):
 
 
 @bot.command(name="reload", hidden=True)
-@commands.check(permission_check)
+@commands.is_owner()
 async def reload_cog(ctx, *, arg=None):
     """Command which Reloads a Module.
     Remember to use dot path. e.g: cogs.owner"""
@@ -268,7 +263,7 @@ async def help_(ctx):
 
 
 @bot.command(name="kill", hidden=True)
-@commands.check(permission_check)
+@commands.is_owner()
 async def kill_bot(ctx):
     """Kills the bot. Only useable by Zynro."""
     await ctx.send(

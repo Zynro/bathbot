@@ -10,36 +10,35 @@ class Modules(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def check_cog(self, ctx):
-        return ctx.author.id in owner_list or ctx.author.id == ctx.guild.owner.id
+    async def cog_check(self, ctx):
+        return (
+            await self.bot.is_owner(ctx.author) or ctx.author.id == ctx.guild.owner.id
+        )
 
     @commands.group()
     async def module(self, ctx):
         if not ctx.invoked_subcommand:
-            if ctx.author.id == config.owner:
-                mod_list = ", ".join(
-                    [i for i in self.bot.modules.keys() if "meme" not in i]
-                )
-                embed = Embed(
-                    title="**Welcome to Bathbot's Modules**",
-                    description=f"__The currently available modules are:__\n{mod_list}",
-                )
-                embed.add_field(
-                    name="**__Current Commands__**:",
-                    value="""
+            mod_list = ", ".join(
+                [i for i in self.bot.modules.keys() if "bathmeme" not in i]
+            )
+            embed = Embed(
+                title="**Welcome to Bathbot's Modules**",
+                description=f"__The currently available modules are:__\n{mod_list}",
+            )
+            embed.add_field(
+                name="**__Current Commands__**:",
+                value="""
 `&module check`
- ▫️ Checks accesses in current guild.
+▫️ Checks what modules the current guuild has access to.
 `&module add <module>`
- ▫️ Adds current guild to specified module.
+▫️ Adds current guild to specified module.
 `&module remove <module>`
- ▫️ Removes current guild from specified module.
-`&module gcheck`
- ▫️ Returns a list of modules current guild has access to.""",
-                )
-                return await ctx.send(embed=embed)
+▫️ Removes current guild from specified module.""",
+            )
+            return await ctx.send(embed=embed)
             return
 
-    @module.command(name="check")
+    @module.command(name="gcheck")
     @commands.is_owner()
     async def check_access_to_module(self, ctx, module=None):
         """Checks what guilds have access to the given module."""
@@ -89,7 +88,7 @@ class Modules(commands.Cog):
             f" been removed from the access list for module '{module}'."
         )
 
-    @module.command(name="gcheck")
+    @module.command(name="check")
     async def check_guilds_access(self, ctx):
         """Returns a list of modules the current guild has access to."""
         origin_guild = ctx.guild.id

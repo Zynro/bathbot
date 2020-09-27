@@ -34,6 +34,7 @@ class Roleplay(commands.Cog):
             path_to_guild = f"guilds/{guild}/{self.bot.modules['roleplay'].path}"
             if not os.path.exists(path_to_guild):
                 self.guild_info[guild] = {"pnp": None}
+                self.member_dice = {}
                 os.mkdir(path_to_guild)
             elif not os.path.isfile(f"{path_to_guild}/roleplay_info.json"):
                 self.guild_info[guild] = {"pnp": None}

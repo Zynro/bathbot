@@ -3,6 +3,7 @@ import subprocess
 import traceback
 import os
 import csv
+import json
 from bs4 import BeautifulSoup
 
 
@@ -102,3 +103,8 @@ def save_csv(path, rows):
 
 def get_dict_type(db, check):
     return bool(isinstance(next(iter(db.values())), check))
+
+
+def json_dump(path, data):
+    with open(path, "w+") as file:
+        json.dump(data, file, indent=2)
