@@ -4,7 +4,7 @@ import random
 import modules.roleplay.models.campaign as Campaign
 import os
 import json
-from models import db as DB
+from models import pnp_db
 
 pnp_file = "roleplay_info.json"
 push_emoji = "<a:push:656219039814909955>"
@@ -22,8 +22,7 @@ class Roleplay(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.module = self.bot.modules["roleplay"]
-        self.initial_dir_creation()
-        self.guild_info = self.load_guild_info()
+        self.pnp_db = pnp_db(bot.sqlSession)
         self.campaign = Campaign.pnp_list["mutant"]
 
     async def cog_check(self, ctx):

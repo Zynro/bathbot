@@ -1,16 +1,14 @@
 import os
-import json
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+import campaign
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import orm
 
-supported_systems = ["mutant"]
+supported_systems = campaign.pnp_list.keys()
 
 path_to_pnp_guilds = "modules/"
-Base = declarative_base()
-Session = orm.sessionmaker()
 
 engine = create_engine("sqlite:///pnp_guilds.db", echo=True)
+Base = declarative_base()
 
 
 def open(Session):
@@ -36,7 +34,7 @@ class Guilds(Base):
         self.system = system
 
 
-class GUILD_PNP_DB(Guilds):
+class PNP_DB(Guilds):
     def __init__(self, Session):
         self.Session = Session
 
@@ -53,19 +51,13 @@ class GUILD_PNP_DB(Guilds):
         session = open(self.Session)
         if system.lower() in supported_systems:
             if not session.query(Guilds).filter_by(guild=guild_id).scalar():
-                print("DOES NOT EXIST")
+                # print("DOES NOT EXIST")
                 row = super.__init__(guild_id, system)
                 session.add(row)
                 session.commit()
             else:
-                print("EXISTS")
+                # print("EXISTS")
                 guild = self.get_guild(guild_id, session)
                 guild.system = system
                 session.commit()
         return session.close()
-
-
-threv = 616758392525946925
-db = GUILD_PNP_DB(Session)
-db.set_system(threv, "mutant")
-print(db.get_guild(threv).system)

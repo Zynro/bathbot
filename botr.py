@@ -7,6 +7,7 @@ import traceback
 import sys
 import aiohttp
 from models.module import Module
+from sqlalchemy import orm
 
 
 def ext_checks(x):
@@ -130,6 +131,8 @@ async def on_ready():
 
         # Create global aiohttp ClientSession
         bot.session = aiohttp.ClientSession()
+        # Create global SQLAlchemy ORM Session
+        bot.sqlSession = orm.sessionmaker()
 
         # Load all extensions
         for extension in extensions:
