@@ -5,6 +5,7 @@ youtube_dl==2017.12.2
 asyncio==3.4.3
 google-api-python-client==1.7.8
 google-auth-oauthlib==0.3.0
+Pillow==6.2.1
 pyexcel==0.5.13
 pyexcel-xls==0.5.8
 pyexcel-xlsx==0.5.7
